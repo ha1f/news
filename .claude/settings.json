@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl:*)",
+      "Bash(python3:*)",
+      "Bash(date:*)",
+      "Bash(ls:*)",
+      "Bash(rm:*)",
+      "Bash(mv:*)",
+      "Bash(mkdir:*)",
+      "Bash(echo:*)",
+      "Bash(cat:*)",
+      "Bash(sort:*)",
+      "Bash(head:*)",
+      "Bash(for:*)",
+      "Bash(ids=:*)",
+      "Bash(git:*)",
+      "Bash(gh:*)"
+    ]
+  }
+}
