@@ -1,4 +1,5 @@
-title: "News Curation"
-description: "自動キュレーションされたニュースダイジェスト"
+title: "News"
+description: "気になるテック・経済ニュースを毎日キュレーション"
 theme: minima
 baseurl: "/news"
+header_pages: []
