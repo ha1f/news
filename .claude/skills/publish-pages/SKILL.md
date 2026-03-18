@@ -2,7 +2,7 @@
 description: "ニュースキュレーションを実行し、GitHub Pagesにデプロイする"
 ---
 
-# News
+# GitHub Pages デプロイ
 
 `/curate-news` でニュースキュレーションを実行し、結果を main ブランチ向けの PR として作成する。PR がマージされると GitHub Pages に自動デプロイされる。
 
