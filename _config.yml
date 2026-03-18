@@ -1,6 +1,23 @@
 title: "News"
+
+author:
+  name: ha1f
+
 description: "気になるテック・経済ニュースを毎日キュレーション"
 theme: minima
 baseurl: "/news"
 header_pages: []
 exclude: [CLAUDE.md, README.md]
+
+minima:
+  skin: auto
+
+  social_links:
+    - title: Source code
+      icon: github
+      url: "https://github.com/ha1f/news"
+    - title: ha1f at X (formerly Twitter)
+      icon: x-twitter
+      url: "https://x.com/_ha1f"
+
+  hide_site_feed_link: true
