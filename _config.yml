@@ -3,3 +3,4 @@ description: "気になるテック・経済ニュースを毎日キュレーシ
 theme: minima
 baseurl: "/news"
 header_pages: []
+exclude: [CLAUDE.md, README.md]
