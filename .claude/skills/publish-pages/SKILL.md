@@ -14,14 +14,17 @@ description: "ニュースキュレーションを実行し、GitHub Pagesにデ
 | ブランチ作成時 | `🌿 ブランチ pages/{stem} を作成します` |
 | PR 作成時 | `📝 PR を作成します` |
 
-## 前提
-
-- GitHub Pages が有効化済みで、main ブランチの `/` をソースとして配信している
-- リポジトリルートに `_config.yml`、`index.md`、`_posts/` が存在する
-
-未セットアップの場合は「付録: 初回セットアップ」の手順でセットアップを行う。
-
 ## 手順
+
+### 0. 前提チェック
+
+main ブランチに `_config.yml` が存在するか確認する:
+```bash
+git fetch origin main
+git show origin/main:_config.yml 2>/dev/null
+```
+
+存在しない場合は「付録: 初回セットアップ」の手順でセットアップを行い、完了後に改めて実行する。
 
 ### 1. `/curate-news` の実行
 
@@ -29,7 +32,7 @@ Skill ツールで `curate-news` を実行する。
 
 完了後、今日の出力ファイルを特定する:
 ```bash
-ls .claude/skills/curate-news/output/{今日の日付}*.md
+ls .claude/skills/curate-news/output/{YYYY-MM-DD}*.md
 ```
 
 出力ファイルの内容を Read で読み込む。ファイル名のステム部分（例: `2026-03-18-23cfb1cf`）を後続のステップで使う。
@@ -52,7 +55,7 @@ git checkout -b pages/{ステム} origin/main
 
 ファイルパス: `_posts/{YYYY-MM-DD}-news.md`
 
-Jekyll はファイル名の日付で記事をソートする。フロントマターの `title` が記事ページの見出しになるため、本文からは `## ニュース (...)` の見出し行を取り除いてリード文から始める。
+フロントマターの `title` が記事ページの見出しになるため、本文はリード文から始める（curate-news 出力の先頭にある `## ニュース (...)` 見出し行はタイトルと重複するので含めない）。
 
 ```yaml
 ---
@@ -61,7 +64,7 @@ title: "{YYYY}年{M}月{D}日"
 date: {YYYY-MM-DD}
 ---
 
-{リード文から始まる curate-news の出力内容}
+{リード文から始まる本文}
 ```
 
 ### 4. コミットと PR 作成
@@ -106,7 +109,7 @@ git checkout -b setup-github-pages origin/main
 title: "News"
 description: "気になるテック・経済ニュースを毎日キュレーション"
 theme: minima
-baseurl: "/news"
+baseurl: "/news"  # リポジトリ名に合わせる（GitHub Pages は `{user}.github.io/{repo}` で配信されるため）
 header_pages: []
 ```
 
