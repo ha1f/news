@@ -1,0 +1,4 @@
+title: "News Curation"
+description: "自動キュレーションされたニュースダイジェスト"
+theme: minima
+baseurl: "/news"
