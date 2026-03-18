@@ -14,7 +14,7 @@
 |---------|-----------|----------------|
 | 全体 | `https://arstechnica.com/feed/` | 全カテゴリの最新記事 |
 | AI | `https://arstechnica.com/ai/feed/` | AI、機械学習 |
-| Tech | `https://arstechnica.com/tech/feed/` | テクノロジー全般 |
+| Tech | `https://arstechnica.com/information-technology/feed/` | テクノロジー全般 |
 | Security | `https://arstechnica.com/security/feed/` | セキュリティ |
 | Science | `https://arstechnica.com/science/feed/` | 科学技術 |
 | Gadgets | `https://arstechnica.com/gadgets/feed/` | ハードウェア、ガジェット |
