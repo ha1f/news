@@ -79,7 +79,8 @@ subagent への指示テンプレート:
 ```
 
 取得の原則:
-- subagent は `model: haiku` で起動する
+- subagent は `model: haiku`、`mode: bypassPermissions` で起動する（メインエージェントと同じ権限で動作させる）
+- 同時起動数が多すぎると `bypassPermissions` でも権限エラーになることがある（22並列で再現確認済み）。ソースをまとめて1つの subagent に複数フィードを処理させるか、バッチに分けて対応する
 - タイムスタンプや一時ファイルなど全てpython3内で処理する。シェル変数をpython3に渡す方式は展開失敗しやすいため避ける
 
 #### キャッシュファイル形式
