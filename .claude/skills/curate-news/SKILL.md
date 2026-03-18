@@ -163,5 +163,13 @@ subagent への指示テンプレート:
 
 ### 6. 結果の保存
 
-出力した内容を `.claude/skills/curate-news/output/{YYYY-MM-DD}.md` に Write で保存する。
-同じ日に複数回実行した場合は上書きする。
+好みファイルのMD5ハッシュ先頭8文字をサフィックスにしてファイル名を決定する:
+
+```bash
+md5 -q .claude/skills/curate-news/preferences.md | cut -c1-8
+```
+
+好みファイルが存在しない場合は `default` をサフィックスにする。
+
+出力先: `.claude/skills/curate-news/output/{YYYY-MM-DD}-{hash}.md`
+同じ日・同じ好みで複数回実行した場合は上書きする。
