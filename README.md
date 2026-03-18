@@ -68,10 +68,11 @@ flowchart LR
 
 ### 好みの設定
 
-`.claude/skills/curate-news/preferences.md` を編集する。
+[`.claude/skills/curate-news/preferences.md`](.claude/skills/curate-news/preferences.md) を編集する。
+以下は例。
 
 ```markdown
-# ニュースの好み（例）
+# ニュースの好み
 
 ## 興味・関心
 
