@@ -2,6 +2,8 @@
 
 Claude Code のスキル機能を使ったニュースキュレーションツール。複数のニュースソースから記事を自動取得し、ユーザーの好みに基づいてキュレーションする。
 
+キュレーション結果の例は [GitHub Pages](https://ha1f.github.io/news/) で確認できる。
+
 ## 使い方
 
 [Claude Code](https://docs.anthropic.com/en/docs/claude-code) でこのリポジトリを開き、`/curate-news` を実行する。
@@ -12,6 +14,8 @@ $ claude
 ```
 
 好みに合った記事が10件程度、日本語でキュレーションされる。
+
+結果はローカルの `output/` に保存される。Webで公開したい場合は `/publish-pages` を使う。キュレーションの実行からPR作成まで自動で行われ、PRをマージすると [GitHub Pages](https://ha1f.github.io/news/) に反映される。
 
 ## 仕組み
 
@@ -101,6 +105,16 @@ flowchart LR
 ### ソースの追加
 
 `sources/` にマークダウンファイルを追加する。フォーマットは `STYLEGUIDE.md` を参照。
+
+## Forkして使う
+
+ここまでの手順はこのリポジトリをそのまま使う場合の説明だった。自分専用のニュースキュレーションを作りたい場合は、リポジトリをForkして使う。
+
+1. **Fork** — GitHubで [Fork](https://github.com/ha1f/news/fork) を作成し、ローカルにcloneする
+2. **好みの編集** — `preferences.md` を自分の興味・関心に書き換える（[書き方](#好みの設定)）
+3. **ソースの調整** — 不要なソースを削除したり、読んでいるメディアを追加する（[追加方法](#ソースの追加)）
+4. **GitHub Pagesの有効化** — リポジトリの **Settings → Pages** で Source を `main` ブランチに設定する。公開URLは `https://{ユーザー名}.github.io/news/` になる
+5. **実行** — Claude Code で `/publish-pages` を実行し、PRをマージすれば公開される
 
 ## ファイル構成
 
