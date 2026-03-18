@@ -19,7 +19,7 @@ description: "ニュースキュレーションを実行し、GitHub Pagesにデ
 - GitHub Pages が有効化済みで、main ブランチの `/` をソースとして配信している
 - リポジトリルートに `_config.yml`、`index.md`、`_posts/` が存在する
 
-未セットアップの場合はユーザーに案内して終了する。
+未セットアップの場合は「付録: 初回セットアップ」の手順でセットアップを行う。
 
 ## 手順
 
@@ -87,3 +87,55 @@ PR の URL をユーザーに表示する。
 ### 5. 元のブランチに戻る
 
 ステップ 2 で確認したブランチに戻る。
+
+## 付録: 初回セットアップ
+
+`_config.yml` が存在しない場合に実行する。Jekyll の最小構成を追加し、GitHub Pages を有効化する。
+
+### A1. ブランチの作成
+
+```bash
+git fetch origin main
+git checkout -b setup-github-pages origin/main
+```
+
+### A2. Jekyll 構成ファイルの作成
+
+**`_config.yml`:**
+```yaml
+title: "News"
+description: "気になるテック・経済ニュースを毎日キュレーション"
+theme: minima
+baseurl: "/news"
+header_pages: []
+```
+
+**`index.md`:**
+```markdown
+---
+layout: home
+---
+```
+
+**`_posts/.gitkeep`:** 空ファイル
+
+### A3. コミット・プッシュ・PR 作成
+
+```bash
+git add _config.yml index.md _posts/.gitkeep
+git commit -m "Setup GitHub Pages with Jekyll"
+git push -u origin setup-github-pages
+gh pr create --base main --title "Setup GitHub Pages" --body "Jekyll最小構成の追加" --draft
+```
+
+### A4. GitHub Pages の有効化
+
+```bash
+gh api repos/$(gh repo view --json nameWithOwner -q .nameWithOwner)/pages -X POST -f 'source[branch]=main' -f 'source[path]=/'
+```
+
+既に有効な場合のエラーは無視してよい。
+
+### A5. ユーザーへの案内
+
+セットアップ PR の URL を表示し、マージを依頼する。マージが完了したら `/publish-pages` を再度実行するよう案内して、元のブランチに戻って終了する。
