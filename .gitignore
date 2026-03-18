@@ -5,6 +5,7 @@
 
 .claude/settings.local.json
 .claude/tmp
+.claude/worktrees
 
 ### macOS ###
 # General
