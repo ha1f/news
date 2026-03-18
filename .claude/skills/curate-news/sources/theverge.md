@@ -1,7 +1,7 @@
 # The Verge
 
 - **ソースID**: theverge
-- **TTL**: 12時間
+- **TTL**: 720分
 - **説明**: テック・科学・エンタメを幅広くカバーする米国大手メディア。深掘りレビューやオピニオンにも強い
 
 ## 仕様リンク
@@ -21,20 +21,18 @@
 
 ## フィード形式と取得上の注意
 
-- フィード形式は取得時に判定すること（RSS 2.0 または Atom）
-- 認証不要
-- Bot制限がある場合はUser-Agentヘッダを設定すること
-- 記事は全て英語
+- Atom 形式
+- User-Agentヘッダを設定する（Bot制限あり）
 
 ## フィールドマッピング
 
 | ソースのフィールド | キャッシュのフィールド | 備考 |
 |---|---|---|
 | `title` | title | |
-| `link` | url | |
-| `description` / `summary` | description | |
-| `pubDate` / `published` | published_at | |
-| `author` / `dc:creator` | meta.author | |
+| `link[@rel="alternate"]` | url | Atom形式のリンク |
+| `summary` | description | |
+| `published` | published_at | ISO 8601形式 |
+| `author > name` | meta.author | |
 | `category` | meta.categories | 複数あり、配列で保持 |
 
 ## 表示名

@@ -1,7 +1,7 @@
 # Nature
 
 - **ソースID**: nature
-- **TTL**: 24時間
+- **TTL**: 1440分
 - **説明**: 世界最高峰の学術ジャーナル。最新の科学研究論文・ニュースを掲載
 
 ## 仕様リンク
@@ -19,10 +19,8 @@
 
 ## フィード形式と取得上の注意
 
-- RSS 1.0 (RDF) 形式 + Dublin Core拡張 + PRISM拡張
-- 認証不要（メタデータは公開。全文は要購読）
+- RSS 1.0 (RDF) 形式 + Dublin Core拡張 + PRISM拡張（名前空間: `http://prismstandard.org/namespaces/basic/2.0/`）
 - 著者が複数の場合、`dc:creator` が複数出現する
-- 記事は全て英語
 
 ## フィールドマッピング
 

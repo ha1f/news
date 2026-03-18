@@ -1,12 +1,12 @@
 # Science (AAAS)
 
 - **ソースID**: science
-- **TTL**: 24時間
+- **TTL**: 1440分
 - **説明**: AAASが発行する世界トップクラスの学術ジャーナル群
 
 ## 仕様リンク
 
-- https://www.science.org/
+- https://www.science.org/content/page/email-alerts-and-rss-feeds
 
 ## カテゴリとフィードURL
 
@@ -19,10 +19,8 @@
 
 ## フィード形式と取得上の注意
 
-- RSS 1.0 (RDF) 形式 + Dublin Core拡張 + PRISM拡張
-- 認証不要（メタデータは公開。全文は要購読）
+- RSS 1.0 (RDF) 形式 + Dublin Core拡張 + PRISM拡張（名前空間: `http://prismstandard.org/namespaces/basic/2.0/`）
 - `dc:type` で記事種別（Research Article, Perspective等）が判別可能
-- 記事は全て英語
 
 ## フィールドマッピング
 

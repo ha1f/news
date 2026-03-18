@@ -1,12 +1,12 @@
 # Qiita
 
 - **ソースID**: qiita
-- **TTL**: 12時間
+- **TTL**: 720分
 - **説明**: 日本最大級のエンジニア向け技術記事共有プラットフォーム
 
 ## 仕様リンク
 
-- https://qiita.com/
+- https://qiita.com/about#feed
 
 ## カテゴリとフィードURL
 
@@ -24,9 +24,8 @@
 ## フィード形式と取得上の注意
 
 - Atom 1.0 形式
-- 認証不要
-- タグ別フィードのURLは `https://qiita.com/tags/{タグ名}/feed`
-- 日本語記事が中心
+- タグ別フィードのURLパターン: `https://qiita.com/tags/{タグ名}/feed`
+- `content` はHTML形式
 
 ## フィールドマッピング
 
