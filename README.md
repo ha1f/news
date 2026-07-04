@@ -1,0 +1,130 @@
+# news
+
+Claude Code のスキル機能を使ったニュースキュレーションツール。複数のニュースソースから記事を自動取得し、ユーザーの好みに基づいてキュレーションする。
+
+キュレーション結果の例は [GitHub Pages](https://ha1f.github.io/news/) で確認できる。
+
+## 使い方
+
+[Claude Code](https://docs.anthropic.com/en/docs/claude-code) でこのリポジトリを開き、`/curate-news` を実行する。
+
+```
+$ claude
+> /curate-news
+```
+
+好みに合った記事が日本語でキュレーションされる。
+
+結果はローカルの `output/` に保存される。Webで公開したい場合は `/publish-pages` を使う。キュレーションの実行からPR作成まで自動で行われ、PRをマージすると [GitHub Pages](https://ha1f.github.io/news/) に反映される。
+
+## 仕組み
+
+```mermaid
+flowchart LR
+    sources["references/sources/*.md"] --> select["ソース選択"]
+    prefs["preferences.md"] --> select
+    select --> fetch["フィード取得\n（並列）"]
+    fetch --> cache["キャッシュ"]
+    cache --> curate["キュレーション"]
+    prefs --> curate
+    curate --> output["output/\n{YYYY-MM-DD}-{hash}.md"]
+```
+
+1. **ソース選択** — `preferences.md` の興味・関心と各ソースのトピックをマッチングし、取得対象を自動選択
+2. **フィード取得** — `scripts/fetch_feeds.py` で対象フィードを並列取得。キャッシュが有効（TTL内）ならスキップ
+3. **キュレーション** — 全記事を統合・重複排除し、興味との関連度とスコアで選定
+4. **出力** — 日本語のマークダウン形式で表示し、`output/{YYYY-MM-DD}-{hash}.md` に保存（hashは好みファイルのMD5先頭8文字）
+
+## ニュースソース
+
+22ソースが定義済み。各ソースは `references/sources/*.md` に独立したファイルとして管理されている。
+
+| ソース | カテゴリ | 説明 |
+|--------|----------|------|
+| [Ars Technica](https://arstechnica.com/) | テック | 深掘り技術記事の老舗メディア |
+| [dev.to](https://dev.to/) | テック | 開発者コミュニティ。チュートリアル・技術記事 |
+| [GitHub Trending](https://github.com/trending) | テック | GitHubのトレンドリポジトリ * |
+| [Hacker News](https://news.ycombinator.com/) | テック | Y Combinator運営のテック系ニュース |
+| [InfoQ](https://www.infoq.com/) | テック | ソフトウェアアーキテクチャ特化メディア |
+| [Lobsters](https://lobste.rs/) | テック | 招待制のテック系コミュニティ |
+| [MIT Technology Review](https://www.technologyreview.com/) | テック | AI・バイオ・量子等の先端技術 |
+| [Product Hunt](https://www.producthunt.com/) | テック | 新プロダクト発見プラットフォーム |
+| [Reddit](https://www.reddit.com/) | テック | テック系サブレディット |
+| [TechCrunch](https://techcrunch.com/) | テック | 米国最大のテックメディア |
+| [The Verge](https://www.theverge.com/) | テック | テック・科学・エンタメの大手メディア |
+| [Wired](https://www.wired.com/) | テック | テクノロジーと文化・社会の交差点 |
+| [日経新聞](https://www.nikkei.com/) | 経済 | 日本最大の経済紙（速報フィード） |
+| [Nature](https://www.nature.com/) | 科学 | 世界最高峰の学術ジャーナル |
+| [Science](https://www.science.org/) | 科学 | AAAS発行のトップ学術ジャーナル群 |
+| [Dribbble](https://dribbble.com/) | デザイン | デザイナー向けコミュニティ（Stories記事） |
+| [GIGAZINE](https://gigazine.net/) | 日本語 | テック・科学・エンタメの老舗ニュースサイト |
+| [ITmedia](https://www.itmedia.co.jp/) | 日本語 | エンタープライズIT・AI・セキュリティ |
+| [Publickey](https://www.publickey1.jp/) | 日本語 | エンタープライズIT専門メディア |
+| [Qiita](https://qiita.com/) | 日本語 | エンジニア向け技術記事共有プラットフォーム |
+| [はてなブックマーク](https://b.hatena.ne.jp/) | 日本語 | 日本最大のソーシャルブックマーク |
+| [Zenn](https://zenn.dev/) | 日本語 | エンジニア向け技術情報プラットフォーム |
+
+\* GitHub Trending はサードパーティの [GitHubTrendingRSS](https://github.com/mshibanami/GitHubTrendingRSS) 経由で取得
+
+**検討したが対応不可のソース**: Bloomberg（公開RSSフィード無し）、Designer News（サイト閉鎖済み）
+
+## カスタマイズ
+
+### 好みの設定
+
+[`.claude/skills/curate-news/preferences.md`](.claude/skills/curate-news/preferences.md) を編集する。
+以下は例。
+
+```markdown
+# ニュースの好み
+
+## 興味・関心
+
+- iOS / Swift 開発
+- ソフトウェアアーキテクチャ
+- AI / LLM
+- 開発ツール・生産性
+- テック業界の動向
+- 話題のサービス・プロダクト
+- 経済・ビジネス
+
+## 好みのメディア
+
+- 日経
+- TechCrunch
+
+## 読みたくない記事
+
+- 入門・チュートリアル系の記事
+- 宣伝色の強い記事
+
+```
+
+興味・関心はソースのカテゴリ自動選択にも使われるため、具体的に書くとより精度が上がる。
+
+### ソースの追加
+
+`references/sources/` にマークダウンファイルを追加する。フォーマットは `STYLEGUIDE.md` を参照。
+
+## Forkして使う
+
+自分専用のニュースキュレーションを作りたい場合は、リポジトリをForkして使う。
+
+1. **Fork** — GitHubで [Fork](https://github.com/ha1f/news/fork) を作成し、ローカルにcloneする
+2. **好みの編集** — `preferences.md` を自分の興味・関心に書き換える（[書き方](#好みの設定)）
+3. **ソースの調整** — 不要なソースを削除したり、読んでいるメディアを追加する（[追加方法](#ソースの追加)）
+4. **GitHub Pagesの有効化** — リポジトリの **Settings → Pages** で Source を `main` ブランチに設定する。公開URLは `https://{ユーザー名}.github.io/news/` になる
+5. **実行** — Claude Code で `/publish-pages` を実行し、PRをマージすれば公開される
+
+## ファイル構成
+
+```
+.claude/skills/curate-news/
+├── SKILL.md           # ワークフロー定義
+├── STYLEGUIDE.md      # 設計方針・ファイル構成ガイド
+├── preferences.md     # ユーザーの好み
+├── scripts/           # フィード取得スクリプト
+├── references/sources/ # ニュースソース定義
+├── cache/             # フィード取得キャッシュ（git管理外）
+└── output/            # キュレーション結果（git管理外）
+```

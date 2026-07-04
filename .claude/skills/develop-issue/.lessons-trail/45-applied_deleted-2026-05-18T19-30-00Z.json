@@ -1,0 +1,10 @@
+{
+  "L": "L45",
+  "action": "applied_deleted",
+  "summary": "bot reviewer 指摘の 3 分類 (scope_addition / preexisting_bug / off_topic) → AskUserQuestion で確認 → 採用 / 別 PR 推奨 / scope 外 reply の workflow rule",
+  "reflected_in": [
+    "references/review-comment-judgment.md (3 分類 mandate + AskUserQuestion + テンプレ返信)"
+  ],
+  "ts": "2026-05-18T19:30:00Z",
+  "agent_run_id": "skill_self_improvement_iter_5"
+}
