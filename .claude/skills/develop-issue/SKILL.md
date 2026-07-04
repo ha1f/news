@@ -42,7 +42,7 @@ issue はドラフト。文面でなく背後の問題と目的を掴む:
 |---|---|
 | 1 PR 以下 | 自分で実装 + レビュー subagent |
 | 依存する複数 PR | 鎖の順に直列 |
-| 独立した複数 PR | worker を並列起動 (worktree で隔離)。自分は検証と統合に徹する |
+| 独立した複数 PR (依存もファイル重複もない) | worker を並列起動 (worktree で隔離)。自分は検証と統合に徹する |
 
 探索やログ解析などコンテキストを食う作業は、規模によらず subagent に隔離して結論だけ受け取る。リスクの高い変更は観点の異なるレビューを複数走らせる。run が長引いたら issue の checklist を引き継ぎ資料に fresh context へ交代する。モデルの使い分けと team の形は [references/model-notes.md](references/model-notes.md)。
 

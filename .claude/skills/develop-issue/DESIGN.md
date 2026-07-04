@@ -16,5 +16,4 @@
 
 ## 変更するときは
 
-- merge 前に [evals/scenarios.md](evals/scenarios.md) の机上シミュレーションを走らせる
-- モデル更新時は「このルールはまだ必要か」を棚卸しし、不要になった行を削る
+merge 前に [evals/scenarios.md](evals/scenarios.md) の机上シミュレーションを走らせる。棚卸し・刈り込みの規律は reflect-and-improve スキルに従う。
