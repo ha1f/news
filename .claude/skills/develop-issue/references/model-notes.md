@@ -6,6 +6,7 @@
 - [Prompting Claude Sonnet 5](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-sonnet-5)
 - [Claude Code system prompts](https://platform.claude.com/docs/en/release-notes/system-prompts) — harness が既に与えている指示。skill や subagent prompt で重複させない
 - [Getting started with loops](https://claude.com/blog/getting-started-with-loops) — 停止条件つきループの設計
+- [Harness engineering (OpenAI)](https://openai.com/ja-JP/index/harness-engineering/) — 指示で守らせるより、機械的に検証できるルールと自己完結した計画を先に整える。モデルを問わず再現性を上げる発想
 
 ## 使い分けの目安
 
