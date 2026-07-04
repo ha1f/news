@@ -5,3 +5,4 @@
 - worktree 環境では diff の base に local branch でなく `origin/<base>` を使う (local が古いと他人の commit が diff に混入する)
 - ユーザ指示で質問をスキップして進むときも、スキップした判断と想定した回答を記録する (issue コメントで人間が後から検証できるように)
 - プロンプトに外部サービスの固有名 (bot 名等) をハードコードしない (GitHub API の `user.type == "Bot"` のような型レベルの判定で足りる)
+- スキル専用の repo ノートは `.claude/rules/` のような自動読み込みされる場所に置かない (このスキルしか読まないのに全セッションの context を消費する)
