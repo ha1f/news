@@ -1,6 +1,6 @@
-# モデルの使い分けと癖
+# モデルと体制のノート
 
-一次情報は公式ガイド。ここには skill 運用に効く要点だけ置く:
+一次情報は公式ガイド。ここには運用に効く要点だけ:
 
 - [Prompting Claude Fable 5](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-fable-5)
 - [Prompting Claude Sonnet 5](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-sonnet-5)
@@ -8,16 +8,24 @@
 - [Getting started with loops](https://claude.com/blog/getting-started-with-loops) — 停止条件つきループの設計
 - [Harness engineering (OpenAI)](https://openai.com/ja-JP/index/harness-engineering/) — 指示で守らせるより、機械的に検証できるルールと自己完結した計画を先に整える。モデルを問わず再現性を上げる発想
 
-## 使い分けの目安
+## モデルの使い分け
 
 - orchestrator (判断・検証・統合): session のモデルをそのまま使う
-- 並列 worker (実装・探索): sonnet で十分なことが多い。Agent の model パラメータで指定
-- 迷ったら指定しない (session のモデルを継承する)
+- 実装 worker: sonnet を並列で
+- 機械的な作業 (ログ解析、大量ファイルの分類・要約、定型変換): haiku を並列数で稼ぐ
+- 迷ったら指定しない (session のモデルを継承)
+
+## team の形
+
+- 使い捨て subagent: 自己完結した sub-plan を渡して返答を待つだけ。独立作業の基本形
+- 会話を継続する teammate: 設計判断の往復が要る大きな sub-plan は、名前つき agent に任せて途中で追加指示・軌道修正する
+- fan-out + 検証: 同じ対象に独立した視点が欲しいとき (観点を変えた複数レビュー、複数案の比較)
 
 ## Sonnet 5
 
 - 指示を字義通りに解釈する。適用範囲を明示する (「最初の 1 件だけでなく全 sub-plan に適用」等)
-- レビューを依頼するときは「確信が低くても全部報告して。フィルタは別段階でやる」と伝えると recall が上がる
+- レビュー依頼は「確信が低くても全部報告して。フィルタは別段階でやる」と伝えると recall が上がる
+- orchestrator を任せる場合は、issue の計画コメントを checklist として更新しながら進めると脱線しにくい
 
 ## Fable 5
 
