@@ -2,13 +2,12 @@
 name: develop-issue
 description: GitHub issue から実装・DRAFT PR 作成・CI green 化・レビュー対応までを自律的に完走する。「#123 を実装して」「この issue を進めて」「fix this issue」や GitHub issue URL の貼り付けで使う。
 argument-hint: "<issue-number-or-url>"
-disable-model-invocation: true
 allowed-tools: Read Write Edit Task Agent AskUserQuestion Monitor Bash(gh issue *) Bash(gh pr *) Bash(gh run *) Bash(gh api *) Bash(gh repo view *) Bash(git status *) Bash(git log *) Bash(git diff *) Bash(git branch *) Bash(git checkout -b *) Bash(git switch *) Bash(git add *) Bash(git commit *) Bash(git fetch *) Bash(git rebase *) Bash(git push *) Bash(git blame *) Bash(jq *)
 ---
 
 # develop-issue
 
-GitHub issue を受け取り、その目的を達成する。任意の repo で使える汎用スキルであり、repo 固有の情報は本体にも LESSONS にも書かず、repo 側のノートに置く ([references/repo-notes.md](references/repo-notes.md))。ここに書くのはゴールと境界だけで、手順は状況で決める。repo の規約と会話中の指示が優先。
+GitHub issue を受け取り、その目的を達成する。任意の repo で使える汎用スキルであり、repo 固有の情報は本体にも LESSONS にも書かず、各 repo の `.claude/rules/develop-issue.md` に置く。ここに書くのはゴールと境界だけで、手順は状況で決める。repo の規約と会話中の指示が優先。
 
 ## 完了条件
 
@@ -58,7 +57,7 @@ issue はドラフト。文面でなく背後の問題と目的を掴む:
 
 ## 学びと改善
 
-- 開始時に読む: repo 固有ノート `.claude/rules/develop-issue.md` (なければ run で知った内容から作成を提案) と、repo 横断の教訓 [LESSONS.md](LESSONS.md)
-- 学びも同じ区分で書き分ける: repo 固有はノートへ (別 PR)、repo によらない教訓は LESSONS へ (書き方は同ファイル冒頭)
+- 開始時に repo ノート `.claude/rules/develop-issue.md` と [LESSONS.md](LESSONS.md) を読む。repo ノートがなければ、run で確認した検証コマンド・CI の癖・レビュー bot・環境の制約をまとめ、作成を別 PR で提案する
+- 学びも書き分ける: repo 固有はノートへ (別 PR)、repo によらない教訓は LESSONS へ (書き方は同ファイル冒頭)
 - run をやりにくくした環境の不足 (ルールの欠落、検証コマンドの権限不足、古いライブラリ) は、issue の枠外でも別 PR / issue で提案する
 - 最後に毎回 reflect-and-improve スキルで振り返る。改善対象は skill に限らない
