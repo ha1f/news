@@ -8,16 +8,7 @@ theme: minima
 baseurl: "/news"
 header_pages: [archive.md]
 exclude: [CLAUDE.md, README.md]
+rss: "RSS"
 
 minima:
   skin: auto
-
-  social_links:
-    - title: Source code
-      icon: github
-      url: "https://github.com/ha1f/news"
-    - title: ha1f at X (formerly Twitter)
-      icon: x-twitter
-      url: "https://x.com/_ha1f"
-
-  hide_site_feed_link: true
