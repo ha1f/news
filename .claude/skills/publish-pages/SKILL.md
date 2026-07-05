@@ -32,12 +32,13 @@ git show origin/main:_config.yml 2>/dev/null
 
 Skill ツールで `curate-news` を実行する。
 
-完了後、今日の出力ファイルを特定する:
+完了後、今日の出力ファイルを特定する。`{YYYY-MM-DD}` は JST (Asia/Tokyo) 基準の日付とする。推測せず、以下のコマンドで取得してから `ls` に渡す:
 ```bash
+TZ=Asia/Tokyo date +%F
 ls .claude/skills/curate-news/output/{YYYY-MM-DD}*.md
 ```
 
-出力ファイルの内容を Read で読み込む。ファイル名のステム部分（例: `2026-03-18-23cfb1cf`）を後続のステップで使う。
+出力ファイルの内容を Read で読み込む。ファイル名のステム部分（例: `2026-03-18-23cfb1cf`）を後続のステップで使う。ステム先頭の日付部分がここで確定した JST 基準の `{YYYY-MM-DD}` であり、後続ステップの `{YYYY-MM-DD}` は全てこの値を使い回す（再度日付を判定し直さない）。
 
 ### 2. ブランチの作成
 
@@ -57,6 +58,8 @@ git checkout -b pages/{ステム} origin/main
 
 ファイルパス: `_posts/{YYYY-MM-DD}-news.md`
 
+この `{YYYY-MM-DD}` を含め、以下の `title` / `date` も**すべてステップ 1 で確定した JST 基準の日付**を使い回す（ここで改めて日付を判定しない）。
+
 フロントマターの `title` が記事ページの見出しになるため、本文はリード文から始める（curate-news 出力の先頭にある `## ニュース (...)` 見出し行はタイトルと重複するので含めない）。
 
 ```yaml
@@ -70,6 +73,8 @@ date: {YYYY-MM-DD}
 ```
 
 ### 4. コミットと PR 作成
+
+コミットメッセージ・PR タイトルの `{YYYY-MM-DD}` も、新たに日付を判定せずステップ 1 で確定した日付をそのまま使う。
 
 ```bash
 git add _posts/
