@@ -6,7 +6,7 @@ author:
 description: "気になるテック・経済ニュースを毎日キュレーション"
 theme: minima
 baseurl: "/news"
-header_pages: []
+header_pages: [archive.md]
 exclude: [CLAUDE.md, README.md]
 
 minima:
