@@ -7,6 +7,7 @@
 - [Claude Code system prompts](https://platform.claude.com/docs/en/release-notes/system-prompts) — harness の指示と重複させないための照合先
 - [Getting started with loops](https://claude.com/blog/getting-started-with-loops) — 停止条件つきループの設計
 - [Harness engineering (OpenAI)](https://openai.com/ja-JP/index/harness-engineering/) — ルールは機械的に検証できる形で環境側に置く
+- [Building a C compiler with parallel Claudes (Anthropic)](https://www.anthropic.com/engineering/building-c-compiler) — 検証器の正確さと共有が土台。検証器を先に整備し、全 agent が同じ検査を再実行できるようにする
 
 ## 使い分け
 
