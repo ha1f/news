@@ -159,5 +159,11 @@ python3 .claude/skills/curate-news/scripts/fetch_feeds.py --source hatena --cate
 python3 .claude/skills/curate-news/scripts/preference_hash.py
 ```
 
+`{YYYY-MM-DD}` は JST (Asia/Tokyo) 基準の日付とする。推測せず、以下のコマンドで取得する:
+
+```bash
+TZ=Asia/Tokyo date +%F
+```
+
 出力先: `.claude/skills/curate-news/output/{YYYY-MM-DD}-{上のコマンドの出力}.md`
 同じ日・同じ好みで複数回実行した場合は上書きする。
