@@ -1,6 +1,6 @@
 # 机上評価シナリオ
 
-スキルを変更したら、fresh context の agent に「SKILL.md と references だけを頼りに各シナリオを模擬実行し、行動が決定できない点・失敗しうる点を報告」させる。期待を満たさない変更は merge しない。
+スキルを変更したら、[eval-guide.md](../references/eval-guide.md) の机上シミュレーションで以下を検証する。期待を満たさない変更は merge しない。
 
 1. **MUST / CRITICAL の多い古いエージェントプロンプト**（Claude 4 前半世代の書き方）
    期待: 強調を理由つき通常表現へ変換し、model-notes.md を根拠に世代のズレを指摘する。全要素が対応表に載る

@@ -12,13 +12,9 @@
 
 不向きなもの: 対話エージェントのシステムプロンプト（タスク分布が広く trainset を切り出せない）、主観的品質（「良い文章」）、多目的の同時最適（品質×コスト等）。これらは手作業改善 + eval の領分。
 
-## DSPy の概要
+参考: https://dspy.ai / https://github.com/stanfordnlp/dspy （2026-05 時点 v3.2.1）
 
-https://dspy.ai / https://github.com/stanfordnlp/dspy （2026-05 時点 v3.2.1）
-
-- **Signature**: プロンプト文字列でなく型付き入出力でタスクを宣言（`"article -> category"`）
-- **Module**: 実行戦略（Predict / ChainOfThought / ReAct）。Signature を変えずに差し替えられる
-- **Optimizer**: program + metric + データから指示文・few-shot 例・（必要なら）weights を自動チューニング。1 回の最適化は $2 / 10 分程度から（公式目安）
+## Optimizer の選び方
 
 | Optimizer | 向く条件 |
 |---|---|
@@ -30,37 +26,16 @@ https://dspy.ai / https://github.com/stanfordnlp/dspy （2026-05 時点 v3.2.1�
 
 迷ったら GEPA（現在の主推奨。公式 docs も主経路として案内）。データ件数は目安であり、行を選ぶ基準はタスクの形（few-shot が効くか、指示文を進化させたいか）。
 
-## GEPA (Genetic-Pareto)
-
-論文: https://arxiv.org/abs/2507.19457 （ICLR 2026）。実行トレース（推論・tool call・エラー）を LM が自然言語で reflect して指示文を書き換え、Pareto frontier から変異元を選んで局所解を回避する。
-
-- 数値（camera-ready 版）: RL (GRPO) を平均 +6%・最大 +20% 上回り、rollout 数は最大 1/35。MIPROv2 を 10% 超上回る。※二次記事によくある「+10%」は v1 の数値
-- DSPy に統合済み（`dspy.GEPA`）。standalone 版 https://github.com/gepa-ai/gepa は DSPy なしで生のシステムプロンプトも最適化できる（要 evaluation セット）
+GEPA は実行トレース（推論・tool call・エラー）を LM が自然言語で reflect して指示文を書き換え、Pareto frontier から変異元を選んで局所解を回避する（論文: https://arxiv.org/abs/2507.19457, ICLR 2026）。camera-ready 版の数値では RL (GRPO) を平均 +6%・最大 +20% 上回り、rollout 数は最大 1/35、MIPROv2 を 10% 超上回る。**二次記事によくある「+10%」は v1 の数値なので引用時は注意。** DSPy に統合済み（`dspy.GEPA`）。standalone 版 https://github.com/gepa-ai/gepa は DSPy なしで生のシステムプロンプトも最適化できる（要 evaluation セット）。
 
 ## Claude で使う
 
+実行系（program）は安いモデル、reflection（GEPA の指示文生成）は賢いモデルを使う。metric は score とテキスト feedback を返す（GEPA はテキストで学ぶ）:
+
 ```python
-import dspy
-dspy.configure(lm=dspy.LM("anthropic/claude-haiku-4-5"))  # 実行系は安く
-
-class Classify(dspy.Signature):
-    """記事をカテゴリに分類する"""
-    article: str = dspy.InputField()
-    category: str = dspy.OutputField()
-
-program = dspy.ChainOfThought(Classify)
-trainset = [dspy.Example(article=a, category=c).with_inputs("article")
-            for a, c in labeled_data]
-
-def metric(example, pred, trace=None, pred_name=None, pred_trace=None):
-    return dspy.Prediction(
-        score=float(pred.category == example.category),
-        feedback=f"expected {example.category}, got {pred.category}")  # GEPA はテキストで学ぶ
-
 opt = dspy.GEPA(metric=metric, auto="light",
-                reflection_lm=dspy.LM("anthropic/claude-opus-4-8"))  # reflection は賢いモデルで
+                reflection_lm=dspy.LM("anthropic/claude-opus-4-8"))
 optimized = opt.compile(program, trainset=trainset[:20], valset=trainset[20:])
-optimized.save("optimized_program.json")
 ```
 
 ## 限界と運用

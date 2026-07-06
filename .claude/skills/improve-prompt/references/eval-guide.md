@@ -26,25 +26,25 @@ fresh context の agent に「SKILL.md と references だけを頼りに各シ�
 
 新旧の出力を A/B ラベルだけで独立の judge agent に渡す（どちらが新版かは知らせない）。position bias 対策に順序を入れ替えて 2 回。tie は稀のはず — 毎回 tie ならシナリオに判別力がない。
 
-## 採点者 (grader) の使い分け
+## grader の使い分けと設計
 
-安く速い順に使う: **code-based**（exact match / regex。最速で最も信頼できる）→ **LLM-as-judge**（柔軟。先に人間の判定と一致するか較正してからスケール）→ **human**（gold standard だが遅い。全数採点は避け、spot-check と較正に使う）。
+安く速い順に使う: code-based（exact match / regex）→ LLM-as-judge（先に人間の判定と較正）→ human（gold standard だが遅い。spot-check と較正に限定）。
 
-LLM-as-judge を使うときは:
+LLM-as-judge を使うときの規律:
 
-- rubric を検証可能に書く（「第 1 文で X に言及。なければ incorrect」）。「良い文章か」のような純定性的評価はスケールしない
+- rubric は検証可能に書く（「第 1 文で X に言及。なければ incorrect」）。「良い文章か」のような純定性的評価はスケールしない
 - 判定は binary か 1〜5 スケール。理由を考えさせてから判定させ、理由は捨てる
 - **process でなく outcome を採点する**（どの経路を通ったかでなく、正しい最終状態に到達したか）
-- escape hatch を与える（判定に足る情報がなければ "Unknown"）。迷ったら FAIL — 弱い assertion での pass は false confidence を生み、無いより悪い
+- escape hatch を与える（判定に足る情報がなければ "Unknown"）。**迷ったら FAIL** — 弱い assertion での pass は false confidence を生み、無いより悪い
 - 独立した評価次元（正確さ・引用・網羅性など）は別々の judge コールに分ける
-- 生成と判定は別モデルにする（self-preference bias: 自モデルの出力を 10〜25% 過大評価する報告がある）
-- verbosity bias（長い出力の過大評価）と position bias（提示順で勝率が 10pt 以上動く）を前提に設計する
+- 生成と判定は別モデルにする（self-preference bias の報告あり）
+- verbosity bias（長い出力の過大評価）と position bias（提示順で勝率が動く）を前提に設計する
 
 ## 非決定性
 
 - 1 回の pass/fail はノイズ。シナリオごとに複数 trial（3 回目安）で平均と分散を見る
-- pass@k（k 回中 1 回成功 = 能力）と pass^k（k 回全部成功 = 一貫性）は別物。per-trial 75% でも 3 連続成功は ~42%
-- 高分散（例: 50% ± 40%）は flaky の兆候 — プロンプトでなくシナリオや環境を先に疑う
+- pass@k（k 回中 1 回成功）と pass^k（k 回全部成功）は別物 — per-trial 75% でも 3 連続成功は ~42%
+- 高分散（例: 50% ± 40%）は flaky の兆候。プロンプトでなくシナリオや環境を先に疑う
 - 新旧どちらでも常に pass する assertion は判別力がない。剪定するか難化する。全シナリオ 100% になったら回帰検出専用に格下げし、新しい難しいシナリオを足す
 
 ## ツール
