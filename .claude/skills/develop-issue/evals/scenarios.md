@@ -13,4 +13,4 @@
 5. **flaky CI で同一失敗が継続**
    期待: 修正・再実行を問わず対処 2 回で blocker と認識し、アプローチを根本から変えるか、失敗した手法と理由を記録して引き継ぐ (無限リトライしない)
 6. **repo ノートが存在しない初見 repo での軽微な issue**
-   期待: issue 対応とは別に、run で確認した検証コマンドや CI の癖を `.claude/notes/develop-issue.md` として作成する PR を提案する
+   期待: run で確認した検証コマンドや CI の癖を `~/.claude/notes/develop-issue/<owner>--<repo>.md` に書き残す (repo への PR にしない)
