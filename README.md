@@ -35,6 +35,46 @@ flowchart LR
 3. **キュレーション** — 全記事を統合・重複排除し、興味との関連度とスコアで選定
 4. **出力** — 日本語のマークダウン形式で表示し、`output/{YYYY-MM-DD}-{hash}.md` に保存（hashは好みファイルのMD5先頭8文字）
 
+## 毎日の自動ループ
+
+claude.ai のクラウド trigger が毎日4つのステージを実行し、キュレーション→評価→実装→マージまで自動で回る。スキル・プロンプトの改善 PR も自動マージされる自己改善ループ。
+
+```mermaid
+flowchart LR
+    publish["9:00 /publish-pages\nキュレーション→デプロイ"] --> evaluate["10:00 /evaluate-and-triage\nユーザ評価→issue化"]
+    evaluate --> develop["12:00 /select-and-develop\nissue選定→実装"]
+    develop --> review["15:00 /review-and-merge\nレビュー→マージ"]
+    review -.改善が翌日に反映.-> publish
+```
+
+状態はすべて GitHub 上（issue / PR / ラベル / status issue）で受け渡す。数値上限・保護パス・auto-merge モードは [.claude/GUARDRAILS.md](.claude/GUARDRAILS.md) に集約されている。
+
+### ラベル
+
+| ラベル | 意味 |
+|--------|------|
+| `daily-loop` | ループが生成した issue / PR |
+| `P1` / `P2` / `P3` | 優先度（P1 = 閲覧体験が壊れている、P2 = 明確な改善、P3 = nice to have） |
+| `hold` | 人間による自動処理の停止。付いた issue は実装されず、PR はマージされない |
+| `needs-human` | ループが人間の判断を求めている |
+| `loop:awaiting-review` | 実装完了・レビュー待ちのシグナル |
+
+### 介入方法（runbook）
+
+- **特定の issue / PR を止める** — `hold` ラベルを付ける
+- **ループ全体を止める** — claude.ai の設定で該当 trigger を無効化する
+- **悪い変更を巻き戻す** — `git revert` の PR を作ってマージする
+- **自動マージの有効化 / 停止** — `.claude/GUARDRAILS.md` の mode を編集する（保護パスなので必ず人間がマージする）
+
+### trigger 定義（claude.ai 上にあり repo 外のため記録）
+
+| JST | cron (UTC) | メッセージ |
+|-----|-----------|-----------|
+| 9:00 | `0 0 * * *` | `/publish-pages` |
+| 10:00 | `0 1 * * *` | `/evaluate-and-triage` |
+| 12:00 | `0 3 * * *` | `/select-and-develop` |
+| 15:00 | `0 6 * * *` | `/review-and-merge` |
+
 ## ニュースソース
 
 22ソースが定義済み。各ソースは `references/sources/*.md` に独立したファイルとして管理されている。
