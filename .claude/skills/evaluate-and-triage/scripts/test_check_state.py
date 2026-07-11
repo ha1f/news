@@ -25,13 +25,12 @@ def status_comment(stage, phase, created_at, ok=None):
 
 
 class SummarizeIssuesTest(unittest.TestCase):
-    def test_finds_status_issue_and_counts_daily_loop(self):
+    def test_finds_status_issue_and_counts_open_issues(self):
         issues = [
-            issue(25, title="📊 daily-loop status"),
-            issue(26, labels=["daily-loop", "P2"]),
-            issue(27, labels=["daily-loop", "hold"]),
-            issue(28, labels=["P1"]),          # daily-loop なし → 数えない
-            issue(29, labels=["daily-loop"], pr=True),  # PR → 数えない
+            issue(25, title="📊 daily-loop status"),  # status → 数えない
+            issue(26),
+            issue(27, labels=["hold"]),
+            issue(29, pr=True),  # PR → 数えない
         ]
         status_issue, count = summarize_issues(issues)
         self.assertEqual(status_issue, 25)

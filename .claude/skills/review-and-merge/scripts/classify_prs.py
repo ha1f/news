@@ -2,12 +2,14 @@
 """daily-loop: open PR をマージ候補かどうか機械判定して JSON で出力する。
 
 使い方: python3 classify_prs.py
-出力: {"config", "merge_candidates", "protected", "not_ready", "others"}
-  - merge_candidates: daily-loop + loop:awaiting-review + quiescence 達成 + 保護パス非該当
-  - protected: 上記のうち保護パスに触れる PR（auto-merge 禁止対象）
-  - not_ready: daily-loop だが doneness 未達（hold / ラベル欠け / quiescence 未達）→ 触らない
-  - others: daily-loop ラベルの無い PR（人間の作業など）
-diff レビュー・linked issue の完了要約確認・マージの実行はエージェントが行う。
+出力: {"config", "merge_candidates", "protected", "not_ready", "drafts", "hold", "external"}
+  - merge_candidates: ready かつ collaborator 名義・quiescence 達成・保護パス非該当
+  - protected: 上記のうち保護パスに触れる PR（auto-merge 禁止 → hold + 人間へ）
+  - not_ready: ready だが quiescence 未達 → 触らない
+  - drafts: draft の PR（作業中）→ 触らない
+  - hold: hold ラベル付き → 触らない
+  - external: collaborator 以外の ready PR → レビューコメントのみ
+diff レビュー・マージの実行はエージェントが行う。
 """
 import json
 import re
@@ -16,6 +18,7 @@ import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+TRUSTED = {"OWNER", "MEMBER", "COLLABORATOR"}
 LINK_RE = re.compile(r"(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?|refs?)\s+#(\d+)", re.I)
 
 
@@ -60,28 +63,27 @@ def protected_hits(files, patterns):
 
 
 def classify(prs, config, now):
-    """PR リストを分類する（純関数）。各 PR は number/title/labels/author_association/
-    body/files/last_commit_at を持つ dict。"""
+    """PR リストを分類する（純関数）。各 PR は number/title/draft/labels/
+    author_association/body/files/last_commit_at を持つ dict。"""
     quiescence = timedelta(minutes=config["quiescence_minutes"])
-    result = {"merge_candidates": [], "protected": [], "not_ready": [], "others": []}
+    result = {"merge_candidates": [], "protected": [], "not_ready": [],
+              "drafts": [], "hold": [], "external": []}
     for pr in sorted(prs, key=lambda p: p["number"]):
-        labels = set(pr["labels"])
         summary = {
             "number": pr["number"],
             "title": pr["title"],
-            "labels": sorted(labels),
             "author_association": pr["author_association"],
             "linked_issues": sorted({int(m.group(1))
                                      for m in LINK_RE.finditer(pr.get("body") or "")}),
         }
-        if "daily-loop" not in labels:
-            result["others"].append(summary)
+        if pr["draft"]:
+            result["drafts"].append(summary)
             continue
-        if "hold" in labels:
-            result["not_ready"].append({**summary, "reason": "hold"})
+        if "hold" in pr["labels"]:
+            result["hold"].append(summary)
             continue
-        if "loop:awaiting-review" not in labels:
-            result["not_ready"].append({**summary, "reason": "loop:awaiting-review なし"})
+        if pr["author_association"] not in TRUSTED:
+            result["external"].append(summary)
             continue
         last_commit = datetime.fromisoformat(pr["last_commit_at"].replace("Z", "+00:00"))
         if now - last_commit < quiescence:
@@ -105,6 +107,7 @@ def main():
         prs.append({
             "number": pr["number"],
             "title": pr["title"],
+            "draft": pr["draft"],
             "labels": [label["name"] for label in pr["labels"]],
             "author_association": pr["author_association"],
             "body": pr.get("body") or "",

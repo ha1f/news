@@ -47,21 +47,12 @@ flowchart LR
     review -.改善が翌日に反映.-> publish
 ```
 
-状態はすべて GitHub 上（issue / PR / ラベル / status issue）で受け渡す。数値上限・保護パス・auto-merge モードは [.claude/GUARDRAILS.md](.claude/GUARDRAILS.md) に集約されている。
-
-### ラベル
-
-| ラベル | 意味 |
-|--------|------|
-| `daily-loop` | ループが生成した issue / PR |
-| `P1` / `P2` / `P3` | 優先度（P1 = 閲覧体験が壊れている、P2 = 明確な改善、P3 = nice to have） |
-| `hold` | 人間による自動処理の停止。付いた issue は実装されず、PR はマージされない |
-| `needs-human` | ループが人間の判断を求めている |
-| `loop:awaiting-review` | 実装完了・レビュー待ちのシグナル |
+状態は GitHub ネイティブのもので受け渡す: PR の **draft（作業中・ループは触らない）/ ready（レビュー・マージ候補）**、issue の open / closed、linked PR、作者。専用ラベルは `hold`（自動処理を止めて人間が見る）の1つだけ。数値上限・保護パス・auto-merge モードは [.claude/GUARDRAILS.md](.claude/GUARDRAILS.md) に集約されている。
 
 ### 介入方法（runbook）
 
-- **特定の issue / PR を止める** — `hold` ラベルを付ける
+- **PR を自動マージさせない** — draft のままにするか、`hold` ラベルを付ける（ready な PR はレビュー後にマージされ得る）
+- **issue を自動実装させない** — `hold` ラベルを付ける
 - **ループ全体を止める** — claude.ai の設定で該当 trigger を無効化する
 - **悪い変更を巻き戻す** — `git revert` の PR を作ってマージする
 - **自動マージの有効化 / 停止** — `.claude/GUARDRAILS.md` の mode を編集する（保護パスなので必ず人間がマージする）

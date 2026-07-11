@@ -16,44 +16,40 @@ CONFIG = {
 }
 
 
-def pr(number, labels=(), files=("index.md",), last_commit="2026-07-11T10:00:00Z",
-       body="", assoc="OWNER"):
-    return {"number": number, "title": f"PR {number}", "labels": list(labels),
-            "files": list(files), "last_commit_at": last_commit, "body": body,
+def pr(number, draft=False, labels=(), files=("index.md",),
+       last_commit="2026-07-11T10:00:00Z", body="", assoc="OWNER"):
+    return {"number": number, "title": f"PR {number}", "draft": draft,
+            "labels": list(labels), "files": list(files),
+            "last_commit_at": last_commit, "body": body,
             "author_association": assoc}
 
 
 class ClassifyTest(unittest.TestCase):
-    def test_non_daily_loop_goes_to_others(self):
-        result = classify([pr(1)], CONFIG, NOW)
-        self.assertEqual([p["number"] for p in result["others"]], [1])
-
-    def test_doneness_gates(self):
+    def test_draft_hold_external_are_separated(self):
         prs = [
-            pr(1, labels=["daily-loop", "hold", "loop:awaiting-review"]),
-            pr(2, labels=["daily-loop"]),  # awaiting-review なし
-            pr(3, labels=["daily-loop", "loop:awaiting-review"],
-               last_commit="2026-07-11T11:45:00Z"),  # 15分前 = quiescence 未達
+            pr(1, draft=True),
+            pr(2, labels=["hold"]),
+            pr(3, assoc="NONE"),
         ]
         result = classify(prs, CONFIG, NOW)
-        reasons = {p["number"]: p["reason"] for p in result["not_ready"]}
-        self.assertEqual(reasons[1], "hold")
-        self.assertIn("awaiting-review", reasons[2])
-        self.assertIn("quiescence", reasons[3])
+        self.assertEqual([p["number"] for p in result["drafts"]], [1])
+        self.assertEqual([p["number"] for p in result["hold"]], [2])
+        self.assertEqual([p["number"] for p in result["external"]], [3])
+        self.assertEqual(result["merge_candidates"], [])
+
+    def test_quiescence_gate(self):
+        result = classify([pr(1, last_commit="2026-07-11T11:45:00Z")], CONFIG, NOW)
+        self.assertIn("quiescence", result["not_ready"][0]["reason"])
         self.assertEqual(result["merge_candidates"], [])
 
     def test_protected_path_detected(self):
-        result = classify(
-            [pr(1, labels=["daily-loop", "loop:awaiting-review"],
-                files=[".github/workflows/pages.yml"])], CONFIG, NOW)
+        result = classify([pr(1, files=[".github/workflows/pages.yml"])], CONFIG, NOW)
         self.assertEqual(result["protected"][0]["protected_files"],
                          [".github/workflows/pages.yml"])
         self.assertEqual(result["merge_candidates"], [])
 
-    def test_merge_candidate_with_linked_issues(self):
-        result = classify(
-            [pr(1, labels=["daily-loop", "loop:awaiting-review"],
-                body="Closes #26\nRefs #30")], CONFIG, NOW)
+    def test_ready_pr_becomes_candidate_with_linked_issues(self):
+        result = classify([pr(1, body="Closes #26\nRefs #30")], CONFIG, NOW)
         self.assertEqual(result["merge_candidates"][0]["linked_issues"], [26, 30])
 
 

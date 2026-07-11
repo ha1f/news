@@ -2,7 +2,7 @@
 """daily-loop: 評価前の配信状態・ループ健全性を機械判定して JSON で出力する。
 
 使い方: python3 check_state.py
-出力: {"config", "today", "post_in_main", "status_issue", "open_daily_loop_issues",
+出力: {"config", "today", "post_in_main", "status_issue", "open_issues",
        "health", "recent_status_comments"}
   - health: 前日の各ステージ (evaluate/develop/review) の start/end/ok 集計。
     status issue コメントの1行目 JSON（GUARDRAILS.md 参照）から機械判定する
@@ -55,17 +55,16 @@ def parse_guardrails(text):
 
 
 def summarize_issues(issues):
-    """open issue から status issue 番号と daily-loop issue 数を出す（純関数）"""
-    status_issue, daily_loop_count = None, 0
+    """open issue から status issue 番号と issue 数（status 除く）を出す（純関数）"""
+    status_issue, open_count = None, 0
     for issue in issues:
         if "pull_request" in issue:
             continue
         if STATUS_TITLE in issue["title"]:
             status_issue = issue["number"]
             continue
-        if any(label["name"] == "daily-loop" for label in issue["labels"]):
-            daily_loop_count += 1
-    return status_issue, daily_loop_count
+        open_count += 1
+    return status_issue, open_count
 
 
 def parse_status_records(comments):
@@ -111,7 +110,7 @@ def main():
     today = datetime.now(JST).strftime("%Y-%m-%d")
     post = gh_json(f"repos/{{owner}}/{{repo}}/contents/_posts/{today}-news.md", ok_404=True)
     issues = gh_json("repos/{owner}/{repo}/issues?state=open&per_page=100")
-    status_issue, daily_loop_count = summarize_issues(issues)
+    status_issue, open_count = summarize_issues(issues)
     comments = []
     if status_issue:
         comments = gh_json(
@@ -121,7 +120,7 @@ def main():
         "today": today,
         "post_in_main": post is not None,
         "status_issue": status_issue,
-        "open_daily_loop_issues": daily_loop_count,
+        "open_issues": open_count,
         "health": summarize_health(parse_status_records(comments), today),
         "recent_status_comments": [
             {"created_at": c["created_at"], "body": c["body"][:BODY_LIMIT]}
