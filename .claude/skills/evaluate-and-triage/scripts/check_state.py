@@ -2,10 +2,13 @@
 """daily-loop: 評価前の配信状態・ループ健全性を機械判定して JSON で出力する。
 
 使い方: python3 check_state.py
-出力: {"config", "today", "post_in_main", "status_issue", "open_issues",
-       "health", "recent_status_comments"}
+出力: {"config", "today", "post_in_main", "publish_in_progress", "pages_url",
+       "pages_build", "status_issue", "open_issues", "health",
+       "recent_status_comments"}
   - health: 前日の各ステージ (evaluate/develop/review) の start/end/ok 集計。
-    status issue コメントの1行目 JSON（GUARDRAILS.md 参照）から機械判定する
+    status issue コメントの1行目 JSON（GUARDRAILS.md 参照）から機械判定する。
+    missing = start も end も無いステージ（trigger 停止やセッション起動失敗の疑い）
+  - pages_build: 最新の pages.yml run（main のビルドが壊れていないかの判定材料）
 起票するかどうかの判断はエージェントが行う。
 """
 import json
@@ -22,8 +25,9 @@ COMMENT_LIMIT = 10
 BODY_LIMIT = 200
 
 
-def gh_json(path, ok_404=False):
-    proc = subprocess.run(["gh", "api", "--paginate", path], capture_output=True, text=True)
+def gh_json(path, ok_404=False, paginate=True):
+    cmd = ["gh", "api"] + (["--paginate"] if paginate else []) + [path]
+    proc = subprocess.run(cmd, capture_output=True, text=True)
     if proc.returncode != 0:
         if ok_404 and "404" in proc.stderr:
             return None
@@ -95,30 +99,52 @@ def summarize_health(records, today):
         elif record.get("phase") == "end":
             entry["end"] = True
             entry["ok"] = record.get("ok")
+    no_records = not any(v["start"] or v["end"] for v in stages.values())
     return {
         "yesterday": yesterday,
         "stages": stages,
         "incomplete": [s for s, v in stages.items() if v["start"] and not v["end"]],
         "failed": [s for s, v in stages.items() if v["ok"] is False],
-        "no_records": not any(v["start"] or v["end"] for v in stages.values()),
+        "missing": [] if no_records else
+                   [s for s, v in stages.items() if not v["start"] and not v["end"]],
+        "no_records": no_records,
     }
 
 
 def main():
     config = parse_guardrails(
         (Path(__file__).resolve().parents[3] / "GUARDRAILS.md").read_text())
-    today = datetime.now(JST).strftime("%Y-%m-%d")
+    now = datetime.now(JST)
+    today = now.strftime("%Y-%m-%d")
     post = gh_json(f"repos/{{owner}}/{{repo}}/contents/_posts/{today}-news.md", ok_404=True)
+    pages = gh_json("repos/{owner}/{repo}/pages", ok_404=True, paginate=False)
+    runs = gh_json("repos/{owner}/{repo}/actions/workflows/pages.yml/runs?per_page=1",
+                   ok_404=True, paginate=False)
+    latest_run = (runs or {}).get("workflow_runs") or []
+    pages_build = None
+    if latest_run:
+        pages_build = {key: latest_run[0][key]
+                       for key in ("status", "conclusion", "head_sha", "updated_at")}
+    prs = gh_json("repos/{owner}/{repo}/pulls?state=open&per_page=100")
+    publish_in_progress = (
+        any(pr["head"]["ref"].startswith("pages/") for pr in prs)
+        or (pages_build is not None and pages_build["status"] != "completed"))
     issues = gh_json("repos/{owner}/{repo}/issues?state=open&per_page=100")
     status_issue, open_count = summarize_issues(issues)
     comments = []
     if status_issue:
+        # health 判定に要るのは前日以降だけなので since で絞る（コメントは日々増えるため）
+        since = (now - timedelta(days=1)).replace(hour=0, minute=0, second=0).isoformat()
         comments = gh_json(
-            f"repos/{{owner}}/{{repo}}/issues/{status_issue}/comments?per_page=100")
+            f"repos/{{owner}}/{{repo}}/issues/{status_issue}/comments"
+            f"?per_page=100&since={since}")
     json.dump({
         "config": config,
         "today": today,
         "post_in_main": post is not None,
+        "publish_in_progress": publish_in_progress,
+        "pages_url": (pages or {}).get("html_url"),
+        "pages_build": pages_build,
         "status_issue": status_issue,
         "open_issues": open_count,
         "health": summarize_health(parse_status_records(comments), today),

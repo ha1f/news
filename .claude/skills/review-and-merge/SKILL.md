@@ -10,7 +10,7 @@ open PR をレビューし、合格したものをマージする。実装セッ
 ## 手順
 
 1. `python3 .claude/skills/review-and-merge/scripts/classify_prs.py` を実行する。draft / hold / 作者の信頼 / quiescence / 保護パスは機械判定済みで、`merge_candidates` / `protected` / `not_ready` / `drafts` / `hold` / `external` に分類された JSON が返る
-2. 全カテゴリが空なら status issue に「対象なし」を記録して終了する
+2. 全カテゴリが空なら status issue に「対象なし」を記録し、reflect-and-improve を実行して終了する（レビューの subagent は起動しない）
 3. `drafts` / `hold` / `not_ready` には触れない（作業中の可能性がある。翌日の run が拾う）
 4. `external`（collaborator 以外の ready PR）はレビューコメントのみ。同一 head SHA に既にこのループのコメントがあれば何もしない。マージはしない
 5. `protected` はレビューのうえ `hold` + 理由コメントを付けて人間に委ねる。マージはしない
@@ -26,13 +26,15 @@ open PR をレビューし、合格したものをマージする。実装セッ
 
 レビューした候補は必ず次のいずれかに落とす（ready のまま放置しない）:
 
-- **合格** → squash マージ（`gh pr merge --squash --delete-branch`）→ `gh run list --workflow=pages.yml --limit 1` で main のビルドを確認（failure なら即 revert PR を作って自分でマージ）→ linked issue に open な linked PR が残っていなければ、受け入れ条件と突合したコメントを付けて close する
+- **合格** → マージ前に `gh pr view --json mergeable,statusCheckRollup` で conflict と checks を確認する（red / conflict は要修正として扱う）→ squash マージ（`gh pr merge --squash --delete-branch`）→ マージ commit の SHA に対応する run を待って main のビルドを確認する（`gh run list --workflow=pages.yml --commit <マージ後の main SHA>` で run を特定し、現れるまで待って `gh run watch <run id>`。直前の別 run で代用しない）。conclusion が failure なら即 revert PR を作って自分でマージし、status issue に記録する → linked issue に open な linked PR が残っていなければ、受け入れ条件と突合したコメントを付けて close する
 - **要修正**（linked issue あり）→ 指摘をコメントして draft に戻す（`gh pr ready --undo`。翌日12時の run が拾う）
-- **要修正**（linked issue なし）/ **不採用** → 理由をコメントして close する
+- **要修正**（linked issue なし）→ 有効な学びを含むなら指摘内容を issue に起票してから、理由をコメントして close する（学びを黙って失わない）
+- **不採用** → 理由をコメントして close する
 
-`auto_merge_mode` が `dry-run` の間は、マージ・close・draft 化・ラベル付与を実行せず、各 PR に「合格 / 不合格と理由」の判定コメントだけを残す。
+`auto_merge_mode` が `dry-run` の間は、マージ・close・draft 化・ラベル付与を実行せず、各 PR に判定コメントだけを残す。判定コメントの1行目は `[dry-run] 合格` / `[dry-run] 不合格` で始め、同一 head SHA に既にこのループの判定コメントがある PR はレビューし直さない（毎日同じ diff に subagent を使わない）。
 
 ## 完了条件
 
 - 全カテゴリ処理済みで、結果（マージ / close / draft 戻し / hold）が status issue に記録されている（1行目 JSON、stage は `review`）
+- 保護パスへの `hold` 付与または revert を行った場合は、Slack ツールが使えればオーナーに DM で1通知する（人間ゲート行きは人間が気づけて初めて機能する）
 - 最後に reflect-and-improve を実行し、作成した改善 PR を ready 化する（翌日の run のレビュー対象になる）

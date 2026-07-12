@@ -22,6 +22,8 @@ GitHub ネイティブの状態だけで回す: PR の draft（作業中・触�
 
 status issue（📊 daily-loop status）へのコメントは1行目を JSON にする（例: `{"stage": "develop", "phase": "end", "ok": true, "summary": "#26 実装 → PR #27"}`。stage は evaluate / develop / review）。スクリプトがこれを読んで前日の健全性を機械判定する。
 
+全アクションがオーナー名義のため GitHub 通知は発生しない。人間の対応が必要になったとき（緊急 issue の起票・保護パスへの hold・revert 実行）は、Slack ツールが使えればオーナーに DM で1通知する。
+
 ## 設計原則（ループを改善するときの憲法）
 
 - 決定的な処理（抽出・フィルタ・分類・状態確認）はスクリプトに寄せ、LLM には判断だけさせる

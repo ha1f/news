@@ -51,6 +51,7 @@ class HealthTest(unittest.TestCase):
         health = summarize_health(parse_status_records(comments), "2026-07-11")
         self.assertEqual(health["incomplete"], [])
         self.assertEqual(health["failed"], [])
+        self.assertEqual(health["missing"], [])
         self.assertFalse(health["no_records"])
 
     def test_dead_session_detected_as_incomplete(self):
@@ -60,6 +61,21 @@ class HealthTest(unittest.TestCase):
         ]
         health = summarize_health(parse_status_records(comments), "2026-07-11")
         self.assertEqual(health["incomplete"], ["evaluate"])
+        # start があるので missing ではない。develop/review は無記録なので missing
+        self.assertEqual(health["missing"], ["develop", "review"])
+
+    def test_silently_dead_stage_detected_as_missing(self):
+        # evaluate だけ無記録（trigger 停止など）で他は正常 → missing に出る
+        comments = [
+            status_comment("develop", "start", "2026-07-10T03:00:00Z"),
+            status_comment("develop", "end", "2026-07-10T04:00:00Z", ok=True),
+            status_comment("review", "start", "2026-07-10T06:00:00Z"),
+            status_comment("review", "end", "2026-07-10T06:30:00Z", ok=True),
+        ]
+        health = summarize_health(parse_status_records(comments), "2026-07-11")
+        self.assertEqual(health["missing"], ["evaluate"])
+        self.assertEqual(health["incomplete"], [])
+        self.assertFalse(health["no_records"])
 
     def test_failed_stage_and_no_records(self):
         comments = [
@@ -70,6 +86,8 @@ class HealthTest(unittest.TestCase):
         self.assertEqual(health["failed"], ["review"])
         empty = summarize_health([], "2026-07-11")
         self.assertTrue(empty["no_records"])
+        # 導入直後（全ステージ無記録）は missing を立てない
+        self.assertEqual(empty["missing"], [])
 
     def test_ignores_other_days_and_non_json_comments(self):
         comments = [
