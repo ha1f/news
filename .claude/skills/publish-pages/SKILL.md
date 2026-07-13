@@ -108,7 +108,7 @@ gh pr merge --squash --delete-branch
 
 ### 7. 振り返りと改善
 
-Skill ツールで `reflect-and-improve` を実行する。
+Skill ツールで `reflect-and-improve` を実行する。作成された改善 PR は ready 化する（`gh pr ready`。15時の review-and-merge のレビュー対象になる。draft のままだと誰にも拾われない）。
 
 ## 付録: 初回セットアップ
 

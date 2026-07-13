@@ -35,6 +35,37 @@ flowchart LR
 3. **キュレーション** — 全記事を統合・重複排除し、興味との関連度とスコアで選定
 4. **出力** — 日本語のマークダウン形式で表示し、`output/{YYYY-MM-DD}-{hash}.md` に保存（hashは好みファイルのMD5先頭8文字）
 
+## 毎日の自動ループ
+
+claude.ai のクラウド trigger が毎日4つのステージを実行し、キュレーション→評価→実装→マージまで自動で回る。スキル・プロンプトの改善 PR も自動マージされる自己改善ループ。
+
+```mermaid
+flowchart LR
+    publish["9:00 /publish-pages\nキュレーション→デプロイ"] --> evaluate["10:00 /evaluate-and-triage\nユーザ評価→issue化"]
+    evaluate --> develop["12:00 /select-and-develop\nissue選定→実装"]
+    develop --> review["15:00 /review-and-merge\nレビュー→マージ"]
+    review -.改善が翌日に反映.-> publish
+```
+
+状態は GitHub ネイティブのもので受け渡す: PR の **draft（作業中・ループは触らない）/ ready（レビュー・マージ候補）**、issue の open / closed、linked PR、作者。専用ラベルは `hold`（自動処理を止めて人間が見る）の1つだけ。数値上限・保護パス・auto-merge モードは [.claude/GUARDRAILS.md](.claude/GUARDRAILS.md) に集約されている。
+
+### 介入方法（runbook）
+
+- **PR を自動マージさせない** — draft のままにするか、`hold` ラベルを付ける（ready な PR はレビュー後にマージされ得る）
+- **issue を自動実装させない** — `hold` ラベルを付ける
+- **ループ全体を止める** — claude.ai の設定で該当 trigger を無効化する
+- **悪い変更を巻き戻す** — `git revert` の PR を作ってマージする
+- **自動マージの有効化 / 停止** — `.claude/GUARDRAILS.md` の mode を編集する（保護パスなので必ず人間がマージする）
+
+### trigger 定義（claude.ai 上にあり repo 外のため記録）
+
+| JST | cron (UTC) | メッセージ |
+|-----|-----------|-----------|
+| 9:00 | `0 0 * * *` | `/publish-pages` |
+| 10:00 | `0 1 * * *` | `/evaluate-and-triage` |
+| 12:00 | `0 3 * * *` | `/select-and-develop` |
+| 15:00 | `0 6 * * *` | `/review-and-merge` |
+
 ## ニュースソース
 
 22ソースが定義済み。各ソースは `references/sources/*.md` に独立したファイルとして管理されている。
@@ -115,6 +146,7 @@ flowchart LR
 3. **ソースの調整** — 不要なソースを削除したり、読んでいるメディアを追加する（[追加方法](#ソースの追加)）
 4. **GitHub Pagesの有効化** — リポジトリの **Settings → Pages** で Source を `main` ブランチに設定する。公開URLは `https://{ユーザー名}.github.io/news/` になる
 5. **実行** — Claude Code で `/publish-pages` を実行し、PRをマージすれば公開される
+6. **（任意）毎日の自動ループ** — [毎日の自動ループ](#毎日の自動ループ) を使う場合は、pinned の status issue（📊 daily-loop status）と `hold` ラベルを作成し、claude.ai で trigger を設定する（[trigger 定義](#trigger-定義claudeai-上にあり-repo-外のため記録)参照）。評価対象の URL は Pages API から自動解決される
 
 ## ファイル構成
 
