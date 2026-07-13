@@ -97,9 +97,7 @@ def classify(prs, config, now):
     return result
 
 
-def main():
-    config = parse_guardrails(
-        (Path(__file__).resolve().parents[3] / "GUARDRAILS.md").read_text())
+def fetch_prs_via_gh():
     prs = []
     for pr in gh_json("repos/{owner}/{repo}/pulls?state=open&per_page=100"):
         commits = gh_json(f"repos/{{owner}}/{{repo}}/pulls/{pr['number']}/commits?per_page=100")
@@ -114,6 +112,16 @@ def main():
             "files": [f["filename"] for f in files],
             "last_commit_at": commits[-1]["commit"]["committer"]["date"],
         })
+    return prs
+
+
+def main():
+    config = parse_guardrails(
+        (Path(__file__).resolve().parents[3] / "GUARDRAILS.md").read_text())
+    if "--stdin" in sys.argv or not sys.stdin.isatty():
+        prs = json.load(sys.stdin)
+    else:
+        prs = fetch_prs_via_gh()
     result = classify(prs, config, datetime.now(timezone.utc))
     json.dump({"config": config, **result}, sys.stdout, ensure_ascii=False, indent=1)
 
