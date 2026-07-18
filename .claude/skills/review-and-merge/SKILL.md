@@ -9,7 +9,7 @@ open PR をレビューし、合格したものをマージする。実装セッ
 
 ## 手順
 
-1. `python3 .claude/skills/review-and-merge/scripts/classify_prs.py` を実行する。draft / hold / 作者の信頼 / quiescence / 保護パスは機械判定済みで、`merge_candidates` / `protected` / `not_ready` / `drafts` / `hold` / `external` に分類された JSON が返る
+1. `python3 .claude/skills/review-and-merge/scripts/classify_prs.py` を実行する。`gh` CLI が使えない環境では、MCP ツールで PR データ（number, title, draft, labels, author_association, body, files, last_commit_at）を取得し、JSON 配列として stdin に渡す（`--stdin` フラグまたはパイプ）。draft / hold / 作者の信頼 / quiescence / 保護パスは機械判定済みで、`merge_candidates` / `protected` / `not_ready` / `drafts` / `hold` / `external` に分類された JSON が返る
 2. 全カテゴリが空なら status issue に「対象なし」を記録し、reflect-and-improve を実行して終了する（レビューの subagent は起動しない）
 3. `drafts` / `hold` / `not_ready` には触れない（作業中の可能性がある。翌日の run が拾う）
 4. `external`（collaborator 以外の ready PR）はレビューコメントのみ。同一 head SHA に既にこのループのコメントがあれば何もしない。マージはしない
