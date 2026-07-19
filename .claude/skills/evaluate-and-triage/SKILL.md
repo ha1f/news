@@ -11,6 +11,12 @@ description: "デプロイ済みのニュースサイトをサービスユーザ
 
 `python3 .claude/skills/evaluate-and-triage/scripts/check_state.py` を実行する。設定値・今日の投稿の有無・Pages のビルド状態・status issue 番号・open issue 数・前日の健全性集計（`health`）が JSON で返る。
 
+`gh` CLI が使えない環境（CCR 等）では、MCP ツールでデータを取得し `--stdin` で渡す:
+
+```json
+{"post_exists": true, "pages": {"html_url": "..."}, "pages_build": {"status": "completed", "conclusion": "success"}, "prs": [...], "issues": [...], "comments": [...]}
+```
+
 - `post_in_main` が false → `publish_in_progress` が true なら publish がまだ走行中。status issue に記録だけして終了する。false なら 9時の失敗として緊急の ops issue を起票し、評価はスキップする
 - `pages_build.conclusion` が failure → main のビルドが壊れている（伝搬遅延ではない）。緊急の ops issue を起票する
 - `health.incomplete` / `health.failed` / `health.missing` が非空 → セッション死亡・失敗・無記録（trigger 停止の疑い）。`git log --since=24hours origin/main -- .claude/` で直近24時間に `.claude/` を変更したマージが有るか確認し、有れば「その変更を revert する」緊急 issue、無ければ「失敗原因を調査する」issue を起票する（一過性の失敗で良い変更を revert しない）。`health.no_records` が true（導入直後）なら起票せず記録だけして進む

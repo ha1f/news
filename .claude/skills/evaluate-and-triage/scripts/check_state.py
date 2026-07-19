@@ -111,11 +111,33 @@ def summarize_health(records, today):
     }
 
 
-def main():
-    config = parse_guardrails(
-        (Path(__file__).resolve().parents[3] / "GUARDRAILS.md").read_text())
-    now = datetime.now(JST)
-    today = now.strftime("%Y-%m-%d")
+def assemble_output(config, today, post_exists, pages, pages_build,
+                    prs, issues, comments):
+    """取得済みデータから出力 JSON を組み立てる（純関数）。"""
+    publish_in_progress = (
+        any(pr.get("head", {}).get("ref", "").startswith("pages/") for pr in prs)
+        or (pages_build is not None and pages_build.get("status") != "completed"))
+    status_issue, open_count = summarize_issues(issues)
+    records = parse_status_records(comments)
+    return {
+        "config": config,
+        "today": today,
+        "post_in_main": post_exists,
+        "publish_in_progress": publish_in_progress,
+        "pages_url": (pages or {}).get("html_url"),
+        "pages_build": pages_build,
+        "status_issue": status_issue,
+        "open_issues": open_count,
+        "health": summarize_health(records, today),
+        "recent_status_comments": [
+            {"created_at": c["created_at"], "body": c["body"][:BODY_LIMIT]}
+            for c in comments[-COMMENT_LIMIT:]
+        ],
+    }
+
+
+def fetch_via_gh(config, today, now):
+    """gh CLI でデータを取得し assemble_output に渡す。"""
     post = gh_json(f"repos/{{owner}}/{{repo}}/contents/_posts/{today}-news.md", ok_404=True)
     pages = gh_json("repos/{owner}/{repo}/pages", ok_404=True, paginate=False)
     runs = gh_json("repos/{owner}/{repo}/actions/workflows/pages.yml/runs?per_page=1",
@@ -126,33 +148,39 @@ def main():
         pages_build = {key: latest_run[0][key]
                        for key in ("status", "conclusion", "head_sha", "updated_at")}
     prs = gh_json("repos/{owner}/{repo}/pulls?state=open&per_page=100")
-    publish_in_progress = (
-        any(pr["head"]["ref"].startswith("pages/") for pr in prs)
-        or (pages_build is not None and pages_build["status"] != "completed"))
     issues = gh_json("repos/{owner}/{repo}/issues?state=open&per_page=100")
-    status_issue, open_count = summarize_issues(issues)
+    status_issue, _ = summarize_issues(issues)
     comments = []
     if status_issue:
-        # health 判定に要るのは前日以降だけなので since で絞る（コメントは日々増えるため）
         since = (now - timedelta(days=1)).replace(hour=0, minute=0, second=0).isoformat()
         comments = gh_json(
             f"repos/{{owner}}/{{repo}}/issues/{status_issue}/comments"
             f"?per_page=100&since={since}")
-    json.dump({
-        "config": config,
-        "today": today,
-        "post_in_main": post is not None,
-        "publish_in_progress": publish_in_progress,
-        "pages_url": (pages or {}).get("html_url"),
-        "pages_build": pages_build,
-        "status_issue": status_issue,
-        "open_issues": open_count,
-        "health": summarize_health(parse_status_records(comments), today),
-        "recent_status_comments": [
-            {"created_at": c["created_at"], "body": c["body"][:BODY_LIMIT]}
-            for c in comments[-COMMENT_LIMIT:]
-        ],
-    }, sys.stdout, ensure_ascii=False, indent=1)
+    return assemble_output(config, today, post is not None, pages, pages_build,
+                           prs, issues, comments)
+
+
+def main():
+    config = parse_guardrails(
+        (Path(__file__).resolve().parents[3] / "GUARDRAILS.md").read_text())
+    now = datetime.now(JST)
+    today = now.strftime("%Y-%m-%d")
+
+    if "--stdin" in sys.argv or not sys.stdin.isatty():
+        data = json.load(sys.stdin)
+        result = assemble_output(
+            config, today,
+            post_exists=data["post_exists"],
+            pages=data.get("pages"),
+            pages_build=data.get("pages_build"),
+            prs=data.get("prs", []),
+            issues=data.get("issues", []),
+            comments=data.get("comments", []),
+        )
+    else:
+        result = fetch_via_gh(config, today, now)
+
+    json.dump(result, sys.stdout, ensure_ascii=False, indent=1)
 
 
 if __name__ == "__main__":
