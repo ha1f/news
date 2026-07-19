@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """daily-loop: 実装候補 issue を機械抽出して JSON で出力する。
 
-使い方: python3 select_issues.py
+使い方:
+  python3 select_issues.py                    # gh CLI でデータ取得
+  echo '{"issues": [...], "prs": [...]}' | python3 select_issues.py --stdin
+
 出力: {"config", "status_issue", "in_progress", "backlog"}
   - in_progress: open な linked PR を持つ issue（要対応かはエージェントが判断）
   - backlog: linked PR の無い issue。作成日の古い順
@@ -64,8 +67,8 @@ def build_candidates(issues, prs):
         if STATUS_TITLE in issue["title"]:
             status_issue = issue["number"]
             continue
-        labels = {label["name"] for label in issue["labels"]}
-        if issue["author_association"] not in TRUSTED or "hold" in labels:
+        labels = {label["name"] for label in issue.get("labels", [])}
+        if issue.get("author_association", "") not in TRUSTED or "hold" in labels:
             continue
         entry = {
             "number": issue["number"],
@@ -78,11 +81,25 @@ def build_candidates(issues, prs):
     return status_issue, sorted(in_progress, key=sort_key), sorted(backlog, key=sort_key)
 
 
+def fetch_via_gh():
+    """gh CLI でデータを取得する。"""
+    issues = gh_json("repos/{owner}/{repo}/issues?state=open&per_page=100")
+    prs = gh_json("repos/{owner}/{repo}/pulls?state=open&per_page=100")
+    return issues, prs
+
+
 def main():
     config = parse_guardrails(
         (Path(__file__).resolve().parents[3] / "GUARDRAILS.md").read_text())
-    issues = gh_json("repos/{owner}/{repo}/issues?state=open&per_page=100")
-    prs = gh_json("repos/{owner}/{repo}/pulls?state=open&per_page=100")
+
+    use_stdin = "--stdin" in sys.argv or not sys.stdin.isatty()
+    if use_stdin:
+        data = json.load(sys.stdin)
+        issues = data["issues"]
+        prs = data["prs"]
+    else:
+        issues, prs = fetch_via_gh()
+
     status_issue, in_progress, backlog = build_candidates(issues, prs)
     json.dump({
         "config": config,
