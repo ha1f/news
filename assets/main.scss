@@ -1,0 +1,17 @@
+---
+---
+@import "minima";
+
+.post-navigation {
+  display: flex;
+  justify-content: space-between;
+  margin-top: $spacing-unit;
+  padding-top: calc($spacing-unit / 2);
+  border-top: 1px solid $grey-color-light;
+  font-size: $base-font-size * 0.9375;
+}
+
+.post-navigation-next {
+  margin-left: auto;
+  text-align: right;
+}
