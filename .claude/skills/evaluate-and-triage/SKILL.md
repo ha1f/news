@@ -18,7 +18,7 @@ description: "デプロイ済みのニュースサイトをサービスユーザ
 ```
 
 - `post_in_main` が false → `publish_in_progress` が true なら publish がまだ走行中。status issue に記録だけして終了する。false なら 9時の失敗として緊急の ops issue を起票し、評価はスキップする
-- `pages_build.conclusion` が failure → main のビルドが壊れている（伝搬遅延ではない）。緊急の ops issue を起票する
+- `pages_build.conclusion` が failure → ログを確認して build job と deploy job のどちらが失敗したか切り分ける。build job が失敗していればコードが壊れているので緊急の ops issue を起票する。deploy job のみの失敗（503 等の一過性エラー）は `rerun_failed_jobs` で再実行し、再実行も失敗したら ops issue を起票する
 - `health.incomplete` / `health.failed` / `health.missing` が非空 → セッション死亡・失敗・無記録（trigger 停止の疑い）。`git log --since=24hours origin/main -- .claude/` で直近24時間に `.claude/` を変更したマージが有るか確認し、有れば「その変更を revert する」緊急 issue、無ければ「失敗原因を調査する」issue を起票する（一過性の失敗で良い変更を revert しない）。`health.no_records` が true（導入直後）なら起票せず記録だけして進む
 - main に有るがサイト未反映（ビルドは success）は伝搬遅延。issue 化せず、反映済みの最新記事を評価する
 
