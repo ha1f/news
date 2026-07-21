@@ -1,0 +1,36 @@
+---
+layout: default
+---
+
+<div class="home">
+
+  {{ content }}
+
+  <h2 class="post-list-heading">最新の記事</h2>
+
+  {%- assign date_format = site.minima.date_format | default: "%Y年%-m月%-d日" -%}
+  {%- assign recent_posts = site.posts | slice: 0, 7 -%}
+
+  <ul class="post-list">
+    {%- for post in recent_posts -%}
+    <li>
+      <span class="post-meta">{{ post.date | date: date_format }}</span>
+      <h3>
+        <a class="post-link" href="{{ post.url | relative_url }}">{{ post.title | escape }}</a>
+      </h3>
+      {%- if post.excerpt -%}
+        <div class="post-excerpt">{{ post.excerpt }}</div>
+      {%- endif -%}
+    </li>
+    {%- endfor -%}
+  </ul>
+
+  <p class="post-list-archive">
+    <a href="{{ '/archive.html' | relative_url }}">すべての記事を見る &rarr;</a>
+  </p>
+
+  <p class="rss-subscribe">
+    <a href="{{ 'feed.xml' | relative_url }}">RSSで購読する</a>
+  </p>
+
+</div>
