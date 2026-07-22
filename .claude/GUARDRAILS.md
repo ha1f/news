@@ -5,7 +5,6 @@
 ```yaml
 max_new_issues_per_day: 3      # PdM の新規 issue 作成上限
 open_issue_cap: 10             # open issue（status issue 除く）がこれを超えたらグルーミングのみ
-max_develop_runs_per_day: 2    # develop-issue の実行上限
 quiescence_minutes: 30         # マージ前に PR の最終 commit から置く時間
 auto_merge_mode: enabled       # dry-run（判定コメントのみ）| enabled（自動マージ）
 protected_paths:               # 触れる PR は auto-merge 禁止 → hold を付けて人間に委ねる
