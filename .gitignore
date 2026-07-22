@@ -43,3 +43,7 @@ Temporary Items
 # End of https://www.toptal.com/developers/gitignore/api/macos
 # Python
 __pycache__/
+
+# Jekyll
+.sass-cache/
+_site/
