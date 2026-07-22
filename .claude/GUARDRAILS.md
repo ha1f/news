@@ -12,10 +12,9 @@ protected_paths:               # 触れる PR は auto-merge 禁止 → hold を
   - .claude/skills/review-and-merge/**
   - .github/workflows/**
   - .claude/GUARDRAILS.md
-  - VISION.md
 ```
 
-保護パスにこのファイル自身・review-and-merge・VISION.md が含まれるため、安全装置や目的を変える変更は必ず人間のマージを通る。
+保護パスにこのファイル自身と review-and-merge が含まれるため、安全装置を緩める変更は必ず人間のマージを通る。
 
 ## 状態の持ち方
 
