@@ -5,7 +5,6 @@
 ```yaml
 max_new_issues_per_day: 3      # PdM の新規 issue 作成上限
 open_issue_cap: 10             # open issue（status issue 除く）がこれを超えたらグルーミングのみ
-max_develop_runs_per_day: 2    # develop-issue の実行上限
 quiescence_minutes: 30         # マージ前に PR の最終 commit から置く時間
 auto_merge_mode: enabled       # dry-run（判定コメントのみ）| enabled（自動マージ）
 protected_paths:               # 触れる PR は auto-merge 禁止 → hold を付けて人間に委ねる
@@ -23,6 +22,14 @@ GitHub ネイティブの状態だけで回す: PR の draft（作業中・触�
 status issue（📊 daily-loop status）へのコメントは1行目を JSON にする（例: `{"stage": "develop", "phase": "end", "ok": true, "summary": "#26 実装 → PR #27"}`。stage は evaluate / develop / review）。スクリプトがこれを読んで前日の健全性を機械判定する。
 
 全アクションがオーナー名義のため GitHub 通知は発生しない。人間の対応が必要になったとき（緊急 issue の起票・保護パスへの hold・revert 実行）は、Slack ツールが使えればオーナーに DM で1通知する。
+
+## コンテンツの権利ガードレール
+
+配信する文章は「事実は自由、表現は保護」の原則で書く。見出し・リンクによる所在表示は検索サービスと同様に原則適法だが、要約は厚くするほど原文の翻案（著作権侵害）に近づく。価値は要約の詳しさではなく選定と導線で出す。
+
+- リード・読みどころ・要約は事実と論点の抽出に限る。原文の構成・修辞をなぞる詳細要約や逐語訳はしない
+- 記事本文・記事画像は転載せず、リンクで原文に誘導する
+- ソースの利用規約（RSS の商用利用条件等）の整理は有料化前に人間が行う
 
 ## 設計原則（ループを改善するときの憲法）
 

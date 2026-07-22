@@ -98,7 +98,7 @@ python3 .claude/skills/curate-news/scripts/fetch_feeds.py --source hatena --cate
 
 ### 5. 出力
 
-海外ニュースも含めて全て日本語で出力する。
+海外ニュースも含めて全て日本語で出力する。表現は [.claude/GUARDRAILS.md](../../GUARDRAILS.md) のコンテンツの権利ガードレールに従う。
 
 ```
 ## ニュース ({取得日時} JST)
