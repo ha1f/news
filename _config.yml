@@ -11,5 +11,4 @@ exclude: [CLAUDE.md, README.md]
 rss: "RSS"
 
 minima:
-  skin: auto
   date_format: "%Y年%-m月%-d日"
