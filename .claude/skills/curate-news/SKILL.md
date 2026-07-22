@@ -98,7 +98,7 @@ python3 .claude/skills/curate-news/scripts/fetch_feeds.py --source hatena --cate
 
 ### 5. 出力
 
-海外ニュースも含めて全て日本語で出力する。
+海外ニュースも含めて全て日本語で出力する。表現は [.claude/GUARDRAILS.md](../../GUARDRAILS.md) のコンテンツの権利ガードレールに従う。
 
 ```
 ## ニュース ({取得日時} JST)
@@ -129,7 +129,7 @@ python3 .claude/skills/curate-news/scripts/fetch_feeds.py --source hatena --cate
 - 何が起きたのか・何が面白いのかが見出しだけで伝わるように
 - 長いタイトルはエッセンスを残して短縮する（目安30字以内）
 - 英語記事は日本語の見出しとして自然な表現にする
-- 元タイトルが既に良ければそのまま使ってよい
+- 元タイトルの事実要素は使ってよいが、言い回しは自分の言葉で付け直す（日本語ソースの原題をそのまま転記しない）
 
 #### 読みどころ（各記事の補足）
 
