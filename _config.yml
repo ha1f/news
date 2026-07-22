@@ -6,7 +6,7 @@ author: ha1f
 description: "気になるテック・経済ニュースを毎日キュレーション"
 theme: minima
 baseurl: "/news"
-header_pages: [archive.md]
+header_pages: [about.md, archive.md]
 exclude: [CLAUDE.md, README.md]
 rss: "RSS"
 
