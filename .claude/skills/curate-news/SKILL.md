@@ -68,13 +68,15 @@ python3 .claude/skills/curate-news/scripts/fetch_feeds.py --source hatena --forc
 
 #### 4a. サマリーで候補を絞る
 
-まず、過去に掲載した記事のURLリストを取得する:
+まず、過去に掲載した記事のURLリストと掲載済みヘッドラインを取得する:
 
 ```bash
 python3 .claude/skills/curate-news/scripts/recent_urls.py
+python3 .claude/skills/curate-news/scripts/recent_topics.py
 ```
 
-出力されたURLはこのステップ以降の除外対象とする。
+- URLリストはこのステップ以降の除外対象とする
+- ヘッドラインはトピック重複チェックに使う（次の絞り込みで参照）
 
 次に、ステップ2で選択したソース・カテゴリを `--show-cache-summary` で一覧表示する:
 
@@ -85,8 +87,11 @@ python3 .claude/skills/curate-news/scripts/fetch_feeds.py --source hatena --cate
 
 タイトル・URL・スコアから候補を30件程度に絞る。この段階では:
 1. 同じURLの記事を1つにまとめる（重複排除）。過去掲載URLに一致する記事も除外する
-2. 好みファイルの「読みたくない記事」に該当するものを除外する
-3. 興味・関心との関連度、スコアから有力候補を選ぶ
+2. **トピック重複チェック**: 候補のタイトルを掲載済みヘッドラインと照合し、同一トピック（同じ事件・発表・出来事）の記事を検出する。URLが異なっても、別ソース・別角度で同じ話題を扱う記事は重複とみなす
+   - 重要な新事実や進展がある続報のみ残し、読みどころに「続報」と明記する
+   - 単なる別ソースからの焼き直し（新情報なし）は除外する
+3. 好みファイルの「読みたくない記事」に該当するものを除外する
+4. 興味・関心との関連度、スコアから有力候補を選ぶ
 
 #### 4b. description を読んで最終選定
 
