@@ -13,7 +13,7 @@ layout: default
 
   <ul class="post-list">
     {%- for post in recent_posts -%}
-    <li>
+    <li data-date="{{ post.date | date: '%Y-%m-%d' }}">
       <span class="post-meta">{{ post.date | date: date_format }}</span>
       <h3>
         <a class="post-link" href="{{ post.url | relative_url }}">{{ post.title | escape }}</a>
@@ -24,6 +24,19 @@ layout: default
     </li>
     {%- endfor -%}
   </ul>
+
+  <script>
+  (function() {
+    var today = new Date().toLocaleDateString('en-CA', {timeZone: 'Asia/Tokyo'});
+    var items = document.querySelectorAll('.post-list li[data-date]');
+    for (var i = 0; i < items.length; i++) {
+      if (items[i].getAttribute('data-date') === today) {
+        items[i].classList.add('is-today');
+        break;
+      }
+    }
+  })();
+  </script>
 
   <p class="post-list-archive">
     <a href="{{ '/archive.html' | relative_url }}">すべての記事を見る &rarr;</a>
