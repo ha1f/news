@@ -10,6 +10,9 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      # latest 追従で全 PR の check が突然 red になるのを防ぐ（CI green はループのマージ条件）
+      PLAYWRIGHT_VERSION: 1.61.1
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -20,3 +23,36 @@ jobs:
         with:
           source: ./
           destination: ./_site
+      # baseurl (/news) 込みの URL を再現するため /news 配下に置いて配信する
+      - name: Serve site
+        run: |
+          mkdir -p serve/news
+          cp -r _site/. serve/news/
+          python3 -m http.server 4000 --directory serve &
+          sleep 1
+      - name: Install Playwright
+        run: npx --yes "playwright@$PLAYWRIGHT_VERSION" install --with-deps chromium
+      - name: Screenshot pages
+        run: |
+          mkdir -p screenshots
+          shot() {
+            npx --yes "playwright@$PLAYWRIGHT_VERSION" screenshot --browser chromium --full-page \
+              --viewport-size "$1" --color-scheme "$2" "$3" "screenshots/$4"
+          }
+          shot 1280,900 light "http://localhost:4000/news/" home-light.png
+          shot 1280,900 dark  "http://localhost:4000/news/" home-dark.png
+          shot 375,812  light "http://localhost:4000/news/" home-mobile-light.png
+          shot 375,812  dark  "http://localhost:4000/news/" home-mobile-dark.png
+          latest=$(find _site -regex '.*/20[0-9][0-9]/.*\.html' | sort | tail -1)
+          if [ -n "$latest" ]; then
+            path="${latest#_site/}"
+            shot 1280,900 light "http://localhost:4000/news/$path" article-light.png
+            shot 1280,900 dark  "http://localhost:4000/news/$path" article-dark.png
+          fi
+      - name: Upload screenshots
+        # 一部失敗でも撮れた分は残す（レビューの材料になる）
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: screenshots
+          path: screenshots/
