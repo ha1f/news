@@ -11,7 +11,7 @@ argument-hint: "対象のプロンプト（ファイルパスまたはテキス�
 ## Step 0: 対象の理解と道具の選択
 
 - 目的と種類を特定する: システムプロンプト / スキル / CLAUDE.md・rules / エージェント指示 / API 呼び出し / ツール記述。いずれにも該当しない文言（コード内のエラーメッセージ、UI テキスト等）はこのスキルの対象外と伝え、通常の作業として扱う
-- エージェント向け・スキル・ツール記述・出力フォーマット制御・長文コンテキスト・API 呼び出しに該当したら [references/type-specific-guide.md](references/type-specific-guide.md) の該当節を読む
+- エージェント向け・スキル・CLAUDE.md/rules・ツール記述・出力フォーマット制御・長文コンテキスト・API 呼び出しに該当したら [references/type-specific-guide.md](references/type-specific-guide.md) の該当節を読む
 - モデル挙動や API 仕様に依存する記述、旧世代向けの徴候（MUST の連発、prefill、budget_tokens 等）があれば [references/model-notes.md](references/model-notes.md) を読む
 - 対象が `.claude/rules/` / `.claude/skills/` 配下なら、同ディレクトリの既存ファイルを Read してスタイル（frontmatter、構造、表記慣習）を実物で確認する（コンテキストからの推測は改訂方針がブレる）
 - 対象がコード化されたパイプライン（分類・抽出・RAG 等）で、metric を関数で書けて評価データが 20 例以上あるなら、手作業改善よりプログラマティック最適化が向く。[references/programmatic-optimization.md](references/programmatic-optimization.md) を読んで提案する。採用されたら以降の手作業は metric とシナリオの言語化（同ファイル末尾）に切り替える

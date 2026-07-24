@@ -25,6 +25,14 @@
 - **時限情報を本文に書かない**: 日付依存の情報は隔離ファイルか「old patterns」節へ（腐った情報が本文に残る事故を防ぐ）
 - **用語は概念ごとに統一**: field / box / element のような同一概念の表記揺れは解釈を割る
 
+## CLAUDE.md・rules (.claude/rules/)
+
+出典: https://code.claude.com/docs/en/memory.md#path-specific-rules （2026-07-24 確認）
+
+- **常駐コストが最も高い種類**: セッション開始時に無条件ロードされ全作業の attention budget を消費する。最小性の基準を一段厳しく、1 行ごとに常駐の価値を問う
+- **`paths` frontmatter でスコープ**: `.claude/rules/*.md` は frontmatter の `paths`（glob リスト）で該当ファイルを触るときだけロードさせられる。特定のファイル群にしか関係しないルールに `paths` が無ければ指摘する
+- **発動条件が本文から一意に読めるか**: 「いつ従うか」を実行者が判断できない rule は、ロードされても機能しない
+
 ## ツール記述 (tool description)
 
 出典: https://www.anthropic.com/engineering/writing-tools-for-agents
