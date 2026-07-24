@@ -37,7 +37,7 @@ flowchart LR
 
 ## 毎日の自動ループ
 
-claude.ai のクラウド trigger が毎日のステージを実行し、キュレーション→評価→実装→マージまで自動で回る。スキル・プロンプトの改善 PR も自動マージされる自己改善ループ。15時のレビューで要修正になり draft に戻った PR は、夕方のクイックループ（16時再修正 → 18時再レビュー）が同日中に拾い、手戻りを翌日に持ち越さない。
+claude.ai のクラウド trigger が毎日のステージを実行し、キュレーション→評価→実装→マージまで自動で回る。スキル・プロンプトの改善 PR も自動マージされる自己改善ループ。実装→レビューは1日2周（12時→15時、16時→18時）。スキルの優先順（要対応の in_progress → backlog）により、15時に要修正で draft に戻った PR は16時の run が最優先で拾い、手戻りを翌日に持ち越さない。
 
 週次（日曜11時）の `/audit-and-adopt` は、プロダクトでなくループ自身の環境を監査する: マージ済み資産の批評・エコシステム（Claude Code 新機能・公式スキル）の取り込み判断・スキル手順が守られているかのプロセス監査。見つかった改善は issue / PR として日次ループに流れ込む。
 
@@ -46,8 +46,8 @@ flowchart LR
     publish["9:00 /publish-pages\nキュレーション→デプロイ"] --> evaluate["10:00 /evaluate-and-triage\nユーザ評価→issue化"]
     evaluate --> develop["12:00 /select-and-develop\nissue選定→実装"]
     develop --> review["15:00 /review-and-merge\nレビュー→マージ"]
-    review --> rework["16:00 /select-and-develop\n要修正PRの再修正のみ"]
-    rework --> review2["18:00 /review-and-merge\n再レビュー→マージ"]
+    review --> develop2["16:00 /select-and-develop\nissue選定→実装（2周目）"]
+    develop2 --> review2["18:00 /review-and-merge\nレビュー→マージ（2周目）"]
     review2 -.改善が翌日に反映.-> publish
 ```
 
@@ -69,7 +69,7 @@ flowchart LR
 | 10:00 | `0 1 * * *` | `/evaluate-and-triage` |
 | 12:00 | `0 3 * * *` | `/select-and-develop` |
 | 15:00 | `0 6 * * *` | `/review-and-merge` |
-| 16:00 | `0 7 * * *` | `/select-and-develop 今回は要対応の in_progress（linked PR に未対応のレビュー指摘・red CI・conflict があるもの）だけを対象にし、backlog には着手しない。18時の review-and-merge までに完走できる分だけ進め、対象が無ければ早期終了する` |
+| 16:00 | `0 7 * * *` | `/select-and-develop` |
 | 18:00 | `0 9 * * *` | `/review-and-merge` |
 | 日曜 11:00 | `0 2 * * 0` | `/audit-and-adopt` |
 
