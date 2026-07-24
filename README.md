@@ -37,14 +37,16 @@ flowchart LR
 
 ## 毎日の自動ループ
 
-claude.ai のクラウド trigger が毎日4つのステージを実行し、キュレーション→評価→実装→マージまで自動で回る。スキル・プロンプトの改善 PR も自動マージされる自己改善ループ。
+claude.ai のクラウド trigger が毎日のステージを実行し、キュレーション→評価→実装→マージまで自動で回る。スキル・プロンプトの改善 PR も自動マージされる自己改善ループ。15時のレビューで要修正になり draft に戻った PR は、夕方のクイックループ（16時再修正 → 18時再レビュー）が同日中に拾い、手戻りを翌日に持ち越さない。
 
 ```mermaid
 flowchart LR
     publish["9:00 /publish-pages\nキュレーション→デプロイ"] --> evaluate["10:00 /evaluate-and-triage\nユーザ評価→issue化"]
     evaluate --> develop["12:00 /select-and-develop\nissue選定→実装"]
     develop --> review["15:00 /review-and-merge\nレビュー→マージ"]
-    review -.改善が翌日に反映.-> publish
+    review --> rework["16:00 /select-and-develop\n要修正PRの再修正のみ"]
+    rework --> review2["18:00 /review-and-merge\n再レビュー→マージ"]
+    review2 -.改善が翌日に反映.-> publish
 ```
 
 状態は GitHub ネイティブのもので受け渡す: PR の **draft（作業中・ループは触らない）/ ready（レビュー・マージ候補）**、issue の open / closed、linked PR、作者。専用ラベルは `hold`（自動処理を止めて人間が見る）の1つだけ。数値上限・保護パス・auto-merge モードは [.claude/GUARDRAILS.md](.claude/GUARDRAILS.md) に集約されている。
@@ -65,6 +67,8 @@ flowchart LR
 | 10:00 | `0 1 * * *` | `/evaluate-and-triage` |
 | 12:00 | `0 3 * * *` | `/select-and-develop` |
 | 15:00 | `0 6 * * *` | `/review-and-merge` |
+| 16:00 | `0 7 * * *` | `/select-and-develop 今回は要対応の in_progress（linked PR に未対応のレビュー指摘・red CI・conflict があるもの）だけを対象にし、backlog には着手しない。18時の review-and-merge までに完走できる分だけ進め、対象が無ければ早期終了する` |
+| 18:00 | `0 9 * * *` | `/review-and-merge` |
 
 ## ニュースソース
 
