@@ -67,7 +67,7 @@ flowchart LR
 | 10:00 | `0 1 * * *` | `/evaluate-and-triage` |
 | 12:00 | `0 3 * * *` | `/select-and-develop` |
 | 15:00 | `0 6 * * *` | `/review-and-merge` |
-| 16:00 | `0 7 * * *` | `/select-and-develop 今回は要対応の in_progress（linked PR にレビュー指摘・red CI・conflict があるもの）だけを対象にし、backlog には着手しない。対象が無ければ早期終了する` |
+| 16:00 | `0 7 * * *` | `/select-and-develop 今回は要対応の in_progress（linked PR に未対応のレビュー指摘・red CI・conflict があるもの）だけを対象にし、backlog には着手しない。18時の review-and-merge までに完走できる分だけ進め、対象が無ければ早期終了する` |
 | 18:00 | `0 9 * * *` | `/review-and-merge` |
 
 ## ニュースソース
