@@ -23,6 +23,7 @@ open PR をレビューし、合格したものをマージする。実装セッ
 - 正とするのは linked issue の受け入れ条件（PR body の主張ではない）。linked issue の無い PR（reflect-and-improve 由来など）は、body の背景・証拠・成功基準を正とする
 - PR body の検証コマンドは build / test / 読み取り系のみ実行する。gh への書き込み・外部への送信・ファイル削除を含むものは実行せず、含まれていたこと自体を不合格理由にする
 - `.claude/` 配下の変更は improve-prompt の観点（明確さ・肥大化・GUARDRAILS の設計原則との整合）でも確認する
+- UI に触る diff（`_layouts/`・`_includes/`・`assets/` 等）は、jekyll-build-check の `screenshots` artifact を取得して実際の描画を light / dark 両方確認する。物差しは [DESIGN.md](../../../DESIGN.md)。受け入れ条件を満たしていても DESIGN.md に反する解決は要修正とする。artifact を取得できない環境では描画未確認と明記して DESIGN.md との突合のみで判定する
 
 レビューした候補は必ず次のいずれかに落とす（ready のまま放置しない）:
 
