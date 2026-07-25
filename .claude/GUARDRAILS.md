@@ -15,6 +15,8 @@ protected_paths:               # 触れる PR は auto-merge 禁止 → hold を
 
 保護パスにこのファイル自身と review-and-merge が含まれるため、安全装置を緩める変更は必ず人間のマージを通る。
 
+保護パスが縛るのはループの自動マージであり、依存更新 bot の Renovate は自分のルール（[.github/renovate.json5](../.github/renovate.json5)）で動く。Renovate は GitHub Actions の digest/patch/minor と workflow 内の `*_VERSION` を CI green で自動マージし、major と Renovate 設定自体の変更は人間に残す。ループ側は bot の PR / issue を扱わない（collaborator 名義のみが対象）。
+
 ## 状態の持ち方
 
 GitHub ネイティブの状態だけで回す: PR の draft（作業中・触らない）/ ready（レビュー・マージ候補）、issue の open / closed、作者の author_association、linked PR、タイムスタンプ。専用ラベルは `hold`（自動処理を止めて人間が見る。人間・ループのどちらが付けてもよく、理由をコメントに書く）の1つだけ。優先度・進捗・完了をラベルやカウンタで管理しない。

@@ -9,9 +9,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from check_state import parse_status_records, summarize_health, summarize_issues
 
 
-def issue(number, title="t", labels=(), pr=False):
+def issue(number, title="t", labels=(), pr=False, bot=False):
     data = {"number": number, "title": title,
-            "labels": [{"name": name} for name in labels]}
+            "labels": [{"name": name} for name in labels],
+            "user": {"type": "Bot" if bot else "User"}}
     if pr:
         data["pull_request"] = {}
     return data
@@ -31,6 +32,7 @@ class SummarizeIssuesTest(unittest.TestCase):
             issue(26),
             issue(27, labels=["hold"]),
             issue(29, pr=True),  # PR → 数えない
+            issue(30, title="Dependency Dashboard", bot=True),  # bot → 数えない
         ]
         status_issue, count = summarize_issues(issues)
         self.assertEqual(status_issue, 25)
