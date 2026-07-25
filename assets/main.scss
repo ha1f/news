@@ -13,6 +13,13 @@
   h3 { font-weight: 700; }
 }
 
+.archive-excerpt {
+  margin: 0.2em 0 0.5em;
+  font-size: $base-font-size * 0.875;
+  color: $grey-color;
+  line-height: 1.5;
+}
+
 .post-navigation {
   display: flex;
   justify-content: space-between;
@@ -68,7 +75,8 @@
     color: #58a6ff;
   }
 
-  .post-meta {
+  .post-meta,
+  .archive-excerpt {
     color: #8b949e;
   }
 
