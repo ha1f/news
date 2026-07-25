@@ -3,20 +3,14 @@
 @import "minima";
 
 .post-list li.is-today {
-  border-left: 3px solid #0969da;
-  padding-left: calc($spacing-unit / 2);
-  .post-meta::after {
-    content: "今日";
-    display: inline-block;
-    margin-left: 0.4em;
-    padding: 0.1em 0.5em;
-    font-size: 0.75em;
-    font-weight: 600;
-    color: #fff;
-    background-color: #0969da;
-    border-radius: 2em;
-    vertical-align: middle;
+  .post-meta {
+    color: $brand-color;
+    &::after {
+      content: " — 今日";
+      font-weight: 400;
+    }
   }
+  h3 { font-weight: 700; }
 }
 
 .post-navigation {
@@ -70,12 +64,8 @@
     }
   }
 
-  .post-list li.is-today {
-    border-left-color: #58a6ff;
-    .post-meta::after {
-      background-color: #58a6ff;
-      color: #171717;
-    }
+  .post-list li.is-today .post-meta {
+    color: #58a6ff;
   }
 
   .post-meta {
