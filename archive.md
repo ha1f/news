@@ -17,7 +17,7 @@ title: "アーカイブ"
 
 <ul class="archive-list">
 {% for post in group.items %}
-  <li data-content="{{ post.content | strip_html | strip_newlines | escape }}">
+  <li data-content="{{ post.content | strip_html | strip_newlines | truncatewords: 100 | escape }}">
     <a href="{{ post.url | relative_url }}">{{ post.title }}</a>
     {% if post.excerpt %}<p class="archive-excerpt">{{ post.excerpt | strip_html | truncatewords: 30 }}</p>{% endif %}
   </li>
