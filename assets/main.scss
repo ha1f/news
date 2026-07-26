@@ -13,6 +13,32 @@
   h3 { font-weight: 700; }
 }
 
+.archive-search {
+  margin-bottom: $spacing-unit;
+
+  input {
+    width: 100%;
+    padding: 0.5em 0.75em;
+    font-size: $base-font-size;
+    border: 1px solid $grey-color-light;
+    border-radius: 4px;
+    background: #fdfdfd;
+    color: #111;
+    box-sizing: border-box;
+
+    &::placeholder { color: $grey-color; }
+    &:focus {
+      outline: none;
+      border-color: $brand-color;
+    }
+  }
+}
+
+.archive-no-results {
+  color: $grey-color;
+  font-style: italic;
+}
+
 .archive-excerpt {
   margin: 0.2em 0 0.5em;
   font-size: $base-font-size * 0.875;
@@ -138,5 +164,18 @@
     background-color: #2d2d2d;
     color: #e0e0e0;
     border-color: #383838;
+  }
+
+  .archive-search input {
+    background-color: #2d2d2d;
+    color: #e0e0e0;
+    border-color: #383838;
+
+    &::placeholder { color: #8b949e; }
+    &:focus { border-color: #58a6ff; }
+  }
+
+  .archive-no-results {
+    color: #8b949e;
   }
 }
