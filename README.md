@@ -73,6 +73,17 @@ flowchart LR
 | 18:00 | `0 9 * * *` | `/review-and-merge` |
 | 日曜 11:00 | `0 2 * * 0` | `/audit-and-adopt` |
 
+## 依存関係の更新
+
+GitHub Actions と workflow 内でピン留めしているバージョン（Playwright・Python）は [Renovate](https://docs.renovatebot.com/) が更新する。設定は [.github/renovate.json5](.github/renovate.json5) で、Renovate 公式の `config:best-practices` をベースにしている。
+
+- **digest 固定** — Actions は `@v7` のようなタグではなく commit SHA に固定される（タグは付け替え可能なため、サプライチェーン攻撃を受けにくくする）
+- **実行タイミング** — 月曜早朝（JST）にまとめて PR を作る。日次ループのステージと重ならない時間帯
+- **自動マージ** — digest / patch / minor は公開から3日経過し CI が green なら Renovate 自身がマージする。major と Renovate 設定自体の変更は人間がマージする
+- **状況の確認** — Renovate が作る Dependency Dashboard issue で保留中の更新を一覧できる（bot の issue なのでループの実装対象・issue 上限には入らない）
+
+有効化には [Renovate GitHub App](https://github.com/apps/renovate) のインストールが必要（リポジトリ設定のためリポジトリ外の作業）。Fork して使う場合も同様に、自分のリポジトリに App をインストールすると設定がそのまま効く。
+
 ## ニュースソース
 
 22ソースが定義済み。各ソースは `references/sources/*.md` に独立したファイルとして管理されている。

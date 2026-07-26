@@ -59,13 +59,18 @@ def parse_guardrails(text):
 
 
 def summarize_issues(issues):
-    """open issue から status issue 番号と issue 数（status 除く）を出す（純関数）"""
+    """open issue から status issue 番号と issue 数（status・bot 除く）を出す（純関数）
+
+    bot の issue（Renovate の Dependency Dashboard 等）はループが実装対象にしないため、
+    open_issue_cap の数にも入れない。"""
     status_issue, open_count = None, 0
     for issue in issues:
         if "pull_request" in issue:
             continue
         if STATUS_TITLE in issue["title"]:
             status_issue = issue["number"]
+            continue
+        if (issue.get("user") or {}).get("type") == "Bot":
             continue
         open_count += 1
     return status_issue, open_count

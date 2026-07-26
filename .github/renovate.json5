@@ -1,0 +1,49 @@
+{
+  $schema: 'https://docs.renovatebot.com/renovate-schema.json',
+
+  extends: [
+    // config:recommended + digest 固定（Docker / GitHub Actions）+ configMigration +
+    // 公開直後バージョンの待機 + 放棄パッケージ検知。Renovate 公式の推奨セット
+    'config:best-practices',
+    // workflow の `*_VERSION:` 環境変数を `# renovate:` コメントで追従する
+    'customManagers:githubActionsVersions',
+  ],
+
+  timezone: 'Asia/Tokyo',
+  // 月曜の早朝にまとめて起こす。日次ループのステージ（9:00〜18:00 JST）と重ならない時間帯
+  schedule: ['* 3-6 * * 1'],
+
+  // 日次ループのレビュー枠を依存更新 PR で埋めない
+  prConcurrentLimit: 3,
+  prHourlyLimit: 2,
+
+  // 公開直後に取り下げ・改竄されたバージョンを掴まないための待機期間（automerge の前提）
+  minimumReleaseAge: '3 days',
+
+  // GUARDRAILS.md: 専用ラベルは hold だけ。Renovate 側でラベルを増やさない
+  labels: [],
+  vulnerabilityAlerts: {
+    labels: [],
+    // 脆弱性由来の更新だけは schedule を待たずに即 PR を作る
+    schedule: ['at any time'],
+  },
+
+  // リポジトリの慣習に合わせて squash でマージする
+  automergeStrategy: 'squash',
+
+  packageRules: [
+    {
+      // pin（タグ→SHA への一斉置換）は初回1回だけ・deploy workflow も含むため人間が見る
+      description: 'GitHub Actions と workflow 内の *_VERSION は digest/patch/minor を CI green で自動マージする（pin と major は人間が見る）',
+      matchManagers: ['github-actions', 'custom.regex'],
+      matchUpdateTypes: ['digest', 'patch', 'minor'],
+      automerge: true,
+    },
+    {
+      description: 'ローカル開発用の Python は patch のみ自動マージする',
+      matchManagers: ['pyenv'],
+      matchUpdateTypes: ['patch'],
+      automerge: true,
+    },
+  ],
+}

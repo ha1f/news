@@ -11,7 +11,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      # latest 追従で全 PR の check が突然 red になるのを防ぐ（CI green はループのマージ条件）
+      # latest 追従で全 PR の check が突然 red になるのを防ぐ（CI green はループのマージ条件）。
+      # 更新は Renovate の PR で行う（.github/renovate.json5）
+      # renovate: datasource=npm depName=playwright
       PLAYWRIGHT_VERSION: 1.61.1
     steps:
       - name: Checkout
