@@ -6,27 +6,7 @@ description: "ニュースキュレーションを実行し、GitHub Pagesにデ
 
 `/curate-news` でニュースキュレーションを実行し、結果を main ブランチ向けの PR として作成・マージする。マージされると GitHub Pages に自動デプロイされる。
 
-各ステップの開始時に進捗を表示する:
-
-| タイミング | 表示 |
-|---|---|
-| curate-news 開始時 | `📰 ニュースキュレーションを実行します` |
-| ブランチ作成時 | `🌿 ブランチ pages/{stem} を作成します` |
-| PR 作成時 | `📝 PR を作成します` |
-| マージ時 | `🚀 PR をマージしてデプロイします` |
-| 振り返り時 | `🔍 振り返りと改善を実行します` |
-
 ## 手順
-
-### 0. 前提チェック
-
-main ブランチに `_config.yml` が存在するか確認する:
-```bash
-git fetch origin main
-git show origin/main:_config.yml 2>/dev/null
-```
-
-存在しない場合は「付録: 初回セットアップ」の手順でセットアップを行い、完了後に改めて実行する。
 
 ### 1. `/curate-news` の実行
 
@@ -108,56 +88,4 @@ gh pr merge --squash --delete-branch
 
 ### 7. 振り返りと改善
 
-Skill ツールで `reflect-and-improve` を実行する。作成された改善 PR は ready 化する（`gh pr ready`。15時の review-and-merge のレビュー対象になる。draft のままだと誰にも拾われない）。
-
-## 付録: 初回セットアップ
-
-`_config.yml` が存在しない場合に実行する。Jekyll の最小構成を追加し、GitHub Pages を有効化する。
-
-### A1. ブランチの作成
-
-```bash
-git fetch origin main
-git checkout -b setup-github-pages origin/main
-```
-
-### A2. Jekyll 構成ファイルの作成
-
-**`_config.yml`:**
-```yaml
-title: "News"
-description: "気になるテック・経済ニュースを毎日キュレーション"
-theme: minima
-baseurl: "/news"  # リポジトリ名に合わせる（GitHub Pages は `{user}.github.io/{repo}` で配信されるため）
-header_pages: []
-```
-
-**`index.md`:**
-```markdown
----
-layout: home
----
-```
-
-**`_posts/.gitkeep`:** 空ファイル
-
-### A3. コミット・プッシュ・PR 作成
-
-```bash
-git add _config.yml index.md _posts/.gitkeep
-git commit -m "Setup GitHub Pages with Jekyll"
-git push -u origin setup-github-pages
-gh pr create --base main --title "Setup GitHub Pages" --body "Jekyll最小構成の追加" --draft
-```
-
-### A4. GitHub Pages の有効化
-
-```bash
-gh api repos/$(gh repo view --json nameWithOwner -q .nameWithOwner)/pages -X POST -f 'source[branch]=main' -f 'source[path]=/'
-```
-
-既に有効な場合のエラーは無視してよい。
-
-### A5. ユーザーへの案内
-
-セットアップ PR の URL を表示し、マージを依頼する。マージが完了したら `/publish-pages` を再度実行するよう案内して、元のブランチに戻って終了する。
+Skill ツールで `reflect-and-improve` を実行する。作成された改善 PR は ready 化する（`gh pr ready`。次の review-and-merge のレビュー対象になる）。
