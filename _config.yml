@@ -3,7 +3,7 @@ timezone: Asia/Tokyo
 
 author: ha1f
 
-description: "気になるテック・経済ニュースを毎日キュレーション"
+description: "国内外のテック・経済ニュースを日本語で毎日キュレーション"
 theme: minima
 baseurl: "/news"
 header_pages: [about.md, archive.md]
