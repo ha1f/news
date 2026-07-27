@@ -52,8 +52,8 @@ jobs:
             shot 1280,900 dark  "http://localhost:4000/news/$path" article-dark.png
           fi
           if [ -f _site/archive.html ]; then
-            shot 1280,900 light "http://localhost:4000/news/archive" archive-light.png
-            shot 1280,900 dark  "http://localhost:4000/news/archive" archive-dark.png
+            shot 1280,900 light "http://localhost:4000/news/archive.html" archive-light.png
+            shot 1280,900 dark  "http://localhost:4000/news/archive.html" archive-dark.png
           fi
       - name: Upload screenshots
         # 一部失敗でも撮れた分は残す（レビューの材料になる）
