@@ -41,20 +41,34 @@ jobs:
             npx --yes "playwright@$PLAYWRIGHT_VERSION" screenshot --browser chromium --full-page \
               --viewport-size "$1" --color-scheme "$2" "$3" "screenshots/$4"
           }
+          # 既定フィード（トップ）
           shot 1280,900 light "http://localhost:4000/news/" home-light.png
           shot 1280,900 dark  "http://localhost:4000/news/" home-dark.png
           shot 375,812  light "http://localhost:4000/news/" home-mobile-light.png
           shot 375,812  dark  "http://localhost:4000/news/" home-mobile-dark.png
-          latest=$(find _site -regex '.*/20[0-9][0-9]/.*\.html' | sort | tail -1)
-          if [ -n "$latest" ]; then
+          # 追加フィード（_data/profiles.json の base に対応するディレクトリ）のトップ
+          for dir in _site/feeds/*/; do
+            [ -f "$dir/index.html" ] || continue
+            id=$(basename "$dir")
+            shot 1280,900 light "http://localhost:4000/news/feeds/$id/" "feed-$id-light.png"
+            shot 1280,900 dark  "http://localhost:4000/news/feeds/$id/" "feed-$id-dark.png"
+          done
+          # フィードごとの最新記事（記事のファイル名はフィードの post_slug）
+          for slug in $(find _site -regex '.*/20[0-9][0-9]/.*\.html' -printf '%f\n' | sed 's/\.html$//' | sort -u); do
+            latest=$(find _site -regex ".*/20[0-9][0-9]/.*/$slug\.html" | sort | tail -1)
+            [ -n "$latest" ] || continue
             path="${latest#_site/}"
-            shot 1280,900 light "http://localhost:4000/news/$path" article-light.png
-            shot 1280,900 dark  "http://localhost:4000/news/$path" article-dark.png
-          fi
-          if [ -f _site/archive.html ]; then
-            shot 1280,900 light "http://localhost:4000/news/archive.html" archive-light.png
-            shot 1280,900 dark  "http://localhost:4000/news/archive.html" archive-dark.png
-          fi
+            shot 1280,900 light "http://localhost:4000/news/$path" "article-$slug-light.png"
+            shot 1280,900 dark  "http://localhost:4000/news/$path" "article-$slug-dark.png"
+          done
+          # 各フィードのアーカイブ
+          for archive in _site/archive.html _site/feeds/*/archive.html; do
+            [ -f "$archive" ] || continue
+            path="${archive#_site/}"
+            name=$(echo "${path%.html}" | tr '/' '-')
+            shot 1280,900 light "http://localhost:4000/news/$path" "$name-light.png"
+            shot 1280,900 dark  "http://localhost:4000/news/$path" "$name-dark.png"
+          done
       - name: Upload screenshots
         # 一部失敗でも撮れた分は残す（レビューの材料になる）
         if: always()

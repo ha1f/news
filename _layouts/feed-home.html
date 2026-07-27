@@ -2,15 +2,23 @@
 layout: default
 ---
 
+{%- assign profile = site.data.profiles | where: "id", page.profile | first -%}
+{%- assign feed_posts = site.posts | where: "profile", page.profile -%}
+
 <div class="home">
+
+  <h1 class="page-heading">{{ page.title | escape }}</h1>
 
   {{ content }}
 
   <h2 class="post-list-heading">最新の記事</h2>
 
   {%- assign date_format = site.minima.date_format | default: "%Y年%-m月%-d日" -%}
-  {%- assign recent_posts = site.posts | slice: 0, 7 -%}
+  {%- assign recent_posts = feed_posts | slice: 0, 7 -%}
 
+  {%- if feed_posts.size == 0 -%}
+    <p class="post-list-empty">このフィードはまだ記事がありません。</p>
+  {%- else -%}
   <ul class="post-list">
     {%- for post in recent_posts -%}
     <li data-date="{{ post.date | date: '%Y-%m-%d' }}">
@@ -39,11 +47,14 @@ layout: default
   </script>
 
   <p class="post-list-archive">
-    <a href="{{ '/archive.html' | relative_url }}">すべての記事を見る &rarr;</a>
+    <a href="{{ profile.base | append: 'archive.html' | relative_url }}">すべての記事を見る &rarr;</a>
   </p>
+  {%- endif -%}
 
   <p class="rss-subscribe">
-    <a href="{{ 'feed.xml' | relative_url }}">RSSで購読する</a>
+    <a href="{{ profile.base | append: 'feed.xml' | relative_url }}">RSSで購読する</a>
   </p>
+
+  {% include feed-switcher.html profile=page.profile %}
 
 </div>

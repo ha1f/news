@@ -1,8 +1,14 @@
 # news
 
-Claude Code のスキル機能を使ったニュースキュレーションツール。複数のニュースソースから記事を自動取得し、ユーザーの好みに基づいてキュレーションする。
+Claude Code のスキル機能を使ったニュースキュレーションツール。複数のニュースソースから記事を自動取得し、読者プロファイル（好み）ごとに別々のフィードとしてキュレーションする。
 
-キュレーション結果の例は [GitHub Pages](https://ha1f.github.io/news/) で確認できる。
+キュレーション結果の例は [GitHub Pages](https://ha1f.github.io/news/) で確認できる。フィードは3つ公開している。
+
+| フィード | 読者像 | ページ |
+|---------|-------|-------|
+| テック・経済 | エンジニア。技術と経済の重要ニュースを毎朝10分で | [/](https://ha1f.github.io/news/) |
+| やさしい時事 | 通勤中のライト読者。前提知識なしで世の中に追いつく | [/feeds/commuter/](https://ha1f.github.io/news/feeds/commuter/) |
+| 科学・研究 | 研究の動きを追いかける読者 | [/feeds/science/](https://ha1f.github.io/news/feeds/science/) |
 
 ## 使い方
 
@@ -13,31 +19,31 @@ $ claude
 > /curate-news
 ```
 
-好みに合った記事が日本語でキュレーションされる。
+全プロファイル分のキュレーションが走り、既定プロファイル（テック・経済）の結果が日本語で表示される。
 
-結果はローカルの `output/` に保存される。Webで公開したい場合は `/publish-pages` を使う。キュレーションの実行からPR作成まで自動で行われ、PRをマージすると [GitHub Pages](https://ha1f.github.io/news/) に反映される。
+結果はローカルの `output/{YYYY-MM-DD}-{プロファイルID}.md` に保存される。Webで公開したい場合は `/publish-pages` を使う。キュレーションの実行からPR作成まで自動で行われ、PRをマージすると [GitHub Pages](https://ha1f.github.io/news/) の各フィードに反映される。
 
 ## 仕組み
 
 ```mermaid
 flowchart LR
-    sources["references/sources/*.md"] --> select["ソース選択"]
-    prefs["preferences.md"] --> select
-    select --> fetch["フィード取得\n（並列）"]
-    fetch --> cache["キャッシュ"]
-    cache --> curate["キュレーション"]
-    prefs --> curate
-    curate --> output["output/\n{YYYY-MM-DD}-{hash}.md"]
+    sources["references/sources/*.md"] --> select["ソース選択\n（全プロファイルの和集合）"]
+    profiles["_data/profiles.json\nprofiles/{id}.md"] --> select
+    select --> fetch["フィード取得\n（並列・1回だけ）"]
+    fetch --> cache["キャッシュ\n（全プロファイル共通）"]
+    cache --> curate["プロファイルごとの選定\n（並列）"]
+    profiles --> curate
+    curate --> output["output/\n{YYYY-MM-DD}-{プロファイルID}.md"]
 ```
 
-1. **ソース選択** — `preferences.md` の興味・関心と各ソースのトピックをマッチングし、取得対象を自動選択
-2. **フィード取得** — `scripts/fetch_feeds.py` で対象フィードを並列取得。キャッシュが有効（TTL内）ならスキップ
-3. **キュレーション** — 全記事を統合・重複排除し、興味との関連度とスコアで選定
-4. **出力** — 日本語のマークダウン形式で表示し、`output/{YYYY-MM-DD}-{hash}.md` に保存（hashは好みファイルのMD5先頭8文字）
+1. **ソース選択** — 全プロファイルの興味・関心と各ソースのトピックをマッチングし、取得対象を自動選択
+2. **フィード取得** — `scripts/fetch_feeds.py` で対象フィードを並列取得。キャッシュが有効（TTL内）ならスキップ。取得と要約の共通処理はプロファイルが増えても1回のまま
+3. **キュレーション** — プロファイル1件につき subagent 1つを並列に走らせ、その好みで選定する。掲載履歴の重複判定もプロファイルごとに独立
+4. **出力** — 日本語のマークダウン形式で `output/{YYYY-MM-DD}-{プロファイルID}.md` に保存
 
 ## 毎日の自動ループ
 
-claude.ai のクラウド trigger が毎日のステージを実行し、キュレーション→評価→実装→マージまで自動で回る。スキル・プロンプトの改善 PR も自動マージされる自己改善ループ。実装→レビューは1日2周（12時→15時、16時→18時）。スキルの優先順（要対応の in_progress → backlog）により、15時に要修正で draft に戻った PR は16時の run が最優先で拾い、手戻りを翌日に持ち越さない。
+claude.ai のクラウド trigger が毎日のステージを実行し、キュレーション→評価→実装→マージまで自動で回る。9時の publish は全フィード分の記事を1つの PR にまとめ、10時の評価はその日のペルソナが読むフィードを見る。スキル・プロンプトの改善 PR も自動マージされる自己改善ループ。実装→レビューは1日2周（12時→15時、16時→18時）。スキルの優先順（要対応の in_progress → backlog）により、15時に要修正で draft に戻った PR は16時の run が最優先で拾い、手戻りを翌日に持ち越さない。
 
 週次（日曜11時）の `/audit-and-adopt` は、プロダクトでなくループ自身の環境を監査する: マージ済み資産の批評・エコシステム（Claude Code 新機能・公式スキル）の取り込み判断・スキル手順が守られているかのプロセス監査。見つかった改善は issue / PR として日次ループに流れ込む。
 
@@ -121,11 +127,14 @@ GitHub Actions と workflow 内でピン留めしているバージョン（Play
 
 ### 好みの設定
 
-[`.claude/skills/curate-news/preferences.md`](.claude/skills/curate-news/preferences.md) を編集する。
-以下は例。
+読者プロファイル1件が1つの好みファイルに対応する。既定プロファイルの好みは [`.claude/skills/curate-news/profiles/owner.md`](.claude/skills/curate-news/profiles/owner.md)。以下は例。
 
 ```markdown
 # ニュースの好み
+
+## 読者像
+
+毎朝10分で「今日知っておくべきこと」を掴みたいソフトウェアエンジニア。専門用語はそのままで構わない。
 
 ## 興味・関心
 
@@ -149,7 +158,18 @@ GitHub Actions と workflow 内でピン留めしているバージョン（Play
 
 ```
 
-興味・関心はソースのカテゴリ自動選択にも使われるため、具体的に書くとより精度が上がる。
+読者像は見出し・読みどころの言葉づかいの水準を決める。興味・関心はソースのカテゴリ自動選択にも使われるため、具体的に書くとより精度が上がる。
+
+### フィード（読者プロファイル）の追加
+
+好みとページの対応は [`_data/profiles.json`](_data/profiles.json) が唯一の定義で、キュレーション側（Python）とサイト側（Jekyll のテンプレート）が同じファイルを読む。追加する手順:
+
+1. `_data/profiles.json` にエントリを足す（`id` / `post_slug` / `name` / `tagline` / `base`。既定フィードだけが `default: true` を持つ）
+2. `.claude/skills/curate-news/profiles/{id}.md` に好みを書く
+3. `feeds/{id}/` に `index.md` / `archive.md` / `feed.xml` を置く（既存フィードのファイルをコピーし、front matter の `profile` と `title` を変える）
+4. `python3 .claude/skills/curate-news/scripts/profiles.py` で認識されることを確認する
+
+記事は `_posts/{YYYY-MM-DD}-{post_slug}.md` に front matter の `profile` 付きで置かれ、そのフィードのトップ・アーカイブ・RSS にだけ載る。掲載履歴・重複判定もフィードごとに独立しているため、同じ記事が別フィードに載ってよい。
 
 ### ソースの追加
 
@@ -160,7 +180,7 @@ GitHub Actions と workflow 内でピン留めしているバージョン（Play
 自分専用のニュースキュレーションを作りたい場合は、リポジトリをForkして使う。
 
 1. **Fork** — GitHubで [Fork](https://github.com/ha1f/news/fork) を作成し、ローカルにcloneする
-2. **好みの編集** — `preferences.md` を自分の興味・関心に書き換える（[書き方](#好みの設定)）
+2. **好みの編集** — `profiles/owner.md` を自分の興味・関心に書き換える（[書き方](#好みの設定)）。使わないフィードは `_data/profiles.json` と `feeds/{id}/` ごと削除する（[追加方法](#フィード読者プロファイルの追加)）
 3. **ソースの調整** — 不要なソースを削除したり、読んでいるメディアを追加する（[追加方法](#ソースの追加)）
 4. **GitHub Pagesの有効化** — リポジトリの **Settings → Pages** で Source を `main` ブランチに設定する。公開URLは `https://{ユーザー名}.github.io/news/` になる
 5. **実行** — Claude Code で `/publish-pages` を実行し、PRをマージすれば公開される
@@ -169,12 +189,19 @@ GitHub Actions と workflow 内でピン留めしているバージョン（Play
 ## ファイル構成
 
 ```
+_data/profiles.json     # 読者プロファイル（フィード）の定義。Python と Jekyll の共通の情報源
+_posts/                 # 公開済みの記事（{YYYY-MM-DD}-{post_slug}.md）
+feeds/{id}/             # フィードごとのトップ・アーカイブ・RSS
+_layouts/               # feed-home / feed-archive / feed-rss / post
+
 .claude/skills/curate-news/
-├── SKILL.md           # ワークフロー定義
-├── STYLEGUIDE.md      # 設計方針・ファイル構成ガイド
-├── preferences.md     # ユーザーの好み
-├── scripts/           # フィード取得スクリプト
-├── references/sources/ # ニュースソース定義
-├── cache/             # フィード取得キャッシュ（git管理外）
-└── output/            # キュレーション結果（git管理外）
+├── SKILL.md            # ワークフロー定義
+├── STYLEGUIDE.md       # 設計方針・ファイル構成ガイド
+├── profiles/{id}.md    # プロファイルごとの好み
+├── scripts/            # プロファイル定義の読み込み・フィード取得
+├── references/
+│   ├── curation.md     # プロファイル1件分の選定手順（subagent に渡す）
+│   └── sources/        # ニュースソース定義
+├── cache/              # フィード取得キャッシュ（git管理外・全プロファイル共通）
+└── output/             # キュレーション結果（git管理外）
 ```

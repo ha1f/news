@@ -1,0 +1,17 @@
+{%- comment -%}
+  ほかのフィードへの導線。include.profile に今いるフィードの id を渡す。
+{%- endcomment -%}
+{%- assign others = site.data.profiles | where_exp: "p", "p.id != include.profile" -%}
+{%- if others.size > 0 -%}
+<nav class="feed-switcher">
+  <h2 class="feed-switcher-heading">ほかの読者向けのフィード</h2>
+  <ul>
+    {%- for other in others %}
+    <li>
+      <a href="{{ other.base | relative_url }}">{{ other.name }}</a>
+      <span class="feed-switcher-tagline">{{ other.tagline }}</span>
+    </li>
+    {%- endfor %}
+  </ul>
+</nav>
+{%- endif -%}

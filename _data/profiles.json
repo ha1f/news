@@ -1,0 +1,24 @@
+[
+  {
+    "id": "owner",
+    "post_slug": "news",
+    "name": "テック・経済",
+    "tagline": "エンジニアの視点で、テック・経済・科学の注目ニュースを毎日",
+    "base": "/",
+    "default": true
+  },
+  {
+    "id": "commuter",
+    "post_slug": "commuter",
+    "name": "やさしい時事",
+    "tagline": "通勤の5分で世の中に追いつく、前提知識のいらないダイジェスト",
+    "base": "/feeds/commuter/"
+  },
+  {
+    "id": "science",
+    "post_slug": "science",
+    "name": "科学・研究",
+    "tagline": "学術ジャーナルと研究の動きを追いかける読者のための1日",
+    "base": "/feeds/science/"
+  }
+]

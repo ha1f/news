@@ -1,6 +1,15 @@
 ---
 layout: default
 ---
+
+{%- assign profile = site.data.profiles | where: "id", page.profile | first -%}
+{%- assign feed_posts = site.posts | where: "profile", page.profile -%}
+{%- for feed_post in feed_posts -%}
+  {%- if feed_post.url == page.url -%}
+    {%- assign position = forloop.index0 -%}
+  {%- endif -%}
+{%- endfor -%}
+
 <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
 
   <header class="post-header">
@@ -10,6 +19,9 @@ layout: default
         {%- assign date_format = site.minima.date_format | default: "%b %-d, %Y" -%}
         {{ page.date | date: date_format }}
       </time>
+      {%- if profile -%}
+        • <a class="post-feed-link" href="{{ profile.base | relative_url }}">{{ profile.name }}</a>
+      {%- endif -%}
       {%- if page.author -%}
         • <span itemprop="author" itemscope itemtype="http://schema.org/Person"><span class="p-author h-card" itemprop="name">{{ page.author }}</span></span>
       {%- endif -%}</p>
@@ -19,16 +31,29 @@ layout: default
     {{ content }}
   </div>
 
-  {%- if page.previous or page.next -%}
+  {%- comment -%}
+    前後の記事は同じフィード内でたどる（フィードをまたぐと文脈が切れるため）。
+    feed_posts は新しい順なので、古い記事が position+1、新しい記事が position-1。
+  {%- endcomment -%}
+  {%- assign older_position = position | plus: 1 -%}
+  {%- assign newer_position = position | minus: 1 -%}
+  {%- if older_position < feed_posts.size -%}
+    {%- assign older_post = feed_posts[older_position] -%}
+  {%- endif -%}
+  {%- if position > 0 -%}
+    {%- assign newer_post = feed_posts[newer_position] -%}
+  {%- endif -%}
+
+  {%- if older_post or newer_post -%}
   <nav class="post-navigation">
     <div class="post-navigation-prev">
-      {%- if page.previous -%}
-      <a href="{{ page.previous.url | relative_url }}">&larr; {{ page.previous.title }}</a>
+      {%- if older_post -%}
+      <a href="{{ older_post.url | relative_url }}">&larr; {{ older_post.title }}</a>
       {%- endif -%}
     </div>
     <div class="post-navigation-next">
-      {%- if page.next -%}
-      <a href="{{ page.next.url | relative_url }}">{{ page.next.title }} &rarr;</a>
+      {%- if newer_post -%}
+      <a href="{{ newer_post.url | relative_url }}">{{ newer_post.title }} &rarr;</a>
       {%- endif -%}
     </div>
   </nav>

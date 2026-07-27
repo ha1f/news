@@ -1,0 +1,20 @@
+{%- comment -%}
+  minima 2.5.1 の head.html の差し替え。フィード（読者プロファイル）ごとに RSS が
+  分かれるため、全記事混在の feed_meta ではなく、そのページのフィードを autodiscovery に出す。
+  profile を持たないページ（about・404 等）は既定フィードを指す。
+{%- endcomment -%}
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  {%- seo -%}
+  <link rel="stylesheet" href="{{ "/assets/main.css" | relative_url }}">
+  {%- assign head_profile_id = page.profile | default: site.data.profiles[0].id -%}
+  {%- assign head_profile = site.data.profiles | where: "id", head_profile_id | first -%}
+  <link type="application/atom+xml" rel="alternate"
+        href="{{ head_profile.base | append: 'feed.xml' | absolute_url }}"
+        title="{{ site.title }} — {{ head_profile.name }}">
+  {%- if jekyll.environment == 'production' and site.google_analytics -%}
+    {%- include google-analytics.html -%}
+  {%- endif -%}
+</head>

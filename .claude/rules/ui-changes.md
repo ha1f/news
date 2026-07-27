@@ -2,7 +2,9 @@
 paths:
   - "_layouts/**"
   - "_includes/**"
+  - "_data/profiles.json"
   - "assets/**"
+  - "feeds/**"
   - "index.md"
   - "archive.md"
   - "about.md"

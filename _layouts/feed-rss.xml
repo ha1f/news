@@ -1,0 +1,31 @@
+---
+layout: null
+---
+<?xml version="1.0" encoding="utf-8"?>
+{%- assign profile = site.data.profiles | where: "id", page.profile | first -%}
+{%- assign feed_posts = site.posts | where: "profile", page.profile -%}
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <generator uri="https://jekyllrb.com/" version="{{ jekyll.version }}">Jekyll</generator>
+  <link href="{{ page.url | absolute_url }}" rel="self" type="application/atom+xml" />
+  <link href="{{ profile.base | absolute_url }}" rel="alternate" type="text/html" />
+  <updated>{% if feed_posts.first %}{{ feed_posts.first.date | date_to_xmlschema }}{% else %}{{ site.time | date_to_xmlschema }}{% endif %}</updated>
+  <id>{{ page.url | absolute_url | xml_escape }}</id>
+  <title type="html">{{ site.title | append: " — " | append: profile.name | xml_escape }}</title>
+  <subtitle>{{ profile.tagline | xml_escape }}</subtitle>
+  {%- if site.author %}
+  <author><name>{{ site.author | xml_escape }}</name></author>
+  {%- endif %}
+  {%- for post in feed_posts limit: 20 %}
+  <entry>
+    <title type="html">{{ post.title | xml_escape }}</title>
+    <link href="{{ post.url | absolute_url }}" rel="alternate" type="text/html" title="{{ post.title | xml_escape }}" />
+    <published>{{ post.date | date_to_xmlschema }}</published>
+    <updated>{{ post.date | date_to_xmlschema }}</updated>
+    <id>{{ post.id | absolute_url | xml_escape }}</id>
+    <content type="html" xml:base="{{ post.url | absolute_url }}">{{ post.content | strip | xml_escape }}</content>
+    {%- if post.excerpt %}
+    <summary type="html">{{ post.excerpt | strip_html | normalize_whitespace | xml_escape }}</summary>
+    {%- endif %}
+  </entry>
+  {%- endfor %}
+</feed>

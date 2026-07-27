@@ -3,12 +3,27 @@ timezone: Asia/Tokyo
 
 author: ha1f
 
-description: "気になるテック・経済ニュースを毎日キュレーション"
+description: "読者の好みごとに、ニュースを毎日キュレーション"
 theme: minima
 baseurl: "/news"
 header_pages: [about.md, archive.md]
 exclude: [CLAUDE.md, README.md]
-rss: "RSS"
+
+# 記事の URL にカテゴリを入れない（フィードが増えても既存記事の URL を変えない）
+permalink: /:year/:month/:day/:title:output_ext
+
+# 記事はどれか1つのフィード（_data/profiles.json の読者プロファイル）に属する。
+# 既定フィードの記事は profile を省略できる
+defaults:
+  - scope:
+      path: ""
+      type: "posts"
+    values:
+      profile: "owner"
+
+# RSS はフィードごとに分ける（_layouts/feed-rss.xml）ため、全記事混在の feed.xml は作らない
+feed:
+  disabled: true
 
 minima:
   date_format: "%Y年%-m月%-d日"

@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 """過去の掲載済みURLを抽出するスクリプト。
 
+同じプロファイルの掲載履歴（公開済みの `_posts/` と手元の `output/`）だけを見る。
+プロファイルが違えば同じ記事が載ってよいため、履歴はプロファイルごとに独立している。
+
 使い方:
-  python3 recent_urls.py                  # 直近7日
-  python3 recent_urls.py --days 5         # 直近5日
-  python3 recent_urls.py --hash 23cfb1cf  # 別のハッシュを指定
+  python3 recent_urls.py                     # 既定プロファイル・直近7日
+  python3 recent_urls.py --profile commuter  # プロファイルを指定
+  python3 recent_urls.py --days 5            # 直近5日
 """
 
 from __future__ import annotations
@@ -17,12 +20,7 @@ from datetime import date, timedelta
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from preference_hash import compute_suffix
-
-_SKILL_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-_OUTPUT_DIR = os.path.join(_SKILL_ROOT, "output")
-_REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(_SKILL_ROOT)))
-_POSTS_DIR = os.path.join(_REPO_ROOT, "_posts")
+from profiles import OUTPUT_DIR, POSTS_DIR, default_profile, get_profile
 
 _URL_RE = re.compile(r"\[.*?\]\((https?://[^)]+)\)")
 
@@ -36,61 +34,38 @@ def _extract_urls(file_path: str) -> set[str]:
         return set()
 
 
-def _collect_from_posts(cutoff: date, today: date) -> set[str]:
-    """_posts/ ディレクトリから掲載済みURLを収集する。"""
+def _collect(directory, suffix: str, cutoff: date, today: date) -> set[str]:
+    """`{YYYY-MM-DD}{suffix}` 形式のファイルからURLを収集する。"""
     urls: set[str] = set()
     try:
-        entries = os.listdir(_POSTS_DIR)
+        entries = os.listdir(directory)
     except FileNotFoundError:
         return urls
 
-    for name in entries:
-        if not name.endswith(".md"):
-            continue
-        date_str = name[:10]
-        try:
-            file_date = date.fromisoformat(date_str)
-        except ValueError:
-            continue
-        if cutoff <= file_date < today:
-            urls |= _extract_urls(os.path.join(_POSTS_DIR, name))
-    return urls
-
-
-def _collect_from_output(cutoff: date, today: date, pref_hash: str) -> set[str]:
-    """output/ ディレクトリから掲載済みURLを収集する（同一セッション補助用）。"""
-    urls: set[str] = set()
-    try:
-        entries = os.listdir(_OUTPUT_DIR)
-    except FileNotFoundError:
-        return urls
-
-    suffix = f"-{pref_hash}.md"
     for name in entries:
         if not name.endswith(suffix):
             continue
-        date_str = name[:10]
         try:
-            file_date = date.fromisoformat(date_str)
+            file_date = date.fromisoformat(name[:10])
         except ValueError:
             continue
         if cutoff <= file_date < today:
-            urls |= _extract_urls(os.path.join(_OUTPUT_DIR, name))
+            urls |= _extract_urls(os.path.join(directory, name))
     return urls
 
 
 def main():
     parser = argparse.ArgumentParser(description="過去の掲載済みURLを抽出")
-    parser.add_argument("--hash", help="preferencesハッシュ（省略時は自動計算）")
+    parser.add_argument("--profile", help="プロファイルID（省略時は既定プロファイル）")
     parser.add_argument("--days", type=int, default=7, help="遡る日数（デフォルト7）")
     args = parser.parse_args()
 
-    pref_hash = args.hash or compute_suffix()
+    profile = get_profile(args.profile) if args.profile else default_profile()
     today = date.today()
     cutoff = today - timedelta(days=args.days)
 
-    urls = _collect_from_posts(cutoff, today)
-    urls |= _collect_from_output(cutoff, today, pref_hash)
+    urls = _collect(POSTS_DIR, f"-{profile.post_slug}.md", cutoff, today)
+    urls |= _collect(OUTPUT_DIR, f"-{profile.id}.md", cutoff, today)
 
     for url in sorted(urls):
         print(url)

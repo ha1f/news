@@ -6,7 +6,8 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from check_state import parse_status_records, summarize_health, summarize_issues
+from check_state import (assemble_output, load_profiles, parse_status_records,
+                         summarize_health, summarize_issues)
 
 
 def issue(number, title="t", labels=(), pr=False, bot=False):
@@ -104,6 +105,44 @@ class HealthTest(unittest.TestCase):
         comments = [status_comment("evaluate", "start", "2026-07-09T23:00:00Z")]
         health = summarize_health(parse_status_records(comments), "2026-07-11")
         self.assertFalse(health["no_records"])
+
+
+class AssembleOutputTest(unittest.TestCase):
+    PROFILES = [
+        {"id": "owner", "post_slug": "news", "name": "既定", "base": "/", "default": True},
+        {"id": "commuter", "post_slug": "commuter", "name": "通勤", "base": "/feeds/commuter/"},
+    ]
+
+    def assemble(self, posts_exist):
+        return assemble_output(
+            config={}, today="2026-07-11", profiles=self.PROFILES,
+            posts_exist=posts_exist, pages=None, pages_build=None,
+            prs=[], issues=[], comments=[])
+
+    def test_all_feeds_published(self):
+        result = self.assemble({"owner": True, "commuter": True})
+        self.assertTrue(result["post_in_main"])
+        self.assertEqual(result["missing_posts"], [])
+
+    def test_partially_published_feed_is_reported(self):
+        result = self.assemble({"owner": True, "commuter": False})
+        self.assertFalse(result["post_in_main"])
+        self.assertEqual(result["missing_posts"], ["commuter"])
+        self.assertEqual(result["posts_in_main"], {"owner": True, "commuter": False})
+
+    def test_unknown_profile_in_input_is_ignored(self):
+        result = self.assemble({"owner": True, "commuter": True, "ghost": True})
+        self.assertEqual(sorted(result["posts_in_main"]), ["commuter", "owner"])
+
+    def test_profiles_are_passed_through_for_url_assembly(self):
+        result = self.assemble({"owner": True, "commuter": True})
+        self.assertEqual([p["base"] for p in result["profiles"]], ["/", "/feeds/commuter/"])
+
+
+class RepositoryProfilesTest(unittest.TestCase):
+    def test_bundled_profiles_json_is_loadable(self):
+        profiles = load_profiles()
+        self.assertTrue(all({"id", "post_slug", "name", "base"} <= set(p) for p in profiles))
 
 
 if __name__ == "__main__":

@@ -2,9 +2,13 @@
 """daily-loop: 評価前の配信状態・ループ健全性を機械判定して JSON で出力する。
 
 使い方: python3 check_state.py
-出力: {"config", "today", "post_in_main", "publish_in_progress", "pages_url",
-       "pages_build", "status_issue", "open_issues", "health",
-       "recent_status_comments"}
+出力: {"config", "today", "profiles", "posts_in_main", "missing_posts", "post_in_main",
+       "publish_in_progress", "pages_url", "pages_build", "status_issue", "open_issues",
+       "health", "recent_status_comments"}
+  - profiles: _data/profiles.json の読者プロファイル（id / name / base / 既定かどうか）。
+    評価対象の URL は pages_url + base で組み立てる
+  - posts_in_main: プロファイルID → 今日の記事が main にあるか。
+    missing_posts は欠けているプロファイルID、post_in_main は全て揃っているか
   - health: 前日の各ステージ (evaluate/develop/review) の start/end/ok 集計。
     status issue コメントの1行目 JSON（GUARDRAILS.md 参照）から機械判定する。
     missing = start も end も無いステージ（trigger 停止やセッション起動失敗の疑い）
@@ -18,6 +22,7 @@ import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+PROFILES_JSON = Path(__file__).resolve().parents[4] / "_data" / "profiles.json"
 STATUS_TITLE = "daily-loop status"
 STAGES = ("evaluate", "develop", "review")
 JST = timezone(timedelta(hours=9))
@@ -56,6 +61,11 @@ def parse_guardrails(text):
             config[key] = int(value) if value.isdigit() else value
             current_list = None
     return config
+
+
+def load_profiles():
+    """_data/profiles.json（読者プロファイルの唯一の定義）を読む"""
+    return json.loads(PROFILES_JSON.read_text(encoding="utf-8"))
 
 
 def summarize_issues(issues):
@@ -116,7 +126,7 @@ def summarize_health(records, today):
     }
 
 
-def assemble_output(config, today, post_exists, pages, pages_build,
+def assemble_output(config, today, profiles, posts_exist, pages, pages_build,
                     prs, issues, comments):
     """取得済みデータから出力 JSON を組み立てる（純関数）。"""
     publish_in_progress = (
@@ -124,10 +134,15 @@ def assemble_output(config, today, post_exists, pages, pages_build,
         or (pages_build is not None and pages_build.get("status") != "completed"))
     status_issue, open_count = summarize_issues(issues)
     records = parse_status_records(comments)
+    posts_in_main = {p["id"]: bool(posts_exist.get(p["id"])) for p in profiles}
     return {
         "config": config,
         "today": today,
-        "post_in_main": post_exists,
+        "profiles": [{"id": p["id"], "name": p["name"], "base": p["base"],
+                      "default": bool(p.get("default"))} for p in profiles],
+        "posts_in_main": posts_in_main,
+        "missing_posts": [pid for pid, exists in posts_in_main.items() if not exists],
+        "post_in_main": all(posts_in_main.values()),
         "publish_in_progress": publish_in_progress,
         "pages_url": (pages or {}).get("html_url"),
         "pages_build": pages_build,
@@ -141,9 +156,14 @@ def assemble_output(config, today, post_exists, pages, pages_build,
     }
 
 
-def fetch_via_gh(config, today, now):
+def fetch_via_gh(config, today, now, profiles):
     """gh CLI でデータを取得し assemble_output に渡す。"""
-    post = gh_json(f"repos/{{owner}}/{{repo}}/contents/_posts/{today}-news.md", ok_404=True)
+    posts_exist = {
+        profile["id"]: gh_json(
+            f"repos/{{owner}}/{{repo}}/contents/_posts/{today}-{profile['post_slug']}.md",
+            ok_404=True) is not None
+        for profile in profiles
+    }
     pages = gh_json("repos/{owner}/{repo}/pages", ok_404=True, paginate=False)
     runs = gh_json("repos/{owner}/{repo}/actions/workflows/pages.yml/runs?per_page=1",
                    ok_404=True, paginate=False)
@@ -161,21 +181,22 @@ def fetch_via_gh(config, today, now):
         comments = gh_json(
             f"repos/{{owner}}/{{repo}}/issues/{status_issue}/comments"
             f"?per_page=100&since={since}")
-    return assemble_output(config, today, post is not None, pages, pages_build,
+    return assemble_output(config, today, profiles, posts_exist, pages, pages_build,
                            prs, issues, comments)
 
 
 def main():
     config = parse_guardrails(
         (Path(__file__).resolve().parents[3] / "GUARDRAILS.md").read_text())
+    profiles = load_profiles()
     now = datetime.now(JST)
     today = now.strftime("%Y-%m-%d")
 
     if "--stdin" in sys.argv or not sys.stdin.isatty():
         data = json.load(sys.stdin)
         result = assemble_output(
-            config, today,
-            post_exists=data["post_exists"],
+            config, today, profiles,
+            posts_exist=data["posts_exist"],
             pages=data.get("pages"),
             pages_build=data.get("pages_build"),
             prs=data.get("prs", []),
@@ -183,7 +204,7 @@ def main():
             comments=data.get("comments", []),
         )
     else:
-        result = fetch_via_gh(config, today, now)
+        result = fetch_via_gh(config, today, now, profiles)
 
     json.dump(result, sys.stdout, ensure_ascii=False, indent=1)
 

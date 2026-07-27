@@ -1,5 +1,5 @@
 ---
 layout: feed-archive
-profile: owner
+profile: commuter
 title: "アーカイブ"
 ---
