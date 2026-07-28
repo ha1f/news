@@ -8,7 +8,7 @@ Claude Code のスキル機能を使ったニュースキュレーションツ�
 |---------|-------|-------|
 | テック・経済 | エンジニア。技術と経済の重要ニュースを毎朝10分で | [/](https://ha1f.github.io/news/) |
 | やさしい時事 | 通勤中のライト読者。前提知識なしで世の中に追いつく | [/feeds/commuter/](https://ha1f.github.io/news/feeds/commuter/) |
-| 科学・研究 | 研究の動きを追いかける読者 | [/feeds/science/](https://ha1f.github.io/news/feeds/science/) |
+| 子育て | 子育て中の読者。制度・研究・暮らしの工夫 | [/feeds/parenting/](https://ha1f.github.io/news/feeds/parenting/) |
 
 ## 使い方
 
@@ -116,7 +116,7 @@ GitHub Actions と workflow 内でピン留めしているバージョン（Play
 | [ITmedia](https://www.itmedia.co.jp/) | 日本語 | エンタープライズIT・AI・セキュリティ |
 | [Publickey](https://www.publickey1.jp/) | 日本語 | エンタープライズIT専門メディア |
 | [Qiita](https://qiita.com/) | 日本語 | エンジニア向け技術記事共有プラットフォーム |
-| [はてなブックマーク](https://b.hatena.ne.jp/) | 日本語 | 日本最大のソーシャルブックマーク |
+| [はてなブックマーク](https://b.hatena.ne.jp/) | 日本語 | 日本最大のソーシャルブックマーク（テクノロジー・政治経済・総合・暮らし・学び） |
 | [Zenn](https://zenn.dev/) | 日本語 | エンジニア向け技術情報プラットフォーム |
 
 \* GitHub Trending はサードパーティの [GitHubTrendingRSS](https://github.com/mshibanami/GitHubTrendingRSS) 経由で取得

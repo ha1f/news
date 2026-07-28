@@ -1,5 +1,5 @@
 ---
 layout: feed-archive
-profile: science
+profile: parenting
 title: "アーカイブ"
 ---

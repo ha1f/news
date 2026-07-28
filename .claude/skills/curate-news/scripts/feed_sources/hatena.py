@@ -15,4 +15,10 @@ FEEDS = [
     FeedConfig("hatena", "総合",
                "https://b.hatena.ne.jp/hotentry.rss", "rdf", 720,
                meta_rules=[_BOOKMARKS]),
+    FeedConfig("hatena", "暮らし",
+               "https://b.hatena.ne.jp/hotentry/life.rss", "rdf", 720,
+               meta_rules=[_BOOKMARKS]),
+    FeedConfig("hatena", "学び",
+               "https://b.hatena.ne.jp/hotentry/knowledge.rss", "rdf", 720,
+               meta_rules=[_BOOKMARKS]),
 ]

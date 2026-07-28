@@ -15,10 +15,10 @@
     "base": "/feeds/commuter/"
   },
   {
-    "id": "science",
-    "post_slug": "science",
-    "name": "科学・研究",
-    "tagline": "学術ジャーナルと研究の動きを追いかける読者のための1日",
-    "base": "/feeds/science/"
+    "id": "parenting",
+    "post_slug": "parenting",
+    "name": "子育て",
+    "tagline": "制度・研究・暮らしの工夫を、子育て中の生活時間に合わせて毎日",
+    "base": "/feeds/parenting/"
   }
 ]
