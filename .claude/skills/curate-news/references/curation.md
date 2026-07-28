@@ -34,7 +34,14 @@ python3 .claude/skills/curate-news/scripts/fetch_feeds.py --source hatena --cate
 
 ## 2. description を読んで最終選定
 
-候補が含まれるキャッシュJSON（ソース・カテゴリ単位のファイル）をReadツールで読み、候補記事の `description` を確認して最終的な記事を10件程度に決定する。1つのキャッシュファイルに複数の候補が含まれる場合はまとめて読む。
+絞り込んだ候補のURLをまとめて渡し、`description` を読んで最終的な記事を10件程度に決定する:
+
+```bash
+python3 .claude/skills/curate-news/scripts/show_descriptions.py \
+  "https://example.com/a" "https://example.com/b" ...
+```
+
+キャッシュJSONを直接 Read しない（1ファイル数万バイトあり、必要なのは候補の description だけ）。表示が短すぎて判断できないときだけ `--chars 800` のように伸ばす。
 
 多様性の担保:
 - 同カテゴリからは2件までにする。読んでいて飽きないよう、ジャンルを散らす

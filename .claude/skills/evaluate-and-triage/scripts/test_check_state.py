@@ -19,10 +19,12 @@ def issue(number, title="t", labels=(), pr=False, bot=False):
     return data
 
 
-def status_comment(stage, phase, created_at, ok=None):
+def status_comment(stage, phase, created_at, ok=None, tokens=None):
     record = {"stage": stage, "phase": phase, "summary": "s"}
     if ok is not None:
         record["ok"] = ok
+    if tokens is not None:
+        record["tokens"] = tokens
     return {"created_at": created_at, "body": json.dumps(record) + "\n詳細"}
 
 
@@ -105,6 +107,44 @@ class HealthTest(unittest.TestCase):
         comments = [status_comment("evaluate", "start", "2026-07-09T23:00:00Z")]
         health = summarize_health(parse_status_records(comments), "2026-07-11")
         self.assertFalse(health["no_records"])
+
+
+class TokenSummaryTest(unittest.TestCase):
+    def comments(self, *token_values):
+        return [status_comment("develop", "end", "2026-07-10T01:00:00Z", ok=True, tokens=t)
+                for t in token_values]
+
+    def health_for(self, comments):
+        return summarize_health(parse_status_records(comments), "2026-07-11")
+
+    def test_sums_yesterdays_end_comments(self):
+        health = self.health_for(self.comments(
+            {"in": 100, "out": 1000, "usd": 1.5},
+            {"in": 200, "out": 2000, "usd": 2.25},
+        ))
+        self.assertEqual(health["tokens"],
+                         {"in": 300, "out": 3000, "usd": 3.75, "stages_reported": 2})
+
+    def test_null_when_no_stage_reported_tokens(self):
+        self.assertIsNone(self.health_for(self.comments(None, None))["tokens"])
+
+    def test_ignores_unmeasured_stages_but_counts_the_rest(self):
+        # 計測できない環境は全て null で載る → 合計には入れない
+        health = self.health_for(self.comments(
+            {"in": None, "out": None, "usd": None},
+            {"in": 10, "out": 20, "usd": None},
+        ))
+        self.assertEqual(health["tokens"],
+                         {"in": 10, "out": 20, "usd": 0.0, "stages_reported": 1})
+
+    def test_ignores_start_comments_and_other_days(self):
+        comments = [
+            status_comment("develop", "start", "2026-07-10T01:00:00Z",
+                           tokens={"in": 1, "out": 1, "usd": 9.0}),
+            status_comment("review", "end", "2026-07-09T01:00:00Z", ok=True,
+                           tokens={"in": 1, "out": 1, "usd": 9.0}),
+        ]
+        self.assertIsNone(self.health_for(comments)["tokens"])
 
 
 class AssembleOutputTest(unittest.TestCase):

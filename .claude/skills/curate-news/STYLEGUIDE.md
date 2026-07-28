@@ -82,6 +82,8 @@
 - `profiles.py`: 読者プロファイルの定義（`_data/profiles.json`）の読み込み・検証。ほかのスクリプトはここから
   好みファイル・出力先・記事ファイル名を得る
 - `fetch_feeds.py`: CLI エントリポイント（`--source`, `--category`, `--force`, `--list`）
+- `show_descriptions.py`: 候補URLの description だけをキャッシュから抜く（最終選定で使う。
+  キャッシュJSONを丸ごと読ませないための足場）
 - `feed_core.py`: データクラス（`FeedConfig`, `MetaRule`）、ユーティリティ関数
 - `feed_parsers.py`: RSS 2.0 / RDF / Atom / HN JSON API の4パーサ
 - `feed_sources/`: ソースごとの宣言的定義（プラグイン方式）

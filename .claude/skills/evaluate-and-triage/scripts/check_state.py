@@ -12,6 +12,7 @@
   - health: 前日の各ステージ (evaluate/develop/review) の start/end/ok 集計。
     status issue コメントの1行目 JSON（GUARDRAILS.md 参照）から機械判定する。
     missing = start も end も無いステージ（trigger 停止やセッション起動失敗の疑い）
+    tokens = 前日の終了コメントに載った消費の合計（載っていなければ null）
   - pages_build: 最新の pages.yml run（main のビルドが壊れていないかの判定材料）
 起票するかどうかの判断はエージェントが行う。
 """
@@ -100,10 +101,29 @@ def parse_status_records(comments):
     return records
 
 
+def sum_tokens(records):
+    """終了コメントの tokens を合計する（純関数）。載っていなければ None。"""
+    total = {"in": 0, "out": 0, "usd": 0.0, "stages_reported": 0}
+    for record in records:
+        tokens = record.get("tokens")
+        if not isinstance(tokens, dict) or not isinstance(tokens.get("out"), int):
+            continue
+        total["stages_reported"] += 1
+        total["in"] += tokens.get("in") or 0
+        total["out"] += tokens["out"]
+        if isinstance(tokens.get("usd"), (int, float)):
+            total["usd"] += tokens["usd"]
+    if not total["stages_reported"]:
+        return None
+    total["usd"] = round(total["usd"], 2)
+    return total
+
+
 def summarize_health(records, today):
-    """前日 (JST) の各ステージの start/end/ok を集計する（純関数）"""
+    """前日 (JST) の各ステージの start/end/ok と消費を集計する（純関数）"""
     yesterday = (datetime.strptime(today, "%Y-%m-%d") - timedelta(days=1)).strftime("%Y-%m-%d")
     stages = {stage: {"start": False, "end": False, "ok": None} for stage in STAGES}
+    ended = []
     for record in records:
         created = datetime.fromisoformat(record["created_at"].replace("Z", "+00:00"))
         if created.astimezone(JST).strftime("%Y-%m-%d") != yesterday:
@@ -114,10 +134,12 @@ def summarize_health(records, today):
         elif record.get("phase") == "end":
             entry["end"] = True
             entry["ok"] = record.get("ok")
+            ended.append(record)
     no_records = not any(v["start"] or v["end"] for v in stages.values())
     return {
         "yesterday": yesterday,
         "stages": stages,
+        "tokens": sum_tokens(ended),
         "incomplete": [s for s, v in stages.items() if v["start"] and not v["end"]],
         "failed": [s for s, v in stages.items() if v["ok"] is False],
         "missing": [] if no_records else

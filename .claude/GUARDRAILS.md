@@ -23,6 +23,8 @@ GitHub ネイティブの状態だけで回す: PR の draft（作業中・触�
 
 status issue（📊 daily-loop status）へのコメントは1行目を JSON にする（例: `{"stage": "develop", "phase": "end", "ok": true, "summary": "#26 実装 → PR #27"}`。stage は evaluate / develop / review / audit（週次）。スクリプトがこれを読んで前日の健全性を機械判定する（audit は週次のため健全性集計の対象外）。
 
+終了コメントには消費も載せる。`python3 .claude/scripts/session_usage.py` の出力（1行の JSON）をそのまま `tokens` の値にする: `{"stage": "develop", "phase": "end", "ok": true, "tokens": {"in": ..., "out": ..., "usd": ...}, "summary": "..."}`。計測できない環境では全て null が返るので、その場合も値をそのまま載せる（推測で埋めない）。
+
 全アクションがオーナー名義のため GitHub 通知は発生しない。人間の対応が必要になったとき（緊急 issue の起票・保護パスへの hold・revert 実行）は、Slack ツールが使えればオーナーに DM で1通知する。
 
 ## コンテンツの権利ガードレール
