@@ -9,6 +9,7 @@
   - in_progress: open な linked PR を持つ issue（要対応かはエージェントが判断）
   - backlog: linked PR の無い issue。作成日の古い順
 フィルタ（collaborator 名義のみ・hold と status issue を除外）は適用済み。
+author_association が欠落した issue（MCP 経由等）は信頼チェックをスキップする。
 優先度・着手順の判断はエージェントが issue を読んで行う。
 """
 import json
@@ -68,7 +69,9 @@ def build_candidates(issues, prs):
             status_issue = issue["number"]
             continue
         labels = {label["name"] for label in issue.get("labels", [])}
-        if issue.get("author_association", "") not in TRUSTED or "hold" in labels:
+        if "author_association" in issue and issue["author_association"] not in TRUSTED:
+            continue
+        if "hold" in labels:
             continue
         entry = {
             "number": issue["number"],
