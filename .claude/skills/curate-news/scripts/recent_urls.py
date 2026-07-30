@@ -81,11 +81,12 @@ def _collect_from_output(cutoff: date, today: date, pref_hash: str) -> set[str]:
 
 def main():
     parser = argparse.ArgumentParser(description="過去の掲載済みURLを抽出")
+    parser.add_argument("--profile", help="プロファイル名またはパス（省略時は preferences.md）")
     parser.add_argument("--hash", help="preferencesハッシュ（省略時は自動計算）")
     parser.add_argument("--days", type=int, default=7, help="遡る日数（デフォルト7）")
     args = parser.parse_args()
 
-    pref_hash = args.hash or compute_suffix()
+    pref_hash = args.hash or compute_suffix(args.profile)
     today = date.today()
     cutoff = today - timedelta(days=args.days)
 
