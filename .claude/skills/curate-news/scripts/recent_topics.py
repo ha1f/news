@@ -77,11 +77,12 @@ def _collect(cutoff: date, today: date, pref_hash: str) -> dict[str, list[str]]:
 
 def main():
     parser = argparse.ArgumentParser(description="過去の掲載済みヘッドラインを抽出")
+    parser.add_argument("--profile", help="プロファイル名またはパス（省略時は preferences.md）")
     parser.add_argument("--hash", help="preferencesハッシュ（省略時は自動計算）")
     parser.add_argument("--days", type=int, default=3, help="遡る日数（デフォルト3）")
     args = parser.parse_args()
 
-    pref_hash = args.hash or compute_suffix()
+    pref_hash = args.hash or compute_suffix(args.profile)
     today = date.today()
     cutoff = today - timedelta(days=args.days)
 

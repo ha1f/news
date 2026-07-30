@@ -8,11 +8,21 @@ description: "最新のニュースを取得・キュレーションして表示
 
 処理は数分かかるため、各ステップの開始時にステップ名と件数（ソース数・記事数等）を表示して進捗を伝える。
 
+## 引数
+
+スキルの `args` でプロファイルを指定できる。省略時はデフォルトの `preferences.md` を使う。
+
+- `--profile alice` → `profiles/alice.md` を使用
+- `--profile path/to/pref.md` → 指定パスを使用
+- 引数なし → `preferences.md`（既存動作）
+
+プロファイルが指定された場合、以降の全スクリプト呼び出しに `--profile <値>` を付与する。
+
 ## 手順
 
 ### 1. 好みファイルの読み込み
 
-`.claude/skills/curate-news/preferences.md` を読み込む。存在しなければデフォルト（全ソース有効）で進める。
+プロファイルが指定されている場合はそのファイル、なければ `.claude/skills/curate-news/preferences.md` を読み込む。存在しなければデフォルト（全ソース有効）で進める。
 
 好みファイルの構成:
 - **興味・関心**: ソース・カテゴリの自動選択と、キュレーション時の優先度付けに使う
@@ -71,8 +81,8 @@ python3 .claude/skills/curate-news/scripts/fetch_feeds.py --source hatena --forc
 まず、過去に掲載した記事のURLリストと掲載済みヘッドラインを取得する:
 
 ```bash
-python3 .claude/skills/curate-news/scripts/recent_urls.py
-python3 .claude/skills/curate-news/scripts/recent_topics.py
+python3 .claude/skills/curate-news/scripts/recent_urls.py [--profile <プロファイル>]
+python3 .claude/skills/curate-news/scripts/recent_topics.py [--profile <プロファイル>]
 ```
 
 - URLリストはこのステップ以降の除外対象とする
@@ -161,7 +171,7 @@ python3 .claude/skills/curate-news/scripts/fetch_feeds.py --source hatena --cate
 ファイル名のサフィックスを取得する:
 
 ```bash
-python3 .claude/skills/curate-news/scripts/preference_hash.py
+python3 .claude/skills/curate-news/scripts/preference_hash.py [--profile <プロファイル>]
 ```
 
 `{YYYY-MM-DD}` は JST (Asia/Tokyo) 基準の日付とする。推測せず、以下のコマンドで取得する:
