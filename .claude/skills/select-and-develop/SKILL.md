@@ -17,5 +17,7 @@ description: "open issue から今日実装する対象を選定し、develop-is
 
 ## 完了条件
 
-- status issue に開始と終了の各1コメント（1行目 JSON、stage は `develop`。着手した issue / 作成した PR / hold にした issue を summary に）
+- status issue に開始と終了の各1コメント。1行目は check_state.py が機械判定する JSON（キー名・値とも厳密一致が必要）:
+  - 開始: `{"stage": "develop", "phase": "start", "summary": "候補: #26, #28。#26 を優先着手"}`
+  - 終了: `{"stage": "develop", "phase": "end", "ok": true, "summary": "#26 実装 → PR #27"}`
 - 最後に reflect-and-improve を実行する。振り返り対象はこのスキルの選定ロジックのみ（develop-issue 内部の学びは develop-issue 自身が反映済み）。作成した改善 PR も ready 化する
