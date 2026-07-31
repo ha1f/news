@@ -51,13 +51,17 @@ def _collect(cutoff: date, today: date, pref_hash: str) -> dict[str, list[str]]:
     """_posts/ と output/ からヘッドラインを日付ごとに収集する。"""
     by_date: dict[str, list[str]] = {}
 
-    for directory, suffix in [(_POSTS_DIR, "-news.md"), (_OUTPUT_DIR, f"-{pref_hash}.md")]:
+    _posts_re = re.compile(r"^\d{4}-\d{2}-\d{2}-news(?:-.+)?\.md$")
+    for directory, match_fn in [
+        (_POSTS_DIR, lambda n: bool(_posts_re.match(n))),
+        (_OUTPUT_DIR, lambda n: n.endswith(f"-{pref_hash}.md")),
+    ]:
         try:
             entries = os.listdir(directory)
         except FileNotFoundError:
             continue
         for name in entries:
-            if not name.endswith(suffix):
+            if not match_fn(name):
                 continue
             date_str = name[:10]
             try:
