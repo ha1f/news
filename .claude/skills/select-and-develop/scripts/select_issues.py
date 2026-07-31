@@ -5,6 +5,10 @@
   python3 select_issues.py                    # gh CLI でデータ取得
   echo '{"issues": [...], "prs": [...]}' | python3 select_issues.py --stdin
 
+--stdin の JSON に "collaborators" (login の文字列リスト) を含めると、
+issue の author_association が欠落していても author が collaborator なら
+信頼済みと判定する (MCP list_issues が author_association を返さない問題の回避策)。
+
 出力: {"config", "status_issue", "in_progress", "backlog"}
   - in_progress: open な linked PR を持つ issue（要対応かはエージェントが判断）
   - backlog: linked PR の無い issue。作成日の古い順
@@ -51,8 +55,20 @@ def parse_guardrails(text):
     return config
 
 
-def build_candidates(issues, prs):
+def _is_trusted(issue, collaborators):
+    """author_association があればそれで判定、なければ collaborators リストで補完。"""
+    assoc = issue.get("author_association", "")
+    if assoc:
+        return assoc in TRUSTED
+    if collaborators:
+        login = (issue.get("user") or {}).get("login", "")
+        return login in collaborators
+    return False
+
+
+def build_candidates(issues, prs, collaborators=None):
     """issue を status / in_progress / backlog に分類する（純関数）"""
+    collaborators = frozenset(collaborators) if collaborators else frozenset()
     links = {}
     for pr in prs:
         for m in LINK_RE.finditer(pr.get("body") or ""):
@@ -68,7 +84,7 @@ def build_candidates(issues, prs):
             status_issue = issue["number"]
             continue
         labels = {label["name"] for label in issue.get("labels", [])}
-        if issue.get("author_association", "") not in TRUSTED or "hold" in labels:
+        if not _is_trusted(issue, collaborators) or "hold" in labels:
             continue
         entry = {
             "number": issue["number"],
@@ -97,10 +113,12 @@ def main():
         data = json.load(sys.stdin)
         issues = data["issues"]
         prs = data["prs"]
+        collaborators = data.get("collaborators")
     else:
         issues, prs = fetch_via_gh()
+        collaborators = None
 
-    status_issue, in_progress, backlog = build_candidates(issues, prs)
+    status_issue, in_progress, backlog = build_candidates(issues, prs, collaborators)
     json.dump({
         "config": config,
         "status_issue": status_issue,
