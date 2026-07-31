@@ -85,11 +85,11 @@ date: {YYYY-MM-DD}
 {リード文から始まる本文}
 ```
 
-名前付きプロファイル:
+名前付きプロファイル（タイトルにプロファイル名を付加し、同日の他プロファイル記事と区別する）:
 ```yaml
 ---
 layout: post
-title: "{YYYY}年{M}月{D}日"
+title: "{YYYY}年{M}月{D}日 ({name})"
 date: {YYYY-MM-DD}
 profile: {name}
 ---
