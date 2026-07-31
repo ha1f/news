@@ -8,14 +8,18 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from select_issues import build_candidates, parse_guardrails
 
 
-def issue(number, title="t", assoc="OWNER", labels=(), created="2026-07-01T00:00:00Z", pr=False):
+def issue(number, title="t", assoc="OWNER", labels=(), created="2026-07-01T00:00:00Z",
+          pr=False, login=None):
     data = {
         "number": number,
         "title": title,
-        "author_association": assoc,
         "labels": [{"name": name} for name in labels],
         "created_at": created,
     }
+    if assoc is not None:
+        data["author_association"] = assoc
+    if login is not None:
+        data["user"] = {"login": login}
     if pr:
         data["pull_request"] = {}
     return data
@@ -62,6 +66,31 @@ class BuildCandidatesTest(unittest.TestCase):
         prs = [pr(10, body="Fixes #1"), pr(11, body="Refs #2"), pr(12, body="resolved #3")]
         _, in_progress, _ = build_candidates(issues, prs)
         self.assertEqual([e["number"] for e in in_progress], [1, 2, 3])
+
+
+    def test_collaborators_fallback_when_author_association_missing(self):
+        issues = [
+            issue(1, assoc=None, login="owner-user"),
+            issue(2, assoc=None, login="external-user"),
+            issue(3, assoc=None, login="member-user"),
+        ]
+        _, _, backlog = build_candidates(issues, [],
+                                         collaborators=["owner-user", "member-user"])
+        self.assertEqual([e["number"] for e in backlog], [1, 3])
+
+    def test_no_collaborators_no_assoc_is_fail_closed(self):
+        issues = [issue(1, assoc=None, login="someone")]
+        _, _, backlog = build_candidates(issues, [])
+        self.assertEqual(backlog, [])
+
+    def test_author_association_takes_precedence_over_collaborators(self):
+        issues = [
+            issue(1, assoc="NONE", login="owner-user"),
+            issue(2, assoc="OWNER", login="unknown"),
+        ]
+        _, _, backlog = build_candidates(issues, [],
+                                         collaborators=["owner-user"])
+        self.assertEqual([e["number"] for e in backlog], [2])
 
 
 class ParseGuardrailsTest(unittest.TestCase):
