@@ -9,7 +9,8 @@ layout: default
   <h2 class="post-list-heading">最新の記事</h2>
 
   {%- assign date_format = site.minima.date_format | default: "%Y年%-m月%-d日" -%}
-  {%- assign recent_posts = site.posts | slice: 0, 7 -%}
+  {%- assign default_posts = site.posts | where_exp: "post", "post.profile == nil" -%}
+  {%- assign recent_posts = default_posts | slice: 0, 7 -%}
 
   <ul class="post-list">
     {%- for post in recent_posts -%}
@@ -37,6 +38,21 @@ layout: default
     }
   })();
   </script>
+
+  {%- assign profile_pages = site.pages | where: "layout", "profile" | sort: "title" -%}
+  {%- if profile_pages.size > 0 -%}
+  <div class="profile-nav">
+    <h3 class="profile-nav-heading">プロファイル別</h3>
+    <ul class="profile-nav-list">
+      {%- for p in profile_pages -%}
+      <li>
+        <a href="{{ p.url | relative_url }}">{{ p.title | escape }}</a>
+        {%- if p.description -%}<span class="profile-nav-desc"> — {{ p.description | escape }}</span>{%- endif -%}
+      </li>
+      {%- endfor -%}
+    </ul>
+  </div>
+  {%- endif -%}
 
   <p class="post-list-archive">
     <a href="{{ '/archive.html' | relative_url }}">すべての記事を見る &rarr;</a>
