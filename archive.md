@@ -9,7 +9,8 @@ title: "アーカイブ"
 
 <p id="archive-no-results" class="archive-no-results" hidden>該当する記事が見つかりません</p>
 
-{% assign posts_by_month = site.posts | group_by_exp: "post", "post.date | date: '%Y%m'" | sort: "name" | reverse %}
+{% assign default_posts = site.posts | where_exp: "post", "post.profile == nil" %}
+{% assign posts_by_month = default_posts | group_by_exp: "post", "post.date | date: '%Y%m'" | sort: "name" | reverse %}
 
 {% for group in posts_by_month %}
 <div class="archive-month" data-month="{{ group.name }}">
