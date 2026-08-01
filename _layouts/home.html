@@ -46,8 +46,8 @@ layout: default
     <ul class="profile-nav-list">
       {%- for p in profile_pages -%}
       <li>
-        <a href="{{ p.url | relative_url }}">{{ p.title }}</a>
-        {%- if p.description -%}<span class="profile-nav-desc"> — {{ p.description }}</span>{%- endif -%}
+        <a href="{{ p.url | relative_url }}">{{ p.title | escape }}</a>
+        {%- if p.description -%}<span class="profile-nav-desc"> — {{ p.description | escape }}</span>{%- endif -%}
       </li>
       {%- endfor -%}
     </ul>
