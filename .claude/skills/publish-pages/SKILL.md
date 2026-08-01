@@ -10,9 +10,9 @@ description: "ニュースキュレーションを実行し、GitHub Pagesにデ
 
 スキルの `args` でプロファイルを指定できる。
 
-- 引数なし → デフォルトの `preferences.md` のみ（既存動作）
-- `--all-profiles` → デフォルト + `profiles/*.md` の全プロファイル
+- 引数なし → デフォルト + `profiles/*.md` の全プロファイル（`--all-profiles` と同じ）
 - `--profile designer` → 指定プロファイルのみ
+- `--all-profiles` → 引数なしと同じ（後方互換のエイリアス）
 
 ## 手順
 
@@ -24,12 +24,12 @@ TZ=Asia/Tokyo date +%F
 ```
 
 引数に応じてキュレーション対象を決める:
-- 引数なし → `[null]`（デフォルト1件）
 - `--profile {name}` → `["{name}"]`
-- `--all-profiles` → デフォルト (`null`) + `profiles/*.md` から取得した名前のリスト:
+- それ以外（引数なし / `--all-profiles`） → デフォルト (`null`) + `profiles/*.md` から取得した名前のリスト:
   ```bash
   ls .claude/skills/curate-news/profiles/*.md 2>/dev/null | xargs -I{} basename {} .md
   ```
+  プロファイルが存在しなければ `[null]`（デフォルト1件のみ）。
 
 以降、このリストの各要素を「対象プロファイル」と呼ぶ。`null` はデフォルトプロファイルを表す。
 
