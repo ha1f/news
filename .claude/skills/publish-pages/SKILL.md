@@ -109,14 +109,10 @@ PR タイトル:
 - 1件: `ニュース: {YYYY-MM-DD}`
 - 複数: `ニュース: {YYYY-MM-DD} ({件数}プロファイル)`
 
-PR を作成する:
-```bash
-gh pr create --base main --title "{タイトル}" --body "$(cat <<'EOF'
-/curate-news の結果を GitHub Pages にデプロイします。
+PR を作成する。`gh` CLI が使えない環境（CCR 等）では GitHub MCP ツールで同等の操作を行う。
 
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
-EOF
-)"
+```bash
+gh pr create --base main --title "{タイトル}" --body "/curate-news の結果を GitHub Pages にデプロイします。"
 ```
 
 PR の URL をユーザーに表示する。
@@ -129,10 +125,12 @@ PR を squash マージしてブランチを削除する。
 gh pr merge --squash --delete-branch
 ```
 
+`gh` が使えなければ MCP ツールで squash マージする。
+
 ### 7. 元のブランチに戻る
 
 ステップ 3 で確認したブランチに戻る。
 
 ### 8. 振り返りと改善
 
-Skill ツールで `reflect-and-improve` を実行する。作成された改善 PR は ready 化する（`gh pr ready`。次の review-and-merge のレビュー対象になる）。
+Skill ツールで `reflect-and-improve` を実行する。作成された改善 PR は ready 化する（`gh pr ready` または MCP ツール。次の review-and-merge のレビュー対象になる）。
