@@ -19,16 +19,34 @@ layout: default
     {{ content }}
   </div>
 
-  {%- if page.previous or page.next -%}
+  {%- if page.profile -%}
+    {%- assign nav_siblings = site.posts | where: "profile", page.profile -%}
+  {%- else -%}
+    {%- assign nav_siblings = site.posts | where_exp: "post", "post.profile == nil" -%}
+  {%- endif -%}
+  {%- assign nav_prev = nil -%}
+  {%- assign nav_next = nil -%}
+  {%- assign nav_found = false -%}
+  {%- for post in nav_siblings -%}
+    {%- if post.url == page.url -%}
+      {%- assign nav_found = true -%}
+    {%- elsif nav_found and nav_prev == nil -%}
+      {%- assign nav_prev = post -%}
+    {%- elsif nav_found == false -%}
+      {%- assign nav_next = post -%}
+    {%- endif -%}
+  {%- endfor -%}
+
+  {%- if nav_prev or nav_next -%}
   <nav class="post-navigation">
     <div class="post-navigation-prev">
-      {%- if page.previous -%}
-      <a href="{{ page.previous.url | relative_url }}">&larr; {{ page.previous.title }}</a>
+      {%- if nav_prev -%}
+      <a href="{{ nav_prev.url | relative_url }}">&larr; {{ nav_prev.title }}</a>
       {%- endif -%}
     </div>
     <div class="post-navigation-next">
-      {%- if page.next -%}
-      <a href="{{ page.next.url | relative_url }}">{{ page.next.title }} &rarr;</a>
+      {%- if nav_next -%}
+      <a href="{{ nav_next.url | relative_url }}">{{ nav_next.title }} &rarr;</a>
       {%- endif -%}
     </div>
   </nav>
