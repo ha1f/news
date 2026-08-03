@@ -14,7 +14,7 @@ jobs:
       # latest 追従で全 PR の check が突然 red になるのを防ぐ（CI green はループのマージ条件）。
       # 更新は Renovate の PR で行う（.github/renovate.json5）
       # renovate: datasource=npm depName=playwright
-      PLAYWRIGHT_VERSION: 1.61.1
+      PLAYWRIGHT_VERSION: 1.62.1
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
