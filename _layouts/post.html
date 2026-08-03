@@ -37,6 +37,39 @@ layout: default
     {%- endif -%}
   {%- endfor -%}
 
+  {%- assign current_date_str = page.date | date: '%Y-%m-%d' -%}
+  {%- assign has_cross = false -%}
+  {%- for post in site.posts -%}
+    {%- assign post_date_str = post.date | date: '%Y-%m-%d' -%}
+    {%- if post_date_str == current_date_str and post.url != page.url and post.profile != page.profile -%}
+      {%- assign has_cross = true -%}
+      {%- break -%}
+    {%- endif -%}
+  {%- endfor -%}
+
+  {%- if has_cross -%}
+  <nav class="cross-profile-nav">
+    <h4 class="cross-profile-heading">別の視点で読む</h4>
+    <ul class="cross-profile-list">
+    {%- for post in site.posts -%}
+      {%- assign post_date_str = post.date | date: '%Y-%m-%d' -%}
+      {%- if post_date_str == current_date_str and post.url != page.url and post.profile != page.profile -%}
+      <li>
+        <a href="{{ post.url | relative_url }}">
+          {%- if post.profile -%}
+            {%- assign profile_page = site.pages | where: "profile", post.profile | first -%}
+            {{ profile_page.title | default: post.profile }}向け
+          {%- else -%}
+            メイン
+          {%- endif -%}
+        </a>
+      </li>
+      {%- endif -%}
+    {%- endfor -%}
+    </ul>
+  </nav>
+  {%- endif -%}
+
   {%- if nav_prev or nav_next -%}
   <nav class="post-navigation">
     <div class="post-navigation-prev">
