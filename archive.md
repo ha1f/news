@@ -3,6 +3,16 @@ layout: page
 title: "アーカイブ"
 ---
 
+{%- assign profile_pages = site.pages | where: "layout", "profile" | sort: "title" -%}
+{%- if profile_pages.size > 0 -%}
+<p class="archive-profile-nav">プロファイル別:
+{%- for p in profile_pages -%}
+  <a href="{{ p.url | relative_url }}">{{ p.title | escape }}</a>
+  {%- unless forloop.last %} / {% endunless -%}
+{%- endfor -%}
+</p>
+{%- endif -%}
+
 <div class="archive-search">
   <input type="text" id="archive-filter" placeholder="キーワードで絞り込み…" autocomplete="off">
 </div>
