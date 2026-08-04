@@ -79,8 +79,9 @@ def strip_utm(url: str) -> str:
 # --- XML処理 ---
 
 def _sanitize_xml(content: bytes) -> bytes:
-    """不正なXMLを前処理。エスケープされていない & を &amp; に変換する。"""
+    """不正なXMLを前処理。制御文字の除去とエスケープされていない & の変換。"""
     text = content.decode("utf-8", errors="replace")
+    text = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", "", text)
     text = re.sub(r"&(?!(?:amp|lt|gt|quot|apos|#\d+|#x[0-9a-fA-F]+);)", "&amp;", text)
     return text.encode("utf-8")
 
