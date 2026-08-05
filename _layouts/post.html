@@ -91,3 +91,18 @@ layout: default
 
   <a class="u-url" href="{{ page.url | relative_url }}" hidden></a>
 </article>
+
+<script>
+(function() {
+  var host = location.hostname;
+  var links = document.querySelectorAll('.post-content a[href]');
+  for (var i = 0; i < links.length; i++) {
+    var a = links[i];
+    if (a.hostname && a.hostname !== host) {
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      a.classList.add('external-link');
+    }
+  }
+})();
+</script>
