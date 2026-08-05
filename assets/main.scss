@@ -54,6 +54,14 @@
   line-height: 1.5;
 }
 
+.external-link::after {
+  content: "\2197";
+  font-size: 0.75em;
+  margin-left: 0.15em;
+  vertical-align: super;
+  color: $grey-color;
+}
+
 .post-navigation {
   display: flex;
   justify-content: space-between;
@@ -264,6 +272,10 @@
   }
 
   .cross-profile-heading {
+    color: #8b949e;
+  }
+
+  .external-link::after {
     color: #8b949e;
   }
 }
