@@ -3,6 +3,16 @@ layout: default
 ---
 <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
 
+  {%- assign current_date_str = page.date | date: '%Y-%m-%d' -%}
+  {%- assign has_cross = false -%}
+  {%- for post in site.posts -%}
+    {%- assign post_date_str = post.date | date: '%Y-%m-%d' -%}
+    {%- if post_date_str == current_date_str and post.url != page.url and post.profile != page.profile -%}
+      {%- assign has_cross = true -%}
+      {%- break -%}
+    {%- endif -%}
+  {%- endfor -%}
+
   <header class="post-header">
     <h1 class="post-title p-name" itemprop="name headline">{{ page.title | escape }}</h1>
     <p class="post-meta">
@@ -13,6 +23,19 @@ layout: default
       {%- if page.author -%}
         • <span itemprop="author" itemscope itemtype="http://schema.org/Person"><span class="p-author h-card" itemprop="name">{{ page.author }}</span></span>
       {%- endif -%}</p>
+    {%- if has_cross -%}
+    <p class="cross-profile-nav">別の視点で読む:
+      {%- assign is_first_cross = true -%}
+      {%- for post in site.posts -%}
+        {%- assign post_date_str = post.date | date: '%Y-%m-%d' -%}
+        {%- if post_date_str == current_date_str and post.url != page.url and post.profile != page.profile -%}
+          {%- unless is_first_cross %} / {% endunless -%}
+          {%- assign is_first_cross = false -%}
+          <a href="{{ post.url | relative_url }}">{%- if post.profile -%}{%- assign profile_page = site.pages | where: "profile", post.profile | first -%}{{ profile_page.title | default: post.profile }}向け{%- else -%}メイン{%- endif -%}</a>
+        {%- endif -%}
+      {%- endfor -%}
+    </p>
+    {%- endif -%}
   </header>
 
   <div class="post-content e-content" itemprop="articleBody">
@@ -36,39 +59,6 @@ layout: default
       {%- assign nav_next = post -%}
     {%- endif -%}
   {%- endfor -%}
-
-  {%- assign current_date_str = page.date | date: '%Y-%m-%d' -%}
-  {%- assign has_cross = false -%}
-  {%- for post in site.posts -%}
-    {%- assign post_date_str = post.date | date: '%Y-%m-%d' -%}
-    {%- if post_date_str == current_date_str and post.url != page.url and post.profile != page.profile -%}
-      {%- assign has_cross = true -%}
-      {%- break -%}
-    {%- endif -%}
-  {%- endfor -%}
-
-  {%- if has_cross -%}
-  <nav class="cross-profile-nav">
-    <h4 class="cross-profile-heading">別の視点で読む</h4>
-    <ul class="cross-profile-list">
-    {%- for post in site.posts -%}
-      {%- assign post_date_str = post.date | date: '%Y-%m-%d' -%}
-      {%- if post_date_str == current_date_str and post.url != page.url and post.profile != page.profile -%}
-      <li>
-        <a href="{{ post.url | relative_url }}">
-          {%- if post.profile -%}
-            {%- assign profile_page = site.pages | where: "profile", post.profile | first -%}
-            {{ profile_page.title | default: post.profile }}向け
-          {%- else -%}
-            メイン
-          {%- endif -%}
-        </a>
-      </li>
-      {%- endif -%}
-    {%- endfor -%}
-    </ul>
-  </nav>
-  {%- endif -%}
 
   {%- if nav_prev or nav_next -%}
   <nav class="post-navigation">
