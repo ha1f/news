@@ -34,7 +34,7 @@ GEPA は実行トレース（推論・tool call・エラー）を LM が自然�
 
 ```python
 opt = dspy.GEPA(metric=metric, auto="light",
-                reflection_lm=dspy.LM("anthropic/claude-opus-4-8"))
+                reflection_lm=dspy.LM("anthropic/claude-opus-5"))
 optimized = opt.compile(program, trainset=trainset[:20], valset=trainset[20:])
 ```
 

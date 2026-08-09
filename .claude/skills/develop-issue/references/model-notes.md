@@ -11,7 +11,7 @@
 
 ## 使い分け
 
-orchestrator は session のモデル、実装 worker は sonnet、ログ解析・分類など機械的な作業は haiku を並列で。迷ったら指定しない。
+orchestrator は session のモデル（現行デフォルト: Opus 5）、実装 worker は Sonnet 5、ログ解析・分類など機械的な作業は Haiku 4.5 を並列で。迷ったら指定しない。
 
 team の形は 3 つ: 使い捨て subagent (独立作業)、会話を継続する teammate (設計判断の往復が要る大物)、fan-out + 検証 (独立視点が欲しいとき)。
 
