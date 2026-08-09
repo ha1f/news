@@ -17,6 +17,8 @@ description: "デプロイ済みのニュースサイトをサービスユーザ
 {"post_exists": true, "pages": {"html_url": "..."}, "pages_build": {"status": "completed", "conclusion": "success"}, "prs": [...], "issues": [...], "comments": [...]}
 ```
 
+コメントのページネーション: MCP の `issue_read`/`get_comments` は `since` フィルタを持たず、古い順に返す。status issue のコメントが100件を超えたら、最後のページから取得して直近1〜2日分を確保する（health check は前日のレコードだけを使う）。
+
 - `post_in_main` が false → `publish_in_progress` が true なら publish がまだ走行中。status issue に記録だけして終了する。false なら 9時の失敗として緊急の ops issue を起票し、評価はスキップする
 - `pages_build.conclusion` が failure → ログを確認して build job と deploy job のどちらが失敗したか切り分ける。build job が失敗していればコードが壊れているので緊急の ops issue を起票する。deploy job のみの失敗（503 等の一過性エラー）は `rerun_failed_jobs` で再実行し、再実行も失敗したら ops issue を起票する
 - `health.incomplete` / `health.failed` / `health.missing` が非空 → セッション死亡・失敗・無記録（trigger 停止の疑い）。`git log --since=24hours origin/main -- .claude/` で直近24時間に `.claude/` を変更したマージが有るか確認し、有れば「その変更を revert する」緊急 issue、無ければ「失敗原因を調査する」issue を起票する（一過性の失敗で良い変更を revert しない）。`health.no_records` が true（導入直後）なら起票せず記録だけして進む
