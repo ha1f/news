@@ -2,6 +2,17 @@
 ---
 @import "minima";
 
+.post-list li:first-child {
+  padding-bottom: calc($spacing-unit * 0.6);
+  margin-bottom: calc($spacing-unit * 0.4);
+  border-bottom: 1px solid $grey-color-light;
+
+  h3 {
+    font-size: $base-font-size * 1.375;
+    font-weight: 700;
+  }
+}
+
 .post-list li.is-today {
   .post-meta {
     color: $brand-color;
@@ -152,6 +163,10 @@
       background-color: #171717;
       border-color: #383838;
     }
+  }
+
+  .post-list li:first-child {
+    border-bottom-color: #383838;
   }
 
   .post-list li.is-today .post-meta {
