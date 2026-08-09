@@ -2,7 +2,7 @@
 
 モデル世代固有の挙動と API 仕様の変化。対象プロンプトが前提とする世代とのズレを見つけるために使う。時限情報はこのファイルに集約し、世代交代時はここだけ更新する（SKILL.md 本文は世代非依存）。
 
-最終更新: 2026-07。現行世代: Claude 5 family (Fable 5 / Mythos 5)、Opus 4.8、Sonnet 5、Haiku 4.5。
+最終更新: 2026-08。現行世代: Claude 5 family (Fable 5 / Opus 5 / Sonnet 5)、Haiku 4.5。
 
 ## 世代を貫く傾向（4.5 → 5）
 
@@ -15,6 +15,7 @@
 | prefill（assistant 応答の事前入力） | 使用可 | Opus 4.6 以降で廃止（400 エラー）。structured outputs / system prompt / tool strict mode で代替 |
 | extended thinking | `budget_tokens` 手動指定 | `effort` パラメータ（low / medium / high / xhigh / max、デフォルト high）。Opus 4.8+ で手動 budget は 400 エラー |
 | sampling params（temperature / top_p / top_k） | 調整可 | Opus 4.8+ で非デフォルト値は 400 エラー。挙動制御はプロンプトで行う |
+| デフォルトモデル | Opus 4.8 | Opus 5（$10/$50 per Mtok、1M context）。Claude Code v2.1.219 以降のデフォルト |
 
 出典: https://platform.claude.com/docs/en/about-claude/models/whats-new-claude-4-8 / https://platform.claude.com/docs/en/build-with-claude/effort
 
@@ -34,4 +35,4 @@
 
 - 4.6: subagent の過剰使用傾向 → 「単純なタスクは直接実行」の指示が有効
 - 4.6/4.7: 「迷ったらツールを使え」が過剰呼び出しを招く
-- effort 推奨: coding は Opus 4.7/4.8 で xhigh 開始、Sonnet 4.6 は medium 開始。Fable 5 は low でも旧世代の xhigh 相当以上
+- effort 推奨: coding は Opus 5 で high 開始（4.7/4.8 では xhigh 開始）、Sonnet 5 は medium 開始。Fable 5 は low でも旧世代の xhigh 相当以上
