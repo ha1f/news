@@ -20,4 +20,4 @@ title: "プロファイル"
 
 既存のプロファイルに合うものがなくても、自分の関心に合わせたカスタムフィードを作れます。GitHub でリポジトリを [Fork](https://github.com/ha1f/news/fork) し、好みの設定を編集するだけで、毎日自分向けにキュレーションされたニュースが届くようになります。
 
-始め方の詳細は [README の「Fork して使う」](https://github.com/ha1f/news#forkして使う) をご覧ください。
+始め方の詳細は [README の「Forkして使う」](https://github.com/ha1f/news#forkして使う) をご覧ください。
