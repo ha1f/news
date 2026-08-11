@@ -96,7 +96,7 @@ def print_summary(feeds: list[FeedConfig]) -> None:
             print(f"[{feed.cache_key}] (キャッシュなし)", file=sys.stderr)
             continue
 
-        items = data.get("items", [])
+        items = data if isinstance(data, list) else data.get("items", [])
         print(f"[{feed.cache_key}] ({len(items)} items)")
         for item in items:
             title = (item.get("title") or "")[:50]
