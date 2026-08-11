@@ -18,6 +18,12 @@ title: "プロファイル"
 
 ## 自分用のフィードを作る
 
-既存のプロファイルに合うものがなくても、自分の関心に合わせたカスタムフィードを作れます。GitHub でリポジトリを [Fork](https://github.com/ha1f/news/fork) し、好みの設定を編集するだけで、毎日自分向けにキュレーションされたニュースが届くようになります。
+既存のプロファイルに合うものがない場合、2つの方法でカスタムフィードを作れます。
 
-始め方の詳細は [README の「Forkして使う」](https://github.com/ha1f/news#forkして使う) をご覧ください。
+### リクエストする
+
+興味のある分野を伝えるだけで、あなた専用のプロファイルを作成します。[こちらからリクエスト](https://github.com/ha1f/news/issues/new?template=profile-request.yml)してください。
+
+### 自分で作る（GitHub ユーザー向け）
+
+リポジトリを [Fork](https://github.com/ha1f/news/fork) し、好みの設定を編集すると、毎日自分向けにキュレーションされたニュースが届きます。詳細は [README の「Forkして使う」](https://github.com/ha1f/news#forkして使う) をご覧ください。

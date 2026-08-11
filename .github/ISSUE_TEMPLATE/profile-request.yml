@@ -1,0 +1,57 @@
+name: "カスタムプロファイルのリクエスト"
+description: "自分の興味に合ったニュースフィードを作成してもらうリクエスト"
+title: "プロファイルリクエスト: "
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        自分の関心に合ったカスタムニュースフィードを作成するリクエストです。
+        以下の項目を記入してください。
+
+  - type: input
+    id: profile-name
+    attributes:
+      label: プロファイル名
+      description: "フィードの短い名前（例: セキュリティエンジニア、プロダクトマネージャー）"
+      placeholder: "例: セキュリティエンジニア"
+    validations:
+      required: true
+
+  - type: textarea
+    id: interests
+    attributes:
+      label: 興味・関心のある分野
+      description: "どんな分野のニュースを読みたいですか？具体的に書くほど精度が上がります"
+      placeholder: |
+        例:
+        - クラウドセキュリティ
+        - 脆弱性情報・CVE
+        - ゼロトラストアーキテクチャ
+        - プライバシー規制（GDPR等）
+    validations:
+      required: true
+
+  - type: textarea
+    id: unwanted
+    attributes:
+      label: 読みたくない記事
+      description: "除外したいジャンルやトピックがあれば記入してください（任意）"
+      placeholder: |
+        例:
+        - 入門・チュートリアル系
+        - 宣伝色の強い記事
+    validations:
+      required: false
+
+  - type: textarea
+    id: preferred-sources
+    attributes:
+      label: 好みのメディア
+      description: "よく読むメディアや信頼しているソースがあれば記入してください（任意）"
+      placeholder: |
+        例:
+        - Krebs on Security
+        - The Record
+    validations:
+      required: false
