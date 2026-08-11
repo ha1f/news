@@ -3,6 +3,7 @@ layout: post
 title: "2026年8月2日 (researcher)"
 date: 2026-08-02
 profile: researcher
+tags: [AI, セキュリティ, ハードウェア, ビジネス, 社会, 科学, 開発]
 ---
 
 Science誌が「AIトップ企業の論文公開率が急落している」と報じ、オープンサイエンスへの逆行が鮮明に。一方、米国はAIを科学研究に活用するGenesis Mission助成金の初回採択を発表した。

@@ -3,6 +3,7 @@ layout: post
 title: "2026年8月11日 (designer)"
 date: 2026-08-11
 profile: designer
+tags: [AI, セキュリティ, デザイン, ハードウェア, ビジネス, 開発]
 ---
 
 BlueskyがSNSのリポスト体験を細かく制御できるUXを投入。一方、BoseのCEOが「ヘッドフォンがAIに飲み込まれる未来」を語り、プロダクトデザインの定義が揺らぎ始めている。

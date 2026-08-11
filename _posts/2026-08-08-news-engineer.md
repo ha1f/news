@@ -3,6 +3,7 @@ layout: post
 title: "2026年8月8日 (engineer)"
 date: 2026-08-08
 profile: engineer
+tags: [AI, セキュリティ, ハードウェア, ビジネス, 開発]
 ---
 
 OracleがOpenJDKへのAI生成コード受け入れを禁止——CEOエリソンの「もうコードは書いていない」発言の直後に。CloudflareはV8ベースのエージェント専用ブラウザをOSSで公開し、SHEでは58%のPRをAIが承認する運用が始まった。開発者のワークフローがAIで塗り替わる一日。

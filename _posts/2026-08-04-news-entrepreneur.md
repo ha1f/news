@@ -3,6 +3,7 @@ layout: post
 title: "2026年8月4日 (entrepreneur)"
 date: 2026-08-04
 profile: entrepreneur
+tags: [AI, セキュリティ, デザイン, ハードウェア, ビジネス, 経済, 開発]
 ---
 
 Amazon時価総額が3兆ドルを突破し世界5社目のクラブ入り、同日にSequoiaが核融合スタートアップValar Atomicsへ$1Bラウンドをリード。巨額調達が相次ぐ一方、日本では消費税1%引き下げの方針を自民税調が了承——起業家の判断材料が詰まった週末。

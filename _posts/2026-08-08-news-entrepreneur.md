@@ -3,6 +3,7 @@ layout: post
 title: "2026年8月8日 (entrepreneur)"
 date: 2026-08-08
 profile: entrepreneur
+tags: [AI, デザイン, ハードウェア, ビジネス, 社会, 科学, 経済, 開発]
 ---
 
 RipplingがAI支出で数百万ドル浪費した経験を製品化し、社員ごとのAI ROI可視化ツールを発表。NaïveやMirendilなどAIスタートアップの大型調達が相次ぐ一方、TikTokは250人をレイオフ。規制面ではMetaの児童安全訴訟で追加$567Mの罰金、日銀は「AI発インフレ」への警戒を強める。

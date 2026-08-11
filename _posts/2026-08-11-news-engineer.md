@@ -3,6 +3,7 @@ layout: post
 title: "2026年8月11日 (engineer)"
 date: 2026-08-11
 profile: engineer
+tags: [AI, セキュリティ, デザイン, ハードウェア, 科学, 開発]
 ---
 
 Agent Plugins 1.0.0がMS・OpenAI・AWS・Googleの支持で正式リリース、AIエージェント間のスキル共有が標準化された。RustはGPU上でのSIMD実行とtrait制限の新RFCで二方面から進化中。14MBのLLMがスマートフォンで動き始めた週。

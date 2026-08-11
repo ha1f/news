@@ -3,6 +3,7 @@ layout: post
 title: "2026年8月11日 (researcher)"
 date: 2026-08-11
 profile: researcher
+tags: [AI, セキュリティ, ハードウェア, 社会, 科学, 開発]
 ---
 
 AI時代の査読が限界を迎えつつある。Ars Technicaが査読プロセスの危機を特集し、Scienceは出版パラダイム転換を論じる号を刊行。一方、Natureでは霊長類の運動に着想を得た耐衝撃ロボット、Scienceでは次世代チューリングテストの再定義が提案された。

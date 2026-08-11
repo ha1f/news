@@ -3,6 +3,7 @@ layout: post
 title: "2026年8月7日 (researcher)"
 date: 2026-08-07
 profile: researcher
+tags: [AI, セキュリティ, ハードウェア, 科学, 開発]
 ---
 
 Scienceにゲノム言語モデルでバクテリオファージを設計する研究が掲載され、同誌は「次のチューリングテスト」を提唱するPolicy Forumも公開——AIの基礎と応用が同時に動いた一週間。DeepMindのハリケーン早期予測モデルWeatherNextのオープンソース化も発表され、NeurIPS 2026の査読プロセスを巡る議論は依然として収束していない。

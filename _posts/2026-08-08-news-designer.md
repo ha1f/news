@@ -3,6 +3,7 @@ layout: post
 title: "2026年8月8日 (designer)"
 date: 2026-08-08
 profile: designer
+tags: [AI, セキュリティ, デザイン, ハードウェア, 科学, 経済, 開発]
 ---
 
 ChatGPTからPhotoshopやIllustratorを直接操作できる「Adobe for ChatGPT」がリリース。OpenAIは動く部品で「生きている感」を追求するスマートスピーカーを発表し、Gen Zのマッチングアプリはスワイプを捨ててAIマッチングに舵を切った。デザインの手段もプロダクトの形も、静かに塗り替わり始めている。

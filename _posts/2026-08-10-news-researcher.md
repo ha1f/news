@@ -3,6 +3,7 @@ layout: post
 title: "2026年8月10日 (researcher)"
 date: 2026-08-10
 profile: researcher
+tags: [AI, セキュリティ, ハードウェア, 科学, 開発]
 ---
 
 Nature Machine Intelligence が量子もつれ構造のニューラル分類で新手法を発表、一方 Reddit では「身体を持たない知能に天井はあるか」という根本的問いが議論を呼んでいる。Science 最新号ではアメリカバイソン5万年のゲノム解析と、糖質がヒト進化を駆動したとする総説が並び、生命史研究の厚みが際立つ週末となった。
