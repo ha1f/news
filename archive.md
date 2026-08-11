@@ -27,7 +27,7 @@ title: "アーカイブ"
   <span class="archive-tags-label">トピック:</span>
   {%- for tag in tag_array -%}
     {%- if tag != "" -%}
-    <button class="archive-tag" data-tag="{{ tag }}">{{ tag }}</button>
+    <button class="archive-tag" data-tag="{{ tag | escape }}">{{ tag | escape }}</button>
     {%- endif -%}
   {%- endfor -%}
 </div>
@@ -47,7 +47,7 @@ title: "アーカイブ"
 
 <ul class="archive-list">
 {% for post in group.items %}
-  <li data-content="{{ post.content | strip_html | strip_newlines | truncatewords: 100 | escape }}" data-tags="{{ post.tags | join: ',' }}">
+  <li data-content="{{ post.content | strip_html | strip_newlines | truncatewords: 100 | escape }}" data-tags="{{ post.tags | join: ',' | escape }}">
     <a href="{{ post.url | relative_url }}">{{ post.title }}</a>
     {% if post.tags.size > 0 %}<span class="archive-item-tags">{{ post.tags | join: " / " }}</span>{% endif %}
     {% if post.excerpt %}<p class="archive-excerpt">{{ post.excerpt | strip_html | truncatewords: 30 }}</p>{% endif %}
@@ -84,7 +84,8 @@ title: "アーカイブ"
 
         if (query) {
           var content = (items[j].getAttribute('data-content') || '').toLowerCase();
-          var title = items[j].textContent.toLowerCase();
+          var titleEl = items[j].querySelector('a');
+          var title = (titleEl ? titleEl.textContent : '').toLowerCase();
           matchQuery = content.indexOf(query) !== -1 || title.indexOf(query) !== -1;
         }
 
