@@ -3,6 +3,7 @@ layout: post
 title: "2026年8月5日 (entrepreneur)"
 date: 2026-08-05
 profile: entrepreneur
+tags: [AI, セキュリティ, ハードウェア, ビジネス, 社会, 科学, 経済, 開発]
 ---
 
 SpaceX初の決算開示でAI事業がロケット事業を逆転、Anthropicは100億ドルのクラウド契約を締結。テキサス州がデータセンター新設を凍結する一方、S&P500は2カ月ぶり最高値を更新。巨額マネーの行き先がAIインフラ時代の輪郭を描く。

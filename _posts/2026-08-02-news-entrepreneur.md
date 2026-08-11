@@ -3,6 +3,7 @@ layout: post
 title: "2026年8月2日 (entrepreneur)"
 date: 2026-08-02
 profile: entrepreneur
+tags: [AI, セキュリティ, デザイン, ビジネス, 社会, 科学, 経済, 開発]
 ---
 
 Index VenturesがWiz売却益を追い風に$2Bを調達、投資可能資本は$3.5Bに。インドではアプリ課金額がQ2で過去最高の$345Mを記録し、新興市場の成熟が加速している。

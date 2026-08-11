@@ -3,6 +3,7 @@ layout: post
 title: "2026年8月3日 (researcher)"
 date: 2026-08-03
 profile: researcher
+tags: [AI, ハードウェア, 科学]
 ---
 
 NeurIPS 2026の討論期間でACと査読者が「消えた」とML研究者たちが困惑、査読プロセスの構造的問題が再燃。Scienceでは今号、リソソーム老化アトラスやX染色体のL1変異誘発など注目論文が並ぶ一方、NIHが政治的に敏感な助成金を再び打ち切る動きが報じられている。

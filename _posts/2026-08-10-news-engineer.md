@@ -3,6 +3,7 @@ layout: post
 title: "2026年8月10日 (engineer)"
 date: 2026-08-10
 profile: engineer
+tags: [AI, セキュリティ, ハードウェア, 科学, 開発]
 ---
 
 AIエージェント開発基盤の標準化が急速に進む一日。Anthropicがclaude codeの自律モードをデフォルト化し、Stripeはグラフ探索でDB障害復旧を自動化。一方でハッカーの美学を問い直す Phrack 72号が話題を集めている。

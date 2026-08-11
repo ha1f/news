@@ -3,6 +3,7 @@ layout: post
 title: "2026年8月6日 (researcher)"
 date: 2026-08-06
 profile: researcher
+tags: [AI, セキュリティ, ハードウェア, ビジネス, 社会, 科学, 開発]
 ---
 
 Jeff Deanら伝説的Google AI研究者が独立し、科学的発見の加速を掲げるスタートアップ「Discovery Loop」を設立。NeurIPS 2026では理論論文のスコア分布が可視化され査読プロセスの透明性が議論を呼ぶ一方、米国では国勢調査の差分プライバシーツールが禁止に。研究の「つくり方」も「守り方」も問われている。

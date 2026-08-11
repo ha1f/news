@@ -3,6 +3,7 @@ layout: post
 title: "2026年8月9日 (engineer)"
 date: 2026-08-09
 profile: engineer
+tags: [AI, セキュリティ, ハードウェア, 開発]
 ---
 
 SpotifyがAIコーディングエージェント「Honk」で全コードベースの移行を自動化している事例がInfoQで公開された。大規模AIシステムの裏側ではパフォーマンスとセキュリティの課題が次々と表面化。一方、ZIPフォーマットの自作やSublime Textへの愛を語る記事も——エンジニアリングの深さと広さが際立つ一日。

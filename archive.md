@@ -13,13 +13,32 @@ title: "アーカイブ"
 </p>
 {%- endif -%}
 
+{% assign default_posts = site.posts | where_exp: "post", "post.profile == nil" %}
+
+{%- assign all_tags = "" -%}
+{%- for post in default_posts -%}
+  {%- for tag in post.tags -%}
+    {%- assign all_tags = all_tags | append: tag | append: "," -%}
+  {%- endfor -%}
+{%- endfor -%}
+{%- assign tag_array = all_tags | split: "," | uniq | sort -%}
+{%- if tag_array.size > 0 -%}
+<div class="archive-tags" role="group" aria-label="トピックフィルタ">
+  <span class="archive-tags-label">トピック:</span>
+  {%- for tag in tag_array -%}
+    {%- if tag != "" -%}
+    <button class="archive-tag" data-tag="{{ tag | escape }}">{{ tag | escape }}</button>
+    {%- endif -%}
+  {%- endfor -%}
+</div>
+{%- endif -%}
+
 <div class="archive-search">
   <input type="text" id="archive-filter" placeholder="キーワードで絞り込み…" autocomplete="off">
 </div>
 
 <p id="archive-no-results" class="archive-no-results" hidden>該当する記事が見つかりません</p>
 
-{% assign default_posts = site.posts | where_exp: "post", "post.profile == nil" %}
 {% assign posts_by_month = default_posts | group_by_exp: "post", "post.date | date: '%Y%m'" | sort: "name" | reverse %}
 
 {% for group in posts_by_month %}
@@ -28,8 +47,9 @@ title: "アーカイブ"
 
 <ul class="archive-list">
 {% for post in group.items %}
-  <li data-content="{{ post.content | strip_html | strip_newlines | truncatewords: 100 | escape }}">
+  <li data-content="{{ post.content | strip_html | strip_newlines | truncatewords: 100 | escape }}" data-tags="{{ post.tags | join: ',' | escape }}">
     <a href="{{ post.url | relative_url }}">{{ post.title }}</a>
+    {% if post.tags.size > 0 %}<span class="archive-item-tags">{{ post.tags | join: " / " }}</span>{% endif %}
     {% if post.excerpt %}<p class="archive-excerpt">{{ post.excerpt | strip_html | truncatewords: 30 }}</p>{% endif %}
   </li>
 {% endfor %}
@@ -42,10 +62,11 @@ title: "アーカイブ"
   var input = document.getElementById('archive-filter');
   var noResults = document.getElementById('archive-no-results');
   var months = document.querySelectorAll('.archive-month');
-  if (!input) return;
+  var tagButtons = document.querySelectorAll('.archive-tag');
+  var activeTag = null;
 
-  input.addEventListener('input', function() {
-    var query = this.value.toLowerCase().trim();
+  function applyFilters() {
+    var query = (input ? input.value : '').toLowerCase().trim();
     var totalVisible = 0;
 
     for (var i = 0; i < months.length; i++) {
@@ -53,25 +74,71 @@ title: "アーカイブ"
       var monthVisible = 0;
 
       for (var j = 0; j < items.length; j++) {
-        var content = (items[j].getAttribute('data-content') || '').toLowerCase();
-        var title = items[j].textContent.toLowerCase();
-        var match = !query || content.indexOf(query) !== -1 || title.indexOf(query) !== -1;
-        items[j].style.display = match ? '' : 'none';
-        if (match) monthVisible++;
+        var matchTag = true;
+        var matchQuery = true;
+
+        if (activeTag) {
+          var tags = (items[j].getAttribute('data-tags') || '').split(',');
+          matchTag = tags.indexOf(activeTag) !== -1;
+        }
+
+        if (query) {
+          var content = (items[j].getAttribute('data-content') || '').toLowerCase();
+          var titleEl = items[j].querySelector('a');
+          var title = (titleEl ? titleEl.textContent : '').toLowerCase();
+          matchQuery = content.indexOf(query) !== -1 || title.indexOf(query) !== -1;
+        }
+
+        var visible = matchTag && matchQuery;
+        items[j].style.display = visible ? '' : 'none';
+        if (visible) monthVisible++;
       }
 
       months[i].style.display = monthVisible > 0 ? '' : 'none';
       totalVisible += monthVisible;
     }
 
-    noResults.hidden = totalVisible > 0 || !query;
-  });
+    noResults.hidden = totalVisible > 0 || (!query && !activeTag);
+  }
 
-  input.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-      this.value = '';
-      this.dispatchEvent(new Event('input'));
+  for (var k = 0; k < tagButtons.length; k++) {
+    tagButtons[k].addEventListener('click', function() {
+      var tag = this.getAttribute('data-tag');
+      if (activeTag === tag) {
+        activeTag = null;
+        this.classList.remove('active');
+      } else {
+        for (var b = 0; b < tagButtons.length; b++) {
+          tagButtons[b].classList.remove('active');
+        }
+        activeTag = tag;
+        this.classList.add('active');
+      }
+      applyFilters();
+    });
+  }
+
+  if (input) {
+    input.addEventListener('input', applyFilters);
+    input.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        this.value = '';
+        applyFilters();
+      }
+    });
+  }
+
+  var params = new URLSearchParams(location.search);
+  var urlTag = params.get('tag');
+  if (urlTag) {
+    for (var t = 0; t < tagButtons.length; t++) {
+      if (tagButtons[t].getAttribute('data-tag') === urlTag) {
+        activeTag = urlTag;
+        tagButtons[t].classList.add('active');
+        applyFilters();
+        break;
+      }
     }
-  });
+  }
 })();
 </script>

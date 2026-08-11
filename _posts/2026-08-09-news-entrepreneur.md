@@ -3,6 +3,7 @@ layout: post
 title: "2026年8月9日 (entrepreneur)"
 date: 2026-08-09
 profile: entrepreneur
+tags: [AI, デザイン, ハードウェア, ビジネス, 社会, 経済, 開発]
 ---
 
 コンサル大手4社のトップがAIによる市場縮小を公言——業界の中の人が自らの存在意義を問い直す異例の展開。OpenAIのNextSlide買収やDeepSeekの値上げ予告など、AIビジネスのプライシングと勢力図が動いている。

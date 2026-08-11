@@ -3,6 +3,7 @@ layout: post
 title: "2026年8月10日 (entrepreneur)"
 date: 2026-08-10
 profile: entrepreneur
+tags: [AI, デザイン, ハードウェア, ビジネス, 開発]
 ---
 
 AI特化ヘッジファンドが半導体スタートアップに$400M投資、AppleがWSJ報道で中国CXMTメモリー採用を試験中と判明。国内ではSalesforceがAI導入でサポート部門を9000人から5000人へ再配置し、情報サービス業の倒産が過去10年最多ペースで推移している。
