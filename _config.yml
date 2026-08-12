@@ -4,8 +4,11 @@ timezone: Asia/Tokyo
 author: ha1f
 
 description: "国内外のテック・経済ニュースを日本語で毎日キュレーション"
+url: "https://ha1f.github.io"
 theme: minima
 baseurl: "/news"
+plugins:
+  - jekyll-sitemap
 header_pages: [about.md, profiles/index.md, archive.md]
 exclude: [CLAUDE.md, README.md]
 rss: "RSS"
