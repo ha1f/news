@@ -55,6 +55,12 @@ jobs:
             shot 1280,900 light "http://localhost:4000/news/archive.html" archive-light.png
             shot 1280,900 dark  "http://localhost:4000/news/archive.html" archive-dark.png
           fi
+          profile=$(find _site/profiles -name '*.html' ! -name 'index.html' | sort | head -1)
+          if [ -n "$profile" ]; then
+            path="${profile#_site/}"
+            shot 1280,900 light "http://localhost:4000/news/$path" profile-light.png
+            shot 1280,900 dark  "http://localhost:4000/news/$path" profile-dark.png
+          fi
       - name: Upload screenshots
         # 一部失敗でも撮れた分は残す（レビューの材料になる）
         if: always()
