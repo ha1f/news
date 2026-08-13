@@ -112,6 +112,26 @@
   font-style: italic;
 }
 
+.archive-show-more {
+  display: block;
+  width: 100%;
+  padding: 0.75em;
+  margin-top: calc($spacing-unit / 2);
+  font-size: $base-font-size * 0.875;
+  font-family: inherit;
+  color: $grey-color;
+  background: none;
+  border: 1px solid $grey-color-light;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+
+  &:hover {
+    color: $brand-color;
+    border-color: $brand-color;
+  }
+}
+
 .archive-excerpt {
   margin: 0.2em 0 0.5em;
   font-size: $base-font-size * 0.875;
@@ -338,6 +358,16 @@
 
   .archive-no-results {
     color: #8b949e;
+  }
+
+  .archive-show-more {
+    color: #8b949e;
+    border-color: #383838;
+
+    &:hover {
+      color: #58a6ff;
+      border-color: #58a6ff;
+    }
   }
 
   .profile-nav {

@@ -59,17 +59,38 @@ title: "アーカイブ"
 
 <script>
 (function() {
+  var INITIAL_MONTHS = 3;
   var input = document.getElementById('archive-filter');
   var noResults = document.getElementById('archive-no-results');
   var months = document.querySelectorAll('.archive-month');
   var tagButtons = document.querySelectorAll('.archive-tag');
   var activeTag = null;
+  var showAll = months.length <= INITIAL_MONTHS;
+  var moreBtn = null;
+
+  if (!showAll) {
+    moreBtn = document.createElement('button');
+    moreBtn.className = 'archive-show-more';
+    var hiddenCount = months.length - INITIAL_MONTHS;
+    moreBtn.textContent = '過去の記事を表示（他' + hiddenCount + 'ヶ月分）';
+    months[months.length - 1].parentNode.appendChild(moreBtn);
+    moreBtn.addEventListener('click', function() {
+      showAll = true;
+      applyFilters();
+    });
+  }
 
   function applyFilters() {
     var query = (input ? input.value : '').toLowerCase().trim();
+    var isFiltering = !!(query || activeTag);
     var totalVisible = 0;
 
     for (var i = 0; i < months.length; i++) {
+      if (!showAll && !isFiltering && i >= INITIAL_MONTHS) {
+        months[i].style.display = 'none';
+        continue;
+      }
+
       var items = months[i].querySelectorAll('.archive-list li');
       var monthVisible = 0;
 
@@ -98,8 +119,11 @@ title: "アーカイブ"
       totalVisible += monthVisible;
     }
 
+    if (moreBtn) moreBtn.hidden = showAll || isFiltering;
     noResults.hidden = totalVisible > 0 || (!query && !activeTag);
   }
+
+  applyFilters();
 
   for (var k = 0; k < tagButtons.length; k++) {
     tagButtons[k].addEventListener('click', function() {
