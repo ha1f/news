@@ -97,5 +97,15 @@ layout: default
       a.classList.add('external-link');
     }
   }
+  var items = document.querySelectorAll('.post-content ol > li');
+  for (var j = 0; j < items.length; j++) {
+    var link = items[j].querySelector('a.external-link');
+    if (!link) continue;
+    var domain = link.hostname.replace(/^www\./, '');
+    var span = document.createElement('span');
+    span.className = 'link-domain';
+    span.textContent = domain;
+    link.parentNode.insertBefore(span, link.nextSibling);
+  }
 })();
 </script>
