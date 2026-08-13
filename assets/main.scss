@@ -127,6 +127,12 @@
   color: $grey-color;
 }
 
+.link-domain {
+  font-size: 0.8125em;
+  color: $grey-color;
+  margin-left: 0.3em;
+}
+
 .post-navigation {
   display: flex;
   justify-content: space-between;
@@ -356,6 +362,10 @@
   }
 
   .external-link::after {
+    color: #8b949e;
+  }
+
+  .link-domain {
     color: #8b949e;
   }
 }
