@@ -27,14 +27,14 @@ layout: default
     <p class="post-tags">{%- for tag in page.tags -%}<a href="{{ '/archive.html' | relative_url }}?tag={{ tag | url_encode }}">{{ tag }}</a>{%- unless forloop.last %} / {% endunless -%}{%- endfor -%}</p>
     {%- endif -%}
     {%- if has_cross -%}
-    <p class="cross-profile-nav">別の視点で読む:
+    <p class="cross-profile-nav">同じ日のニュースを別の切り口で:
       {%- assign is_first_cross = true -%}
       {%- for post in site.posts -%}
         {%- assign post_date_str = post.date | date: '%Y-%m-%d' -%}
         {%- if post_date_str == current_date_str and post.url != page.url and post.profile != page.profile -%}
           {%- unless is_first_cross %} / {% endunless -%}
           {%- assign is_first_cross = false -%}
-          <a href="{{ post.url | relative_url }}">{%- if post.profile -%}{%- assign profile_page = site.pages | where: "profile", post.profile | first -%}{{ profile_page.title | default: post.profile }}向け{%- else -%}メイン{%- endif -%}</a>
+          {%- if post.profile -%}{%- assign profile_page = site.pages | where: "profile", post.profile | first -%}<a href="{{ post.url | relative_url }}" title="{{ profile_page.description | default: profile_page.title }}">{{ profile_page.title | default: post.profile }}向け</a>{%- else -%}<a href="{{ post.url | relative_url }}">メイン</a>{%- endif -%}
         {%- endif -%}
       {%- endfor -%}
     </p>
