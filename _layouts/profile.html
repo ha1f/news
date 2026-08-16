@@ -61,6 +61,20 @@ layout: default
       <a href="{{ post.url | relative_url }}">{{ post.title }}</a>
       {%- if post.tags.size > 0 %}<span class="archive-item-tags">{{ post.tags | join: " / " }}</span>{% endif -%}
       {%- if post.excerpt -%}<p class="archive-excerpt">{{ post.excerpt | strip_html | truncatewords: 30 }}</p>{%- endif -%}
+      {%- if post.content contains '<li>' -%}
+      <ul class="archive-article-titles">
+        {%- assign article_items = post.content | split: '<li>' -%}
+        {%- for item in article_items offset: 1 -%}
+          {%- if item contains '</a>' -%}
+            {%- assign before_close_a = item | split: '</a>' | first -%}
+            {%- assign link_text = before_close_a | split: '>' | last -%}
+            {%- if link_text.size > 1 -%}
+            <li><a href="{{ post.url | relative_url }}">{{ link_text }}</a></li>
+            {%- endif -%}
+          {%- endif -%}
+        {%- endfor -%}
+      </ul>
+      {%- endif -%}
     </li>
   {%- endfor -%}
   </ul>
