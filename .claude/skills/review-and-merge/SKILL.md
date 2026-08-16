@@ -27,7 +27,7 @@ open PR をレビューし、合格したものをマージする。実装セッ
 
 レビューした候補は必ず次のいずれかに落とす（ready のまま放置しない）:
 
-- **合格** → マージ前に `gh pr view --json mergeable,statusCheckRollup` で conflict と checks を確認する（red / conflict は要修正として扱う）→ squash マージ（`gh pr merge --squash --delete-branch`）→ マージ commit の SHA に対応する run を待って main のビルドを確認する（`gh run list --workflow=pages.yml --commit <マージ後の main SHA>` で run を特定し、現れるまで待って `gh run watch <run id>`。直前の別 run で代用しない）。conclusion が failure なら即 revert PR を作って自分でマージし、status issue に記録する → linked issue に open な linked PR が残っていなければ close する（受け入れ条件の突合は develop-issue の要約コメントが担う）
+- **合格** → マージ前に `gh pr view --json mergeable,statusCheckRollup` で conflict と checks を確認する（red / conflict は要修正として扱う）→ squash マージ（`gh pr merge --squash --delete-branch`）→ マージ commit の SHA に対応する run を待って main のビルドを確認する（`gh run list --workflow=pages.yml --commit <マージ後の main SHA>` で run を特定し、現れるまで待って `gh run watch <run id>`。直前の別 run で代用しない）。conclusion が failure なら即 revert PR を作って自分でマージし、status issue に記録する → linked issue に open な linked PR が残っていなければ close する（受け入れ条件との突合は develop-issue の要約コメントが担う）
 - **要修正**（linked issue あり）→ 指摘をコメントして draft に戻す（`gh pr ready --undo`。次の develop run が拾う）
 - **要修正**（linked issue なし）→ 有効な学びを含むなら指摘内容を issue に起票してから、理由をコメントして close する（学びを黙って失わない）
 - **不採用** → 理由をコメントして close する
