@@ -139,6 +139,24 @@
   line-height: 1.5;
 }
 
+.archive-article-titles {
+  margin: 0 0 0.5em 1.2em;
+  font-size: $base-font-size * 0.8125;
+  line-height: 1.6;
+
+  li { margin-bottom: 0; }
+
+  a {
+    color: $grey-color;
+    text-decoration: none;
+    &:hover { color: $brand-color; }
+  }
+
+  .archive-article-more a {
+    font-style: italic;
+  }
+}
+
 .external-link::after {
   content: "\2197";
   font-size: 0.75em;
@@ -389,6 +407,11 @@
 
   .cross-profile-nav {
     color: #8b949e;
+  }
+
+  .archive-article-titles a {
+    color: #8b949e;
+    &:hover { color: #58a6ff; }
   }
 
   .external-link::after {
