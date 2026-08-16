@@ -1,4 +1,5 @@
 ---
+name: curate-news
 description: "最新のニュースを取得・キュレーションして表示する。「ニュース」「今日の話題」「最新情報」など、ニュースに関する要求で使う。"
 ---
 
@@ -16,7 +17,7 @@ description: "最新のニュースを取得・キュレーションして表示
 - `--profile path/to/pref.md` → 指定パスを使用
 - 引数なし → `preferences.md`（既存動作）
 
-プロファイルが指定された場合、以降の全スクリプト呼び出しに `--profile <値>` を付与する。
+プロファイルが指定された場合、`--profile` オプションを受け付けるスクリプト（`recent_urls.py`・`recent_topics.py`・`preference_hash.py`）にはそのオプションを付与する。`fetch_feeds.py` は `--profile` を受け付けないため付与しない。
 
 ## 手順
 
