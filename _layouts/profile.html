@@ -68,7 +68,7 @@ layout: default
         {%- for item in article_items offset: 1 -%}
           {%- if item contains '</a>' -%}
             {%- assign before_close_a = item | split: '</a>' | first -%}
-            {%- assign link_text = before_close_a | split: '>' | last -%}
+            {%- assign link_text = before_close_a | strip_html -%}
             {%- if link_text.size > 1 -%}
               {%- assign article_count = article_count | plus: 1 -%}
               {%- if article_count <= 3 -%}
