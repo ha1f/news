@@ -62,17 +62,25 @@ layout: default
       {%- if post.tags.size > 0 %}<span class="archive-item-tags">{{ post.tags | join: " / " }}</span>{% endif -%}
       {%- if post.excerpt -%}<p class="archive-excerpt">{{ post.excerpt | strip_html | truncatewords: 30 }}</p>{%- endif -%}
       {%- if post.content contains '<li>' -%}
+      {%- assign article_items = post.content | split: '<li>' -%}
+      {%- assign article_count = 0 -%}
       <ul class="archive-article-titles">
-        {%- assign article_items = post.content | split: '<li>' -%}
         {%- for item in article_items offset: 1 -%}
           {%- if item contains '</a>' -%}
             {%- assign before_close_a = item | split: '</a>' | first -%}
             {%- assign link_text = before_close_a | split: '>' | last -%}
             {%- if link_text.size > 1 -%}
-            <li><a href="{{ post.url | relative_url }}">{{ link_text }}</a></li>
+              {%- assign article_count = article_count | plus: 1 -%}
+              {%- if article_count <= 3 -%}
+              <li><a href="{{ post.url | relative_url }}">{{ link_text }}</a></li>
+              {%- endif -%}
             {%- endif -%}
           {%- endif -%}
         {%- endfor -%}
+        {%- assign remaining = article_count | minus: 3 -%}
+        {%- if remaining > 0 -%}
+        <li class="archive-article-more"><a href="{{ post.url | relative_url }}">他{{ remaining }}件</a></li>
+        {%- endif -%}
       </ul>
       {%- endif -%}
     </li>

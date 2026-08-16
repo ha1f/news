@@ -151,6 +151,10 @@
     text-decoration: none;
     &:hover { color: $brand-color; }
   }
+
+  .archive-article-more a {
+    font-style: italic;
+  }
 }
 
 .external-link::after {
