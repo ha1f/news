@@ -55,6 +55,10 @@ jobs:
             shot 1280,900 light "http://localhost:4000/news/archive.html" archive-light.png
             shot 1280,900 dark  "http://localhost:4000/news/archive.html" archive-dark.png
           fi
+          if [ -f _site/profiles/index.html ]; then
+            shot 1280,900 light "http://localhost:4000/news/profiles/" profiles-light.png
+            shot 1280,900 dark  "http://localhost:4000/news/profiles/" profiles-dark.png
+          fi
           profile=$(find _site/profiles -name '*.html' ! -name 'index.html' | sort | head -1)
           if [ -n "$profile" ]; then
             path="${profile#_site/}"
