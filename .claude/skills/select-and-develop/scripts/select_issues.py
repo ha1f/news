@@ -24,6 +24,7 @@ from pathlib import Path
 TRUSTED = {"OWNER", "MEMBER", "COLLABORATOR"}
 STATUS_TITLE = "daily-loop status"
 LINK_RE = re.compile(r"(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?|refs?)\s+#(\d+)", re.I)
+BRANCH_ISSUE_RE = re.compile(r"(?:^|/)(\d+)[-_]")
 
 
 def gh_json(path):
@@ -71,8 +72,14 @@ def build_candidates(issues, prs, collaborators=None):
     collaborators = frozenset(collaborators) if collaborators else frozenset()
     links = {}
     for pr in prs:
+        seen = set()
         for m in LINK_RE.finditer(pr.get("body") or ""):
-            links.setdefault(int(m.group(1)), []).append({
+            seen.add(int(m.group(1)))
+        branch = ((pr.get("head") or {}).get("ref") or "")
+        for m in BRANCH_ISSUE_RE.finditer(branch):
+            seen.add(int(m.group(1)))
+        for issue_num in seen:
+            links.setdefault(issue_num, []).append({
                 "number": pr["number"],
                 "draft": pr["draft"],
             })
