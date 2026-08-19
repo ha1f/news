@@ -2,6 +2,6 @@
 layout: profile-feed
 profile: researcher
 profile_title: "研究者"
-profile_description: "AI/ML論文・量子コンピューティング・バイオテック・科学政策のキュレーション"
+profile_description: "AI/ML論文・バイオテック・量子コンピューティング・科学政策・オープンサイエンスのキュレーション"
 profile_page: /profiles/researcher.html
 ---
