@@ -90,7 +90,8 @@ def build_candidates(issues, prs, collaborators=None):
         if STATUS_TITLE in issue["title"]:
             status_issue = issue["number"]
             continue
-        labels = {label["name"] for label in issue.get("labels", [])}
+        labels = {(label["name"] if isinstance(label, dict) else label)
+                  for label in issue.get("labels", [])}
         if not _is_trusted(issue, collaborators) or "hold" in labels:
             continue
         entry = {
