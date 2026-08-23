@@ -1,6 +1,33 @@
 ---
 layout: default
 ---
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "NewsArticle",
+  "headline": {{ page.title | jsonify }},
+  "datePublished": "{{ page.date | date_to_xmlschema }}",
+  "dateModified": "{{ page.date | date_to_xmlschema }}",
+  "author": {
+    "@type": "Person",
+    "name": {{ page.author | default: site.author | jsonify }}
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": {{ site.title | jsonify }}
+  },
+  "description": {{ page.excerpt | strip_html | strip_newlines | strip | truncatewords: 50 | jsonify }},
+  "url": "{{ page.url | absolute_url }}",
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "{{ page.url | absolute_url }}"
+  },
+  "inLanguage": {{ site.lang | default: "ja" | jsonify }}
+  {%- if page.tags.size > 0 -%},
+  "keywords": {{ page.tags | jsonify }}
+  {%- endif -%}
+}
+</script>
 <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
 
   {%- assign current_date_str = page.date | date: '%Y-%m-%d' -%}
