@@ -5,7 +5,7 @@ layout: default
 {
   "@context": "https://schema.org",
   "@type": "NewsArticle",
-  "headline": {{ page.title | jsonify }},
+  "headline": {{ page.title | jsonify | replace: "</", "<\/" }},
   "datePublished": "{{ page.date | date_to_xmlschema }}",
   "dateModified": "{{ page.date | date_to_xmlschema }}",
   "author": {
@@ -16,7 +16,7 @@ layout: default
     "@type": "Organization",
     "name": {{ site.title | jsonify }}
   },
-  "description": {{ page.excerpt | strip_html | strip_newlines | strip | truncatewords: 50 | jsonify }},
+  "description": {{ page.excerpt | strip_html | strip_newlines | strip | truncatewords: 50 | jsonify | replace: "</", "<\/" }},
   "url": "{{ page.url | absolute_url }}",
   "mainEntityOfPage": {
     "@type": "WebPage",
