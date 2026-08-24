@@ -1,0 +1,29 @@
+---
+layout: null
+---
+{
+  "name": "{{ site.title }}",
+  "short_name": "{{ site.title }}",
+  "icons": [
+    {
+      "src": "{{ '/assets/favicon-32x32.png' | relative_url }}",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "{{ '/assets/apple-touch-icon.png' | relative_url }}",
+      "sizes": "180x180",
+      "type": "image/png"
+    },
+    {
+      "src": "{{ '/assets/favicon.svg' | relative_url }}",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ],
+  "theme_color": "#2a7ae2",
+  "background_color": "#ffffff",
+  "display": "standalone",
+  "start_url": "{{ '/' | relative_url }}",
+  "scope": "{{ '/' | relative_url }}"
+}
