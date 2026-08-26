@@ -5,6 +5,7 @@ timezone: Asia/Tokyo
 author: ha1f
 
 description: "海外のテック・経済ニュースも日本語で読める毎日キュレーション"
+og_image: assets/og-image.png
 url: "https://ha1f.github.io"
 theme: minima
 baseurl: "/news"
