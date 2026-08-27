@@ -41,6 +41,8 @@ claude.ai のクラウド trigger が毎日のステージを実行し、キュ�
 
 週次（日曜11時）の `/audit-and-adopt` は、プロダクトでなくループ自身の環境を監査する: マージ済み資産の批評・エコシステム（Claude Code 新機能・公式スキル）の取り込み判断・スキル手順が守られているかのプロセス監査。見つかった改善は issue / PR として日次ループに流れ込む。
 
+プロダクト・事業側のリスク監査（法務・収益化準備など）は `/audit` が担う。監査の観点は [.claude/skills/audit/audits/](.claude/skills/audit/audits/) にデータとして版管理され、実施のたびに履歴が残るため、同じ監査を誰でも再現できる。各定義の「再監査トリガー」の該当は週次の audit-and-adopt が確認して実行する。人間にしかできない判断を `hold` で依頼するときは、その観点を監査定義として資産化する（詳細は [.claude/GUARDRAILS.md](.claude/GUARDRAILS.md) の設計原則）— 監査能力自体がループとともに成長する。
+
 ```mermaid
 flowchart LR
     publish["9:00 /publish-pages\nキュレーション→デプロイ"] --> evaluate["10:00 /evaluate-and-triage\nユーザ評価→issue化"]
