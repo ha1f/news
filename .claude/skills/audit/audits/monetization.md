@@ -51,4 +51,4 @@ GUARDRAILS は「ソースの利用規約の整理は収益化前に人間が行
 
 | 日付 | 対象 | 結果 | 成果物 |
 |---|---|---|---|
-| 2026-08-28 | `3db0218` | 22ソースの利用条件と収益化法令要件を棚卸し。商用明示許可のソースは無く、収益化前に除外・許諾照会の判断が必要。非営利の現状にも要判断論点あり（AI 利用条項・改変禁止・日経非公式フィード）→ hold issue で人間に委任 | [data/monetization-sources.md](data/monetization-sources.md) |
+| 2026-08-28 | `3db0218` | 22ソースの利用条件と収益化法令要件を棚卸し。商用明示許可のソースは無く、収益化前に除外・許諾照会の判断が必要。非営利の現状にも要判断論点あり（AI 利用条項・改変禁止・日経非公式フィード）→ [#241](https://github.com/ha1f/news/issues/241)（hold）で人間に委任 | [data/monetization-sources.md](data/monetization-sources.md) |
