@@ -41,6 +41,7 @@
 ### ソースとの関係
 
 - [ ] 各ソースのフィード利用が当該ソースの利用規約・robots.txt に反していないか（新規追加ソースを中心に references/sources/ と突合。商用利用条件の棚卸しは monetization 監査が担う）
+- [ ] AI での処理に対する制限（生成 AI/RAG 利用の除外条項、Content-Signal 等の意思表示）が新設・変更されていないか（2026-08 の棚卸しで Condé Nast・PMC・Lobsters に確認済み。[monetization の棚卸し表](data/monetization-sources.md)参照）
 
 ## 人間に残す判断
 
