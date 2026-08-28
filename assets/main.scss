@@ -213,6 +213,12 @@
 .profile-description {
   color: $grey-color;
   font-size: $base-font-size;
+  margin-bottom: calc($spacing-unit / 4);
+}
+
+.profile-context {
+  color: $grey-color;
+  font-size: $base-font-size * 0.875;
   margin-bottom: $spacing-unit;
 }
 
@@ -401,6 +407,7 @@
   .profile-nav-heading,
   .profile-nav-desc,
   .profile-description,
+  .profile-context,
   .profile-empty {
     color: #8b949e;
   }
