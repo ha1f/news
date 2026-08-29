@@ -4,9 +4,9 @@ XMLベースの3パーサと、それらが使うユーティリティ（HTTP取
 XML前処理、メタ情報抽出）を提供する。
 
 パーサ:
-- parse_rss2: RSS 2.0（TechCrunch, Gigazine, Lobsters, Zenn 等）
+- parse_rss2: RSS 2.0（TechCrunch, Gigazine, Zenn 等）
 - parse_rdf: RSS 1.0/RDF（はてな, 日経, Nature, Science）
-- parse_atom: Atom（Publickey, Reddit, Product Hunt, The Verge, Qiita）
+- parse_atom: Atom（Publickey, Reddit, Product Hunt, Qiita）
 
 各パーサは (content: bytes, feed: FeedConfig) -> list[dict] のシグネチャを持つ。
 PARSERS辞書で FeedConfig.fmt からパーサ関数にディスパッチする。
@@ -155,8 +155,8 @@ def extract_meta(element: ET.Element, rules: list[MetaRule]) -> dict:
 def parse_rss2(content: bytes, feed: FeedConfig) -> list[dict]:
     """RSS 2.0フィードをパースしてアイテムリストを返す。
 
-    対応ソース: TechCrunch, Ars Technica, Wired, Lobsters, Zenn, Gigazine,
-    ITmedia, InfoQ, MIT TR, dev.to, GitHub Trending, Dribbble
+    対応ソース: TechCrunch, Zenn, Gigazine, ITmedia, InfoQ, MIT TR,
+    dev.to, GitHub Trending, Dribbble
     フィールドマッピング: title, link→url, description, pubDate→published_at
     """
     root = ET.fromstring(_sanitize_xml(content))
@@ -215,7 +215,7 @@ def parse_rdf(content: bytes, feed: FeedConfig) -> list[dict]:
 def parse_atom(content: bytes, feed: FeedConfig) -> list[dict]:
     """Atomフィードをパースしてアイテムリストを返す。
 
-    対応ソース: Publickey, Reddit, Product Hunt, The Verge, Qiita
+    対応ソース: Publickey, Reddit, Product Hunt, Qiita
     フィールドマッピング: title, link[rel=alternate]→url, summary/content→description,
                          published/updated→published_at
     FeedConfig.description_field で description の取得元を制御できる。

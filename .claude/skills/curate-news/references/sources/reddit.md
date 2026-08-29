@@ -42,6 +42,15 @@
 
 `Reddit`
 
+## 利用条件
+
+- **AI利用**: 可（規定なし）
+- **商用利用（課金）**: 不可（書面合意なき商用利用を禁止）
+- **広告掲載での利用**: 不可（同上）
+- **義務**: Data API 利用時は Reddit 指定の帰属表示
+- **制約**: robots.txt が全面 Disallow で自動取得の許諾根拠が曖昧（要判断）。UGC の改変禁止（表示整形を除く）
+- **根拠**: https://redditinc.com/policies/user-agreement （確認日 2026-08-28）
+
 ## 実装
 
 [`feed_sources/reddit.py`](../../scripts/feed_sources/reddit.py)

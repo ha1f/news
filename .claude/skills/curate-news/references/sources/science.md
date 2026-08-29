@@ -39,6 +39,15 @@
 
 `Science`
 
+## 利用条件
+
+- **AI利用**: 可（規定なし）
+- **商用利用（課金）**: 不可（personal, non-commercial 限定。商用は AAAS の書面許諾が必要）
+- **広告掲載での利用**: 不可（同上）
+- **義務**: AAAS への帰属表示の維持
+- **制約**: 体系的取得・DB 化は express consent 必要（現状の該当性は要判断）。robots.txt はフィードを明示 Allow
+- **根拠**: https://www.aaas.org/terms-of-use （確認日 2026-08-28。science.org 側 ToS は bot 遮断で未確認）
+
 ## 実装
 
 [`feed_sources/science.py`](../../scripts/feed_sources/science.py)

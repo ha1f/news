@@ -19,9 +19,9 @@ GUARDRAILS は「ソースの利用規約の整理は収益化前に人間が行
 
 ### ソース利用条件の棚卸し
 
-- [ ] 全ソース（references/sources/*.md）について、RSS/API の利用規約・商用利用の可否・帰属表示要件を一次情報で確認し、[data/monetization-sources.md](data/monetization-sources.md) の一覧表を更新する（前回確認日からの差分を見る）
+- [ ] 全ソース（references/sources/*.md）について、RSS/API の利用規約・商用利用の可否・帰属表示要件を一次情報で確認し、各ソース定義の「利用条件」セクションと [data/monetization-sources.md](data/monetization-sources.md) の詳細（引用・横断整理）を更新する（前回確認日からの差分を見る）
+- [ ] AI での処理に対する制限（生成 AI/RAG 利用の除外条項、robots.txt の AI クローラ拒否・Content-Signal）の有無を確認する。明示的に AI 利用を制限するソースは除外を提案する（オーナー方針 #241: AI 不可のソースは使わない。非営利の現状にも効く）
 - [ ] 商用利用不可・要許諾のソースを特定し、収益化時の扱いの選択肢（除外・許諾申請・代替ソース）を整理する
-- [ ] AI での処理に対する制限（生成 AI/RAG 利用の除外条項、robots.txt の AI クローラ拒否・Content-Signal）の有無を確認する — 非営利の現状にも効く条項がある
 - [ ] サードパーティ経由のソース（GitHubTrendingRSS 等）は、経由サービスと元サービスの両方の条件を確認する
 
 ### 課金導入時の要件

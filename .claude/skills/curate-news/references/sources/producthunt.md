@@ -36,6 +36,15 @@
 
 `PH`
 
+## 利用条件
+
+- **AI利用**: 可（規定なし）
+- **商用利用（課金）**: 要連絡（ToS は非商用限定、API は「商用は hello@producthunt.com へ」）
+- **広告掲載での利用**: 要連絡（同上）
+- **義務**: 帰属表示＋Product Hunt へのリンクバック（要請ベース）
+- **制約**: ToS はクロール禁止（/feed の位置付けは規約上不明確）
+- **根拠**: https://www.producthunt.com/legal?section=terms-of-service （確認日 2026-08-28）
+
 ## 実装
 
 [`feed_sources/producthunt.py`](../../scripts/feed_sources/producthunt.py)

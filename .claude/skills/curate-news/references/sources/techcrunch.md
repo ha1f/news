@@ -42,6 +42,15 @@
 
 `TechCrunch`
 
+## 利用条件
+
+- **AI利用**: 可（規定なし）
+- **商用利用（課金）**: 要判断（RSS 規約に規定なし、一般 ToS は非商用限定）
+- **広告掲載での利用**: 要判断（フィードへの広告組込みは明示禁止。サイト上の広告併置の可否は不明確）
+- **義務**: TechCrunch への帰属表示＋原文への直リンク（明文義務）
+- **制約**: フィード内容の改変禁止（見出しリライトの該当性は要判断 → #241）
+- **根拠**: https://techcrunch.com/rss-terms-of-use/ （確認日 2026-08-28）
+
 ## 実装
 
 [`feed_sources/techcrunch.py`](../../scripts/feed_sources/techcrunch.py)

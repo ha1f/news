@@ -39,6 +39,15 @@
 
 `dev.to`
 
+## 利用条件
+
+- **AI利用**: 可（規定なし）
+- **商用利用（課金）**: 不可（personal, non-commercial 限定の明文）
+- **広告掲載での利用**: 規定なし（商用禁止の文言に含まれるおそれ）
+- **義務**: 規定なし（著作権は投稿者にあるため原文直リンクを維持）
+- **制約**: 複製・public display 禁止の文言あり（現行形態への適用は要判断）
+- **根拠**: https://dev.to/terms （確認日 2026-08-28）
+
 ## 実装
 
 [`feed_sources/devto.py`](../../scripts/feed_sources/devto.py)
