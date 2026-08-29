@@ -40,6 +40,15 @@
 
 `HN`
 
+## 利用条件
+
+- **AI利用**: 可（規定なし）
+- **商用利用（課金）**: 規定なし（YC サイト規約の適用可否は要判断）
+- **広告掲載での利用**: 規定なし
+- **義務**: 規定なし
+- **制約**: なし（レート制限なし・robots.txt が JSON を明示 Allow）
+- **根拠**: https://github.com/HackerNews/API / https://www.ycombinator.com/legal/ （確認日 2026-08-28）
+
 ## 実装
 
 [`feed_sources/hackernews.py`](../../scripts/feed_sources/hackernews.py)

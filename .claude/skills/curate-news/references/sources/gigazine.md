@@ -34,6 +34,15 @@
 
 `GIGAZINE`
 
+## 利用条件
+
+- **AI利用**: 可（規定なし）
+- **商用利用（課金）**: 規定なし（規約ページ不存在。収益化時は要問い合わせ）
+- **広告掲載での利用**: 規定なし（同上）
+- **義務**: 規定なし
+- **制約**: robots.txt に Crawl-delay 100（日次取得は問題なし）
+- **根拠**: https://gigazine.net/news/about/ （確認日 2026-08-28、規約不存在を確認）
+
 ## 実装
 
 [`feed_sources/gigazine.py`](../../scripts/feed_sources/gigazine.py)

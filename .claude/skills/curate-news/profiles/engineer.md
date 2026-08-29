@@ -12,7 +12,6 @@
 ## 好みのメディア
 
 - Hacker News
-- Lobsters
 - GitHub Trending
 
 ## 読みたくない記事

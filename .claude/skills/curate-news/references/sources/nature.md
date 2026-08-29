@@ -38,6 +38,15 @@
 
 `Nature`
 
+## 利用条件
+
+- **AI利用**: 可（規定なし。robots.txt は AI クローラを拒否）
+- **商用利用（課金）**: 要許諾（明示許可制。窓口 permissions@nature.com）
+- **広告掲載での利用**: 要許諾（広告目的のリンクも要許諾の文言）
+- **義務**: 著者・出典の帰属表示
+- **制約**: feeds の再配信・DB 化を名指しで禁止（非商用の現状も要判断）
+- **根拠**: https://www.nature.com/info/terms-and-conditions （確認日 2026-08-28）
+
 ## 実装
 
 [`feed_sources/nature.py`](../../scripts/feed_sources/nature.py)

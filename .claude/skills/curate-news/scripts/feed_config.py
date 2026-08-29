@@ -81,7 +81,7 @@ class FeedConfig:
              "rss2" | "rdf" | "atom" | "custom"
         ttl_minutes: キャッシュの有効期間（分）。ソース定義のTTLに合わせる。
         user_agent: HTTPリクエスト時のUser-Agentヘッダ。
-                    bot制限があるソース（Gigazine, Wired, Reddit等）で設定する。
+                    bot制限があるソース（Gigazine, Reddit等）で設定する。
         meta_rules: キャッシュJSONのmetaフィールドに抽出する追加情報のルール。
         strip_utm: Trueの場合、記事URLからUTMパラメータを除去する（InfoQ用）。
         description_field: Atomフィードでdescriptionに使う要素名。
@@ -118,13 +118,10 @@ class FeedConfig:
 # ソース定義（feed_sources/*.py）から共有して使う。
 
 DC_CREATOR = MetaRule("dc:creator", "author")
-"""Dublin Core の著者名（単一）。TechCrunch, Ars Technica, Zenn 等で使用。"""
+"""Dublin Core の著者名（単一）。TechCrunch, Zenn 等で使用。"""
 
 DC_CREATOR_LIST = MetaRule("dc:creator", "authors", "list")
 """Dublin Core の著者名（複数）。Nature, Science 等、複数著者があるソースで使用。"""
 
 CATEGORIES = MetaRule("category", "categories", "categories")
 """RSS/Atom のカテゴリ要素。テキストとterm属性の両方を収集する。"""
-
-SLASH_COMMENTS = MetaRule("slash:comments", "comments", "int")
-"""Slash拡張のコメント数。Ars Technica で使用。"""

@@ -33,6 +33,15 @@
 
 `Dribbble`
 
+## 利用条件
+
+- **AI利用**: 可（規定なし）
+- **商用利用（課金）**: 要判断（明示許可なし＋広範な複製禁止。公式 RSS 提供との整合が不明確）
+- **広告掲載での利用**: 要判断（同上）
+- **義務**: 規定なし
+- **制約**: 利用ライセンスは freely revocable（いつでも取消可）
+- **根拠**: https://dribbble.com/terms （確認日 2026-08-28）
+
 ## 実装
 
 [`feed_sources/dribbble.py`](../../scripts/feed_sources/dribbble.py)
