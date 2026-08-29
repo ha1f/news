@@ -152,8 +152,21 @@
     &:hover { color: $brand-color; }
   }
 
-  .archive-article-more a {
-    font-style: italic;
+  .archive-article-more {
+    margin-top: 0.25em;
+
+    a {
+      color: $brand-color;
+      font-style: normal;
+
+      &::after {
+        content: " →";
+      }
+
+      &:hover {
+        text-decoration: underline;
+      }
+    }
   }
 }
 
@@ -419,6 +432,10 @@
   .archive-article-titles a {
     color: #8b949e;
     &:hover { color: #58a6ff; }
+  }
+
+  .archive-article-titles .archive-article-more a {
+    color: #58a6ff;
   }
 
   .external-link::after {
