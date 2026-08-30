@@ -15,8 +15,7 @@
       "Bash(for:*)",
       "Bash(ids=:*)",
       "Bash(git:*)",
-      "Bash(gh:*)",
-      "Write(.claude/skills/curate-news/cache/*)"
+      "Bash(gh:*)"
     ]
   }
 }
