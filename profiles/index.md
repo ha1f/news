@@ -12,6 +12,9 @@ title: "プロファイル"
 <li>
   <a href="{{ p.url | relative_url }}">{{ p.title | escape }}</a>
   {% if p.description %}<span class="profile-nav-desc"> — {{ p.description | escape }}</span>{% endif %}
+  {%- if p.topics.size > 0 -%}
+  <br><span class="profile-nav-topics">{%- for topic in p.topics -%}<a class="profile-nav-topic" href="{{ p.url | relative_url }}?tag={{ topic | url_encode }}">{{ topic | escape }}</a>{%- unless forloop.last -%} {%- endunless -%}{%- endfor -%}</span>
+  {%- endif -%}
   {%- assign latest_post = site.posts | where: "profile", p.profile | first -%}
   {%- if latest_post -%}
   <br><span class="profile-nav-desc"><a href="{{ latest_post.url | relative_url }}">{{ latest_post.date | date: "%-m月%-d日" }}のフィード →</a></span>

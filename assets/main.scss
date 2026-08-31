@@ -223,6 +223,35 @@
   color: $grey-color;
 }
 
+.profile-nav-topics {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.25em;
+  margin-top: 0.25em;
+}
+
+.profile-nav-topic {
+  display: inline-block;
+  padding: 0.1em 0.45em;
+  font-size: $base-font-size * 0.8125;
+  color: $grey-color;
+  border: 1px solid $grey-color-light;
+  border-radius: 3px;
+  text-decoration: none;
+  transition: color 0.15s, border-color 0.15s;
+
+  &:hover,
+  &:visited:hover {
+    color: $brand-color;
+    border-color: $brand-color;
+    text-decoration: none;
+  }
+
+  &:visited {
+    color: $grey-color;
+  }
+}
+
 .profile-description {
   color: $grey-color;
   font-size: $base-font-size;
@@ -427,6 +456,21 @@
 
   .cross-profile-nav {
     color: #8b949e;
+  }
+
+  .profile-nav-topic {
+    color: #8b949e;
+    border-color: #383838;
+
+    &:hover,
+    &:visited:hover {
+      color: #58a6ff;
+      border-color: #58a6ff;
+    }
+
+    &:visited {
+      color: #8b949e;
+    }
   }
 
   .archive-article-titles a {
