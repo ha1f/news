@@ -20,6 +20,8 @@ description: "ループ自身の資産（スキル・ルール・ワークフロ
 
 取捨の基準: 観測された問題・確実な失効だけ拾い、推測的な改善は捨てる。軽微で確実な修正（バージョン更新・失効した記述の訂正）は直接 DRAFT PR にして ready 化する。判断が要るものは issue にする（書式・上限は evaluate-and-triage の新規 issue と同じ。上限は日単位で evaluate と共有なので、当日の作成済み件数を差し引く。cap 超過時は見送り、status 記録に残す）。ビジョン・フェーズに関わる提案は VISION.md の更新 PR。該当なしのレンズは無理に絞り出さず「該当なし」でよい。
 
+PR を作成したら `python3 .claude/scripts/check_protected_paths.py --diff origin/main` で保護パスへの該当を確認する。該当する場合は PR に `hold` ラベルを付与し、理由をコメントする。保護パス該当 PR のマージはしない（review-and-merge ステージが hold を検出して人間に委ねる）。
+
 ## 完了条件
 
 - 4レンズの結果がそれぞれ issue / PR / status 記録の「該当なし」のいずれかに落ちている
