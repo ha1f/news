@@ -37,6 +37,15 @@
 
 `MIT TR`
 
+## 利用条件
+
+- **AI利用**: 可（規定なし。robots.txt は AI クローラを拒否）
+- **商用利用（課金）**: 不可（再利用は有償ライセンスとして販売。窓口 licensing@technologyreview.com）
+- **広告掲載での利用**: 不可（同上）
+- **義務**: 規定なし（許諾自体が個別契約）
+- **制約**: 書面許可なき複製・再配信の禁止（ToS が RSS に適用と明記）
+- **根拠**: https://www.technologyreview.com/terms-of-service/ （確認日 2026-08-28）
+
 ## 実装
 
 [`feed_sources/mit_tech_review.py`](../../scripts/feed_sources/mit_tech_review.py)

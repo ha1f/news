@@ -1,6 +1,33 @@
 ---
 layout: default
 ---
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "NewsArticle",
+  "headline": {{ page.title | jsonify | replace: "</", "<\/" }},
+  "datePublished": "{{ page.date | date_to_xmlschema }}",
+  "dateModified": "{{ page.date | date_to_xmlschema }}",
+  "author": {
+    "@type": "Person",
+    "name": {{ page.author | default: site.author | jsonify }}
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": {{ site.title | jsonify }}
+  },
+  "description": {{ page.excerpt | strip_html | strip_newlines | strip | truncatewords: 50 | jsonify | replace: "</", "<\/" }},
+  "url": "{{ page.url | absolute_url }}",
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "{{ page.url | absolute_url }}"
+  },
+  "inLanguage": {{ site.lang | default: "ja" | jsonify }}
+  {%- if page.tags.size > 0 -%},
+  "keywords": {{ page.tags | jsonify }}
+  {%- endif -%}
+}
+</script>
 <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
 
   {%- assign current_date_str = page.date | date: '%Y-%m-%d' -%}
@@ -22,7 +49,8 @@ layout: default
       </time>
       {%- if page.author -%}
         • <span itemprop="author" itemscope itemtype="http://schema.org/Person"><span class="p-author h-card" itemprop="name">{{ page.author }}</span></span>
-      {%- endif -%}</p>
+      {%- endif -%}
+      • <button class="post-share" data-url="{{ page.url | absolute_url }}" data-title="{{ page.title | escape }}" aria-label="この記事を共有"><svg class="post-share-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 10.5L11 5.5M11 5.5H6.5M11 5.5V10"/><rect x="1.5" y="1.5" width="13" height="13" rx="2"/></svg>共有</button></p>
     {%- if page.tags.size > 0 -%}
     <p class="post-tags">{%- for tag in page.tags -%}<a href="{{ '/archive.html' | relative_url }}?tag={{ tag | url_encode }}">{{ tag }}</a>{%- unless forloop.last %} / {% endunless -%}{%- endfor -%}</p>
     {%- endif -%}
@@ -106,6 +134,33 @@ layout: default
     span.className = 'link-domain';
     span.textContent = domain;
     link.parentNode.insertBefore(span, link.nextSibling);
+  }
+
+  var shareBtn = document.querySelector('.post-share');
+  if (shareBtn) {
+    if (!navigator.share && !navigator.clipboard) {
+      shareBtn.style.display = 'none';
+    } else {
+      var shareHtml = shareBtn.innerHTML;
+      shareBtn.addEventListener('click', function() {
+        var url = shareBtn.getAttribute('data-url');
+        var title = shareBtn.getAttribute('data-title');
+        if (navigator.share) {
+          navigator.share({ title: title, url: url }).catch(function() {});
+        } else {
+          navigator.clipboard.writeText(url).then(function() {
+            shareBtn.textContent = 'コピーしました';
+            shareBtn.setAttribute('aria-label', 'コピーしました');
+            shareBtn.classList.add('post-share-done');
+            setTimeout(function() {
+              shareBtn.innerHTML = shareHtml;
+              shareBtn.setAttribute('aria-label', 'この記事を共有');
+              shareBtn.classList.remove('post-share-done');
+            }, 1500);
+          }).catch(function() {});
+        }
+      });
+    }
   }
 })();
 </script>

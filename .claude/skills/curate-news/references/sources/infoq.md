@@ -42,6 +42,15 @@
 
 `InfoQ`
 
+## 利用条件
+
+- **AI利用**: 可（規定なし）
+- **商用利用（課金）**: 規定なし（要約＋リンクバック許可に商用限定なし。照会先 feedback@infoq.com）
+- **広告掲載での利用**: 規定なし
+- **義務**: 要約掲載時は InfoQ 記事ページへのリンクバック（明示許可の条件）
+- **制約**: 全文転載の禁止
+- **根拠**: https://www.infoq.com/terms-and-conditions/ （確認日 2026-08-28）
+
 ## 実装
 
 [`feed_sources/infoq.py`](../../scripts/feed_sources/infoq.py)

@@ -37,6 +37,15 @@
 
 `GitHub Trending`
 
+## 利用条件
+
+- **AI利用**: 可（規定なし）
+- **商用利用（課金）**: 要判断（GitHub AUP の利用目的列挙は研究・アーカイブのみ）
+- **広告掲載での利用**: 要判断（同上）
+- **義務**: リポジトリへのリンク維持（説明文は各リポジトリオーナーの著作物）
+- **制約**: 経由サービス（GitHubTrendingRSS、個人運営・MIT）依存。停止時はフォーク自前ホストか GitHub API へ切替
+- **根拠**: https://docs.github.com/en/site-policy/acceptable-use-policies/github-acceptable-use-policies （確認日 2026-08-28）
+
 ## 実装
 
 [`feed_sources/github_trending.py`](../../scripts/feed_sources/github_trending.py)

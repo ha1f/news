@@ -152,8 +152,21 @@
     &:hover { color: $brand-color; }
   }
 
-  .archive-article-more a {
-    font-style: italic;
+  .archive-article-more {
+    margin-top: 0.25em;
+
+    a {
+      color: $brand-color;
+      font-style: normal;
+
+      &::after {
+        content: " →";
+      }
+
+      &:hover {
+        text-decoration: underline;
+      }
+    }
   }
 }
 
@@ -210,15 +223,77 @@
   color: $grey-color;
 }
 
+.profile-nav-topics {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.25em;
+  margin-top: 0.25em;
+}
+
+.profile-nav-topic {
+  display: inline-block;
+  padding: 0.1em 0.45em;
+  font-size: $base-font-size * 0.8125;
+  color: $grey-color;
+  border: 1px solid $grey-color-light;
+  border-radius: 3px;
+  text-decoration: none;
+  transition: color 0.15s, border-color 0.15s;
+
+  &:hover,
+  &:visited:hover {
+    color: $brand-color;
+    border-color: $brand-color;
+    text-decoration: none;
+  }
+
+  &:visited {
+    color: $grey-color;
+  }
+}
+
 .profile-description {
   color: $grey-color;
   font-size: $base-font-size;
+  margin-bottom: calc($spacing-unit / 4);
+}
+
+.profile-context {
+  color: $grey-color;
+  font-size: $base-font-size * 0.875;
   margin-bottom: $spacing-unit;
 }
 
 .profile-empty {
   color: $grey-color;
   font-style: italic;
+}
+
+.post-share {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2em;
+  padding: 0;
+  font-size: inherit;
+  font-family: inherit;
+  color: $grey-color;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color 0.15s;
+  vertical-align: baseline;
+
+  &:hover { color: $brand-color; }
+  &:focus-visible { outline: 1.5px solid $brand-color; outline-offset: 2px; border-radius: 2px; }
+}
+
+.post-share-icon {
+  width: 0.9em;
+  height: 0.9em;
+}
+
+.post-share-done {
+  color: $brand-color;
 }
 
 .cross-profile-nav {
@@ -413,8 +488,18 @@
   .profile-nav-heading,
   .profile-nav-desc,
   .profile-description,
+  .profile-context,
   .profile-empty {
     color: #8b949e;
+  }
+
+  .post-share {
+    color: #8b949e;
+    &:hover { color: #58a6ff; }
+  }
+
+  .post-share-done {
+    color: #58a6ff;
   }
 
   .cross-profile-nav {
@@ -429,9 +514,28 @@
     }
   }
 
+  .profile-nav-topic {
+    color: #8b949e;
+    border-color: #383838;
+
+    &:hover,
+    &:visited:hover {
+      color: #58a6ff;
+      border-color: #58a6ff;
+    }
+
+    &:visited {
+      color: #8b949e;
+    }
+  }
+
   .archive-article-titles a {
     color: #8b949e;
     &:hover { color: #58a6ff; }
+  }
+
+  .archive-article-titles .archive-article-more a {
+    color: #58a6ff;
   }
 
   .external-link::after {

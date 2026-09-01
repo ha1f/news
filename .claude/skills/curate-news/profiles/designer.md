@@ -12,7 +12,6 @@
 ## 好みのメディア
 
 - Dribbble
-- The Verge
 
 ## 読みたくない記事
 

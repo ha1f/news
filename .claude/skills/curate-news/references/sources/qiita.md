@@ -41,6 +41,15 @@
 
 `Qiita`
 
+## 利用条件
+
+- **AI利用**: 可（規定なし）
+- **商用利用（課金）**: 要許諾（「転用・売却・再販」禁止に該当のおそれ）
+- **広告掲載での利用**: 不可（データを元にしたサービスへの広告設置収益化は規約違反と公式ヘルプが明言）
+- **義務**: 規定なし（著作権は投稿者に留保のため原文直リンクを維持）
+- **制約**: スクレイピング不許可（フィード/API は提供）
+- **根拠**: https://qiita.com/terms / https://help.qiita.com/ja/articles/points-when-creating-application-using-qiita-data （確認日 2026-08-28）
+
 ## 実装
 
 [`feed_sources/qiita.py`](../../scripts/feed_sources/qiita.py)

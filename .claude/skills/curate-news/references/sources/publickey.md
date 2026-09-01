@@ -36,6 +36,15 @@
 
 `Publickey`
 
+## 利用条件
+
+- **AI利用**: 可（規定なし）
+- **商用利用（課金）**: 規定なし（個人運営。収益化時は直接確認が現実的）
+- **広告掲載での利用**: 規定なし
+- **義務**: 規定なし
+- **制約**: なし
+- **根拠**: https://www.publickey1.jp/about-us.html （確認日 2026-08-28、規約不存在を確認）
+
 ## 実装
 
 [`feed_sources/publickey.py`](../../scripts/feed_sources/publickey.py)

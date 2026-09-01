@@ -9,6 +9,7 @@ layout: default
     {%- if page.description -%}
     <p class="profile-description">{{ page.description }}</p>
     {%- endif -%}
+    <p class="profile-context">トップページとは異なる記事を、この分野の視点で選んでいます。<a href="{{ '/' | relative_url }}">全体フィード →</a></p>
     {%- if page.profile -%}
     <p class="profile-feed-link">
       <a href="{{ '/profiles/' | append: page.profile | append: '-feed.xml' | relative_url }}">

@@ -41,6 +41,8 @@ claude.ai のクラウド trigger が毎日のステージを実行し、キュ�
 
 週次（日曜11時）の `/audit-and-adopt` は、プロダクトでなくループ自身の環境を監査する: マージ済み資産の批評・エコシステム（Claude Code 新機能・公式スキル）の取り込み判断・スキル手順が守られているかのプロセス監査。見つかった改善は issue / PR として日次ループに流れ込む。
 
+プロダクト・事業側のリスク監査（法務・収益化準備など）は `/audit` が担う。監査の観点は [.claude/skills/audit/audits/](.claude/skills/audit/audits/) にデータとして版管理され、実施のたびに履歴が残るため、同じ監査を誰でも再現できる。各定義の「再監査トリガー」の該当は週次の audit-and-adopt が確認して実行する。人間にしかできない判断を `hold` で依頼するときは、その観点を監査定義として資産化する（詳細は [.claude/GUARDRAILS.md](.claude/GUARDRAILS.md) の設計原則）— 監査能力自体がループとともに成長する。
+
 ```mermaid
 flowchart LR
     publish["9:00 /publish-pages\nキュレーション→デプロイ"] --> evaluate["10:00 /evaluate-and-triage\nユーザ評価→issue化"]
@@ -86,22 +88,18 @@ GitHub Actions と workflow 内でピン留めしているバージョン（Play
 
 ## ニュースソース
 
-22ソースが定義済み。各ソースは `references/sources/*.md` に独立したファイルとして管理されている。
+18ソースが定義済み。各ソースは `references/sources/*.md` に独立したファイルとして管理され、規約・robots.txt を一次情報で確認した利用条件（AI利用・商用利用・広告・義務・制約）を各定義の「利用条件」セクションに保持している。
 
 | ソース | カテゴリ | 説明 |
 |--------|----------|------|
-| [Ars Technica](https://arstechnica.com/) | テック | 深掘り技術記事の老舗メディア |
 | [dev.to](https://dev.to/) | テック | 開発者コミュニティ。チュートリアル・技術記事 |
 | [GitHub Trending](https://github.com/trending) | テック | GitHubのトレンドリポジトリ * |
 | [Hacker News](https://news.ycombinator.com/) | テック | Y Combinator運営のテック系ニュース |
 | [InfoQ](https://www.infoq.com/) | テック | ソフトウェアアーキテクチャ特化メディア |
-| [Lobsters](https://lobste.rs/) | テック | 招待制のテック系コミュニティ |
 | [MIT Technology Review](https://www.technologyreview.com/) | テック | AI・バイオ・量子等の先端技術 |
 | [Product Hunt](https://www.producthunt.com/) | テック | 新プロダクト発見プラットフォーム |
 | [Reddit](https://www.reddit.com/) | テック | テック系サブレディット |
 | [TechCrunch](https://techcrunch.com/) | テック | 米国最大のテックメディア |
-| [The Verge](https://www.theverge.com/) | テック | テック・科学・エンタメの大手メディア |
-| [Wired](https://www.wired.com/) | テック | テクノロジーと文化・社会の交差点 |
 | [日経新聞](https://www.nikkei.com/) | 経済 | 日本最大の経済紙（速報フィード） |
 | [Nature](https://www.nature.com/) | 科学 | 世界最高峰の学術ジャーナル |
 | [Science](https://www.science.org/) | 科学 | AAAS発行のトップ学術ジャーナル群 |
@@ -116,6 +114,8 @@ GitHub Actions と workflow 内でピン留めしているバージョン（Play
 \* GitHub Trending はサードパーティの [GitHubTrendingRSS](https://github.com/mshibanami/GitHubTrendingRSS) 経由で取得
 
 **検討したが対応不可のソース**: Bloomberg（公開RSSフィード無し）、Designer News（サイト閉鎖済み）
+
+**規約により除外したソース**（2026-08 の monetization 監査・#241 の方針）: Ars Technica・Wired（Condé Nast 規約が生成AI/RAG での利用を非商用からも除外）、The Verge（PMC 規約が AI ツールでの取得を明示禁止）、Lobsters（`Content-Signal: ai-input=no` を宣言）。AI 利用を明示的に制限するソースは採用しない
 
 ## カスタマイズ
 
