@@ -12,7 +12,7 @@ baseurl: "/news"
 plugins:
   - jekyll-sitemap
 header_pages: [about.md, profiles/index.md, archive.md]
-exclude: [CLAUDE.md, README.md]
+exclude: [CLAUDE.md, README.md, DESIGN.md, VISION.md]
 rss: "RSS"
 
 minima:
