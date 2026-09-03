@@ -75,6 +75,8 @@ flowchart LR
 | 18:00 | `0 9 * * *` | `/review-and-merge` |
 | 日曜 11:00 | `0 2 * * 0` | `/audit-and-adopt` |
 
+週次監査の trigger だけは、モデルにその時点の最上位モデル（Fable 系）を指定する（監査は最上位モデルで行うオーナー方針）。他のステージは既定のモデルのまま。
+
 ## 依存関係の更新
 
 GitHub Actions と workflow 内でピン留めしているバージョン（Playwright・Python）は [Renovate](https://docs.renovatebot.com/) が更新する。設定は [.github/renovate.json5](.github/renovate.json5) で、Renovate 公式の `config:best-practices` をベースにしている。
