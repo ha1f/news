@@ -252,6 +252,16 @@
   }
 }
 
+.topic-nav {
+  margin-top: calc($spacing-unit / 2);
+}
+
+.topic-nav-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3em;
+}
+
 .profile-description {
   color: $grey-color;
   font-size: $base-font-size;
