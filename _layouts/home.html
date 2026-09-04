@@ -77,6 +77,26 @@ layout: default
   </div>
   {%- endif -%}
 
+  {%- assign all_tags = "" -%}
+  {%- for post in default_posts -%}
+    {%- for tag in post.tags -%}
+      {%- assign all_tags = all_tags | append: tag | append: "," -%}
+    {%- endfor -%}
+  {%- endfor -%}
+  {%- assign tag_array = all_tags | split: "," | uniq | sort -%}
+  {%- if tag_array.size > 0 -%}
+  <div class="topic-nav">
+    <h3 class="profile-nav-heading">トピック別</h3>
+    <div class="topic-nav-tags">
+      {%- for tag in tag_array -%}
+        {%- if tag != "" -%}
+        <a class="profile-nav-topic" href="{{ '/archive.html' | relative_url }}?tag={{ tag | url_encode }}">{{ tag | escape }}</a>
+        {%- endif -%}
+      {%- endfor -%}
+    </div>
+  </div>
+  {%- endif -%}
+
   <p class="post-list-archive">
     <a href="{{ '/archive.html' | relative_url }}">すべての記事を見る &rarr;</a>
   </p>
