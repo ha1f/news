@@ -58,7 +58,7 @@ layout: default
 
   <ul class="archive-list">
   {%- for post in group.items -%}
-    <li data-content="{{ post.content | strip_html | strip_newlines | truncatewords: 100 | escape }}" data-tags="{{ post.tags | join: ',' | escape }}">
+    <li data-date="{{ post.date | date: '%Y-%m-%d' }}" data-content="{{ post.content | strip_html | strip_newlines | truncatewords: 100 | escape }}" data-tags="{{ post.tags | join: ',' | escape }}">
       <a href="{{ post.url | relative_url }}">{{ post.title }}</a>
       {%- if post.tags.size > 0 %}<span class="archive-item-tags">{{ post.tags | join: " / " }}</span>{% endif -%}
       {%- if post.excerpt -%}<p class="archive-excerpt">{{ post.excerpt | strip_html | truncatewords: 30 }}</p>{%- endif -%}
@@ -90,13 +90,45 @@ layout: default
   </div>
   {%- endfor -%}
 
+  <button id="archive-show-older" class="archive-show-more" hidden></button>
+
   <script>
   (function() {
     var input = document.getElementById('archive-filter');
     var noResults = document.getElementById('archive-no-results');
+    var showOlderBtn = document.getElementById('archive-show-older');
     var months = document.querySelectorAll('.archive-month');
     var tagButtons = document.querySelectorAll('.archive-tag');
     var activeTag = null;
+    var folded = true;
+
+    var RECENT_DAYS = 3;
+    var cutoffDate = null;
+    var olderCount = 0;
+    var allItems = document.querySelectorAll('.archive-list li[data-date]');
+    if (allItems.length > 0) {
+      var mostRecent = null;
+      for (var i = 0; i < allItems.length; i++) {
+        var d = new Date(allItems[i].getAttribute('data-date') + 'T00:00:00');
+        if (!mostRecent || d > mostRecent) mostRecent = d;
+      }
+      cutoffDate = new Date(mostRecent);
+      cutoffDate.setDate(cutoffDate.getDate() - (RECENT_DAYS - 1));
+      for (var i = 0; i < allItems.length; i++) {
+        var d = new Date(allItems[i].getAttribute('data-date') + 'T00:00:00');
+        if (d < cutoffDate) olderCount++;
+      }
+    }
+
+    if (olderCount > 0 && showOlderBtn) {
+      showOlderBtn.textContent = '過去の記事も見る（' + olderCount + '件）';
+      showOlderBtn.hidden = false;
+      showOlderBtn.addEventListener('click', function() {
+        folded = false;
+        this.hidden = true;
+        applyFilters();
+      });
+    }
 
     function applyFilters() {
       var query = (input ? input.value : '').toLowerCase().trim();
@@ -104,12 +136,20 @@ layout: default
       var totalVisible = 0;
 
       for (var i = 0; i < months.length; i++) {
-        var items = months[i].querySelectorAll('.archive-list li');
+        var items = months[i].querySelectorAll('.archive-list > li');
         var monthVisible = 0;
 
         for (var j = 0; j < items.length; j++) {
           var matchTag = true;
           var matchQuery = true;
+          var matchFold = true;
+
+          if (folded && !isFiltering && cutoffDate) {
+            var dateStr = items[j].getAttribute('data-date');
+            if (dateStr) {
+              matchFold = new Date(dateStr + 'T00:00:00') >= cutoffDate;
+            }
+          }
 
           if (activeTag) {
             var tags = (items[j].getAttribute('data-tags') || '').split(',');
@@ -123,7 +163,7 @@ layout: default
             matchQuery = content.indexOf(query) !== -1 || title.indexOf(query) !== -1;
           }
 
-          var visible = matchTag && matchQuery;
+          var visible = matchTag && matchQuery && matchFold;
           items[j].style.display = visible ? '' : 'none';
           if (visible) monthVisible++;
         }
@@ -133,6 +173,9 @@ layout: default
       }
 
       noResults.hidden = totalVisible > 0 || (!query && !activeTag);
+      if (showOlderBtn && olderCount > 0) {
+        showOlderBtn.hidden = !folded || isFiltering;
+      }
     }
 
     applyFilters();
