@@ -36,6 +36,6 @@ open PR をレビューし、合格したものをマージする。実装セッ
 
 ## 完了条件
 
-- 全カテゴリ処理済みで、結果（マージ / close / draft 戻し / hold）が status issue に記録されている（1行目 JSON、stage は `review`）
+- 全カテゴリ処理済みで、結果（マージ / close / draft 戻し / hold）が status issue に記録されている（1行目 JSON、stage は `review`）。end コメントの JSON に `reflect` キーを含める（例: `{"stage": "review", "phase": "end", "ok": true, "summary": "PR #27 マージ", "reflect": "改善なし"}`）
 - 保護パスへの `hold` 付与または revert を行った場合は、Slack ツールが使えればオーナーに DM で1通知する（人間ゲート行きは人間が気づけて初めて機能する）
 - 最後に reflect-and-improve を実行し、作成した改善 PR を ready 化する（次の review run のレビュー対象になる）
