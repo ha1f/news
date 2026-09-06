@@ -20,5 +20,6 @@ description: "open issue から今日実装する対象を選定し、develop-is
 
 - status issue に開始と終了の各1コメント。1行目は check_state.py が機械判定する JSON（キー名・値とも厳密一致が必要）:
   - 開始: `{"stage": "develop", "phase": "start", "summary": "候補: #26, #28。#26 を優先着手"}`
-  - 終了: `{"stage": "develop", "phase": "end", "ok": true, "summary": "#26 実装 → PR #27"}`
+  - 終了: `{"stage": "develop", "phase": "end", "ok": true, "summary": "#26 実装 → PR #27", "reflect": "LESSONS.md 更新1件"}`
+    - `reflect` は reflect-and-improve の結果を1行で記す（例: `"改善なし"`, `"LESSONS.md 更新1件"`, `"改善 PR #30"`）。実施の有無と成果を機械・人間の両方が追跡できるようにする
 - 最後に reflect-and-improve を実行する。振り返り対象はこのスキルの選定ロジックのみ（develop-issue 内部の学びは develop-issue 自身が反映済み）。作成した改善 PR も ready 化する
