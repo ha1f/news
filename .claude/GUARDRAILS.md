@@ -11,6 +11,8 @@ protected_paths:               # 触れる PR は auto-merge 禁止 → hold を
   - .claude/skills/review-and-merge/**
   - .github/workflows/**
   - .claude/GUARDRAILS.md
+  - terms.md                   # 法的文書はオーナー承認必須 (#226)
+  - privacy.md                 # 同上
 ```
 
 保護パスにこのファイル自身と review-and-merge が含まれるため、安全装置を緩める変更は必ず人間のマージを通る。

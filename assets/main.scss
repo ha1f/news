@@ -311,6 +311,18 @@
   color: $grey-color;
 }
 
+.footer-legal {
+  font-size: $base-font-size * 0.8125;
+  color: $grey-color;
+  margin-top: $spacing-unit / 2;
+
+  a {
+    color: $grey-color;
+    text-decoration: none;
+    &:hover { color: $brand-color; }
+  }
+}
+
 @media (prefers-color-scheme: dark) {
   body {
     background-color: #171717;
@@ -502,6 +514,14 @@
 
   .cross-profile-nav {
     color: #8b949e;
+  }
+
+  .footer-legal {
+    color: #8b949e;
+    a {
+      color: #8b949e;
+      &:hover { color: #58a6ff; }
+    }
   }
 
   .profile-nav-topic {
