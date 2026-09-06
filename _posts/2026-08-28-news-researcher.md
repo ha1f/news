@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年8月28日 (researcher)"
+title: "2026年8月28日（研究者）"
 date: 2026-08-28
 profile: researcher
 tags: [AI, 科学]

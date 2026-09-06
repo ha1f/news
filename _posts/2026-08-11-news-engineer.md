@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年8月11日 (engineer)"
+title: "2026年8月11日（ソフトウェアエンジニア）"
 date: 2026-08-11
 profile: engineer
 tags: [AI, セキュリティ, デザイン, ハードウェア, 科学, 開発]
