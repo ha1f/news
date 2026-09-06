@@ -304,7 +304,7 @@
 .footer-legal {
   font-size: $base-font-size * 0.8125;
   color: $grey-color;
-  margin-top: calc($spacing-unit / 2);
+  margin-top: $spacing-unit / 2;
 
   a {
     color: $grey-color;
