@@ -2,7 +2,7 @@
 
 モデル世代固有の挙動と API 仕様の変化。対象プロンプトが前提とする世代とのズレを見つけるために使う。時限情報はこのファイルに集約し、世代交代時はここだけ更新する（SKILL.md 本文は世代非依存）。
 
-最終更新: 2026-08。現行世代: Claude 5 family (Fable 5 / Opus 5 / Sonnet 5)、Haiku 4.5。
+最終更新: 2026-09。現行世代: Claude 5 family (Fable 5.1 / Opus 5 / Sonnet 5)、Haiku 4.5。Fable 5 は Legacy。
 
 ## 世代を貫く傾向（4.5 → 5）
 
@@ -35,4 +35,5 @@
 
 - 4.6: subagent の過剰使用傾向 → 「単純なタスクは直接実行」の指示が有効
 - 4.6/4.7: 「迷ったらツールを使え」が過剰呼び出しを招く
-- effort 推奨: coding は Opus 5 で high 開始（4.7/4.8 では xhigh 開始）、Sonnet 5 は medium 開始。Fable 5 は low でも旧世代の xhigh 相当以上
+- effort 推奨: coding は Opus 5 で high 開始（4.7/4.8 では xhigh 開始）、Sonnet 5 は medium 開始。Fable 5.1 は medium で Fable 5 相当、low でも旧世代の xhigh 相当以上。キャッシュ読み $0.25/MTok（Fable 5 の 1/4）
+- Fable 5.1 の注意: 並列ツール呼び出しが減る傾向（1文のバッチ指示で戻る）、小さな変更でファイル全体を書き直しやすい（targeted edit を指示）、要約で原文をそのまま再現しやすい（GUARDRAILS の権利ガードレールとの関連: curate-news は既定モデル Opus 5 で実行するため現時点で実害なし、既定が Fable 系に移るときは注意）

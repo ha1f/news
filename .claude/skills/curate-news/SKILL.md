@@ -23,7 +23,7 @@ description: "最新のニュースを取得・キュレーションして表示
 
 ### 1. 好みファイルの読み込み
 
-プロファイルが指定されている場合はそのファイル、なければ `.claude/skills/curate-news/preferences.md` を読み込む。存在しなければデフォルト（全ソース有効）で進める。
+引数で決まった好みファイルを読み込む。存在しなければ全ソースから幅広く取得する（各ソースの汎用的なカテゴリを1つずつ）。
 
 好みファイルの構成:
 - **興味・関心**: ソース・カテゴリの自動選択と、キュレーション時の優先度付けに使う
@@ -41,9 +41,8 @@ python3 .claude/skills/curate-news/scripts/fetch_feeds.py --list
 1. 一覧にはソースID・カテゴリ・フィード形式が表示される
 2. 好みファイルの「興味・関心」とカテゴリ名をマッチングし、関連度の高いソース・カテゴリを選択する
 3. 各ソースの詳細（含まれるトピック・表示名等）が必要な場合は `references/sources/{ソースID}.md` を参照する
-4. 好みファイルがない場合は全ソースから幅広く取得する（各ソースの汎用的なカテゴリを1つずつ）
-5. 1つのソースから複数カテゴリを選んでよい（興味が複数のカテゴリにまたがる場合）
-6. どのソース・カテゴリも興味と関連しなければ、そのソースはスキップする
+4. 1つのソースから複数カテゴリを選んでよい（興味が複数のカテゴリにまたがる場合）
+5. どのソース・カテゴリも興味と関連しなければ、そのソースはスキップする
 
 ### 3. フィード取得
 
@@ -53,12 +52,6 @@ python3 .claude/skills/curate-news/scripts/fetch_feeds.py --list
 # 選択したソース・カテゴリを指定して取得（キャッシュ有効ならスキップ）
 python3 .claude/skills/curate-news/scripts/fetch_feeds.py --source hatena --category テクノロジー
 python3 .claude/skills/curate-news/scripts/fetch_feeds.py --source hackernews --category トップ
-
-# 全フィード一括取得
-python3 .claude/skills/curate-news/scripts/fetch_feeds.py
-
-# キャッシュを無視して強制再取得
-python3 .claude/skills/curate-news/scripts/fetch_feeds.py --source hatena --force
 ```
 
 ステップ2で選択したソース・カテゴリごとにコマンドを実行する。
@@ -109,7 +102,7 @@ python3 .claude/skills/curate-news/scripts/fetch_feeds.py --source hatena --cate
 候補が含まれるキャッシュJSON（ソース・カテゴリ単位のファイル）をReadツールで読み、候補記事の `description` を確認して最終的な記事を決定する。1つのキャッシュファイルに複数の候補が含まれる場合はまとめて読む。
 
 多様性の担保:
-- 同カテゴリからは2件までにする。読んでいて飽きないよう、ジャンルを散らす
+- 同じソース・カテゴリからは2件までにする。トピックの幅が出るよう散らす
 - **セレンディピティ枠**: 興味・関心に直接マッチしない記事も1〜2件、意図的に混ぜて視野を広げる。意外でも「読んでよかった」と思える質の記事を選ぶ
 
 ### 5. 出力
