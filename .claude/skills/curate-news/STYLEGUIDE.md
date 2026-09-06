@@ -88,7 +88,7 @@
 
 フィード取得の実行可能コード。コンテキストに読み込まずに実行する。
 
-- `fetch_feeds.py`: CLI エントリポイント（`--source`, `--category`, `--force`, `--list`）
+- `fetch_feeds.py`: CLI エントリポイント（`--source`, `--category`, `--force`, `--list`, `--show-cache-summary`）
 - `feed_config.py`: データクラス（`FeedConfig`, `MetaRule`）、ユーティリティ関数
 - `feed_parsers.py`: RSS 2.0 / RDF / Atom / HN JSON API の4パーサ
 - `feed_sources/`: ソースごとの宣言的定義（プラグイン方式）
@@ -117,5 +117,5 @@
 
 ## output/
 
-- キュレーション結果の markdown を日付別に保存（`{YYYY-MM-DD}.md`）
+- キュレーション結果の markdown を日付別に保存（`{YYYY-MM-DD}-{hash}.md`）
 - gitignore 対象
