@@ -1,7 +1,7 @@
 ---
 layout: page
 title: "プライバシーポリシー"
-last_updated: 2026-08-26
+last_updated: 2026-09-06
 ---
 
 {{ site.title }}（以下「本サイト」）における情報の取り扱いについて説明します。
