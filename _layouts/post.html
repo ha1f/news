@@ -62,7 +62,7 @@ layout: default
         {%- if post_date_str == current_date_str and post.url != page.url and post.profile != page.profile -%}
           {%- unless is_first_cross %} / {% endunless -%}
           {%- assign is_first_cross = false -%}
-          {%- if post.profile -%}{%- assign profile_page = site.pages | where: "profile", post.profile | first -%}<a href="{{ post.url | relative_url }}" title="{{ profile_page.description | default: profile_page.title }}">{{ profile_page.title | default: post.profile }}向け</a>{%- else -%}<a href="{{ post.url | relative_url }}">メイン</a>{%- endif -%}
+          {%- if post.profile -%}{%- assign profile_page = site.pages | where: "profile", post.profile | where: "layout", "profile" | first -%}<a href="{{ post.url | relative_url }}" title="{{ profile_page.description | default: profile_page.title }}">{{ profile_page.title | default: post.profile }}向け</a>{%- else -%}<a href="{{ post.url | relative_url }}">メイン</a>{%- endif -%}
         {%- endif -%}
       {%- endfor -%}
     </p>

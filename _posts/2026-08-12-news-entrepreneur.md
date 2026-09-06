@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年8月12日 (entrepreneur)"
+title: "2026年8月12日（起業家）"
 date: 2026-08-12
 profile: entrepreneur
 tags: [AI, ビジネス, 経済, 科学, 社会]

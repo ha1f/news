@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年8月24日 (designer)"
+title: "2026年8月24日（デザイナー）"
 date: 2026-08-24
 profile: designer
 tags: [AI, デザイン, 開発, ハードウェア, 社会]
