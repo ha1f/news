@@ -64,8 +64,8 @@ layout: default
   {%- assign profile_pages = site.pages | where: "layout", "profile" | sort: "title" -%}
   {%- if profile_pages.size > 0 -%}
   <div class="profile-nav">
-    <h3 class="profile-nav-heading">プロファイル別</h3>
-    <p class="profile-nav-desc">トップページとは異なる記事を、職種ごとの関心に合わせて届けます。</p>
+    <h3 class="profile-nav-heading">職種別のニュース</h3>
+    <p class="profile-nav-desc">職種ごとの関心に特化した記事をピックアップ。トップページには載らない専門的なニュースが見つかります。</p>
     <ul class="profile-nav-list">
       {%- for p in profile_pages -%}
       <li>
