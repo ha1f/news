@@ -3,8 +3,8 @@
 @import "minima";
 
 .post-list li:first-child {
-  padding-bottom: calc($spacing-unit * 0.6);
-  margin-bottom: calc($spacing-unit * 0.4);
+  padding-bottom: $spacing-unit * 0.6;
+  margin-bottom: $spacing-unit * 0.4;
   border-bottom: 1px solid $grey-color-light;
 
   h3 {
@@ -27,7 +27,7 @@
 .archive-profile-nav {
   font-size: $base-font-size * 0.875;
   color: $grey-color;
-  margin-bottom: calc($spacing-unit / 2);
+  margin-bottom: $spacing-unit / 2;
 
   a { white-space: nowrap; }
 }
@@ -35,7 +35,7 @@
 .archive-tags {
   font-size: $base-font-size * 0.875;
   color: $grey-color;
-  margin-bottom: calc($spacing-unit / 2);
+  margin-bottom: $spacing-unit / 2;
   line-height: 2;
 }
 
@@ -116,7 +116,7 @@
   display: block;
   width: 100%;
   padding: 0.75em;
-  margin-top: calc($spacing-unit / 2);
+  margin-top: $spacing-unit / 2;
   font-size: $base-font-size * 0.875;
   font-family: inherit;
   color: $grey-color;
@@ -188,7 +188,7 @@
   display: flex;
   justify-content: space-between;
   margin-top: $spacing-unit;
-  padding-top: calc($spacing-unit / 2);
+  padding-top: $spacing-unit / 2;
   border-top: 1px solid $grey-color-light;
   font-size: $base-font-size * 0.9375;
 }
@@ -200,7 +200,7 @@
 
 .profile-nav {
   margin-top: $spacing-unit;
-  padding-top: calc($spacing-unit / 2);
+  padding-top: $spacing-unit / 2;
   border-top: 1px solid $grey-color-light;
 }
 
@@ -208,7 +208,7 @@
   font-size: $base-font-size;
   color: $grey-color;
   font-weight: 400;
-  margin-bottom: calc($spacing-unit / 4);
+  margin-bottom: $spacing-unit / 4;
 }
 
 .profile-nav-list {
@@ -253,7 +253,7 @@
 }
 
 .topic-nav {
-  margin-top: calc($spacing-unit / 2);
+  margin-top: $spacing-unit / 2;
 }
 
 .topic-nav-tags {
@@ -265,7 +265,7 @@
 .profile-description {
   color: $grey-color;
   font-size: $base-font-size;
-  margin-bottom: calc($spacing-unit / 4);
+  margin-bottom: $spacing-unit / 4;
 }
 
 .profile-context {
