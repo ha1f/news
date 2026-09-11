@@ -3,12 +3,17 @@
 
 使い方: python3 classify_prs.py
 出力: {"config", "merge_candidates", "protected", "not_ready", "drafts", "hold", "external"}
-  - merge_candidates: ready かつ collaborator 名義・quiescence 達成・保護パス非該当
+  - merge_candidates: ready かつ信頼名義・quiescence 達成・保護パス非該当
   - protected: 上記のうち保護パスに触れる PR（auto-merge 禁止 → hold + 人間へ）
   - not_ready: ready だが quiescence 未達 → 触らない
   - drafts: draft の PR（作業中）→ 触らない
   - hold: hold ラベル付き → 触らない
-  - external: collaborator 以外の ready PR → レビューコメントのみ
+  - external: 信頼名義以外の ready PR → レビューコメントのみ
+信頼の軸は「この repo に書き込める名義か」で、人間・bot・AI を区別しない: head branch が
+この repo にある PR（head_in_repo）は書き込み権限の証明として信頼する。head の情報が無い
+入力では author_association（OWNER / MEMBER / COLLABORATOR）で代用する。
+保護パスの判定は変更内容で行う: 該当ファイルの diff がバージョン・digest 文字列の置換だけ
+なら安全装置の変更ではないので protected にせず、protected_version_bumps に列挙する。
 diff レビュー・マージの実行はエージェントが行う。
 """
 import json
@@ -20,6 +25,32 @@ from pathlib import Path
 
 TRUSTED = {"OWNER", "MEMBER", "COLLABORATOR"}
 LINK_RE = re.compile(r"(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?|refs?)\s+#(\d+)", re.I)
+# バージョンらしい形だけを伏せる: `@` 直後の digest / v始まり / ドットを含む数値。
+# 裸の整数（quiescence_minutes: 30 等の設定値）は伏せない
+VERSION_TOKEN_RE = re.compile(r"(?<=@)[0-9a-f]{7,64}\b|\bv\d+(?:\.\d+)*\b|\b\d+(?:\.\d+)+\b")
+
+
+def version_bump_only(patch):
+    """diff がバージョン・digest 文字列の置換だけで構成されているか（純関数）。
+    削除行と追加行が同数で、行ごとに対にしたとき「生の行は異なるが、バージョン token を
+    伏せると一致する」ときだけ True（同一行の移動・並べ替えは置換ではない）。
+    patch は GitHub files API の形式（@@ から始まり、ファイルヘッダを含まない）。"""
+    if not patch:
+        return False
+    removed = [line[1:] for line in patch.splitlines() if line.startswith("-")]
+    added = [line[1:] for line in patch.splitlines() if line.startswith("+")]
+    if not added or len(added) != len(removed):
+        return False
+    return all(r != a and VERSION_TOKEN_RE.sub("§", r) == VERSION_TOKEN_RE.sub("§", a)
+               for r, a in zip(removed, added))
+
+
+def is_trusted(pr):
+    """この repo に書き込める名義か。head branch がこの repo にあれば書き込み権限の証明。
+    head_in_repo が真偽値でない入力（MCP 経路の取り違え等）は author_association で判定する。"""
+    if isinstance(pr.get("head_in_repo"), bool):
+        return pr["head_in_repo"]
+    return pr.get("author_association") in TRUSTED
 
 
 def gh_json(path):
@@ -64,7 +95,8 @@ def protected_hits(files, patterns):
 
 def classify(prs, config, now):
     """PR リストを分類する（純関数）。各 PR は number/title/draft/labels/
-    author_association/body/files/last_commit_at を持つ dict。"""
+    author_association/author/head_in_repo/body/files/patches/last_commit_at を持つ dict
+    （patches は {filename: unified diff}。無ければ保護パスの変更内容判定は行わない）。"""
     quiescence = timedelta(minutes=config["quiescence_minutes"])
     result = {"merge_candidates": [], "protected": [], "not_ready": [],
               "drafts": [], "hold": [], "external": []}
@@ -72,7 +104,8 @@ def classify(prs, config, now):
         summary = {
             "number": pr["number"],
             "title": pr["title"],
-            "author_association": pr["author_association"],
+            "author": pr.get("author"),
+            "author_association": pr.get("author_association"),
             "linked_issues": sorted({int(m.group(1))
                                      for m in LINK_RE.finditer(pr.get("body") or "")}),
         }
@@ -82,14 +115,21 @@ def classify(prs, config, now):
         if "hold" in pr["labels"]:
             result["hold"].append(summary)
             continue
-        if pr["author_association"] not in TRUSTED:
+        if not is_trusted(pr):
             result["external"].append(summary)
             continue
         last_commit = datetime.fromisoformat(pr["last_commit_at"].replace("Z", "+00:00"))
         if now - last_commit < quiescence:
             result["not_ready"].append({**summary, "reason": "quiescence 未達"})
             continue
+        # 保護パスはループ自身の安全装置を守る仕組み。バージョン・digest の置換だけの変更は
+        # 安全装置を変えないので protected にせず、レビューで上流の changelog を確認する
+        patches = pr.get("patches") or {}
         hits = protected_hits(pr["files"], config["protected_paths"])
+        bumps = [f for f in hits if version_bump_only(patches.get(f))]
+        hits = [f for f in hits if f not in bumps]
+        if bumps:
+            summary["protected_version_bumps"] = bumps
         if hits:
             result["protected"].append({**summary, "protected_files": hits})
         else:
@@ -107,9 +147,13 @@ def fetch_prs_via_gh():
             "title": pr["title"],
             "draft": pr["draft"],
             "labels": [label["name"] for label in pr["labels"]],
+            "author": (pr.get("user") or {}).get("login"),
             "author_association": pr["author_association"],
+            "head_in_repo": ((pr.get("head") or {}).get("repo") or {}).get("full_name")
+            == ((pr.get("base") or {}).get("repo") or {}).get("full_name"),
             "body": pr.get("body") or "",
             "files": [f["filename"] for f in files],
+            "patches": {f["filename"]: f.get("patch") or "" for f in files},
             "last_commit_at": commits[-1]["commit"]["committer"]["date"],
         })
     return prs

@@ -15,13 +15,13 @@ protected_paths:               # 触れる PR は auto-merge 禁止 → hold を
   - privacy.md                 # 同上
 ```
 
-保護パスにこのファイル自身と review-and-merge が含まれるため、安全装置を緩める変更は必ず人間のマージを通る。
+保護パスにこのファイル自身と review-and-merge が含まれるため、安全装置を緩める変更は必ず人間のマージを通る。保護パス内でもバージョン・digest 文字列の置換だけの変更は安全装置を変えないので、スクリプトが見分けて通常のレビューに回す（上流の changelog を確認するのはレビューの仕事）。
 
-保護パスが縛るのはループの自動マージであり、依存更新 bot の Renovate は自分のルール（[.github/renovate.json5](../.github/renovate.json5)）で動く。Renovate は GitHub Actions の digest/patch/minor と workflow 内の `*_VERSION` を CI green で自動マージし、major と Renovate 設定自体の変更は人間に残す。ループ側は bot の PR / issue を扱わない（collaborator 名義のみが対象）。
+信頼の軸は「この repo に書き込める名義か」であり、人間・bot・AI を区別しない。head branch がこの repo にある PR は書き込み権限（オーナーが与えた collaborator 権限や App のインストール）の証明として信頼し、fork からの PR は external として扱う。オーナーが導入したツール（依存更新の Renovate など）が作る PR は、そのツール自身が終端化しないものをループが引き取ってマージまたは close まで運ぶ。各ツールのルールと固有の挙動は README とツールの設定ファイルを正とする。
 
 ## 状態の持ち方
 
-GitHub ネイティブの状態だけで回す: PR の draft（作業中・触らない）/ ready（レビュー・マージ候補）、issue の open / closed、作者の author_association、linked PR、タイムスタンプ。専用ラベルは `hold`（自動処理を止めて人間が見る。人間・ループのどちらが付けてもよく、理由をコメントに書く）の1つだけ。優先度・進捗・完了をラベルやカウンタで管理しない。
+GitHub ネイティブの状態だけで回す: PR の draft（作業中・触らない）/ ready（レビュー・マージ候補）、issue の open / closed、作者の書き込み権限（PR は head branch の所在、issue は author_association。issue 側は bot のトラッキング issue を実装対象から外すため未移行）、linked PR、タイムスタンプ。専用ラベルは `hold`（自動処理を止めて人間が見る。人間・ループのどちらが付けてもよく、理由をコメントに書く）の1つだけ。優先度・進捗・完了をラベルやカウンタで管理しない。
 
 status issue（📊 daily-loop status）へのコメントは1行目を JSON にする（例: `{"stage": "develop", "phase": "end", "ok": true, "summary": "#26 実装 → PR #27"}`。stage は evaluate / develop / review / audit（週次）。スクリプトがこれを読んで前日の健全性を機械判定する（audit は週次のため健全性集計の対象外）。
 
@@ -38,6 +38,7 @@ status issue（📊 daily-loop status）へのコメントは1行目を JSON に
 ## 設計原則（ループを改善するときの憲法）
 
 - 決定的な処理（抽出・フィルタ・分類・状態確認）はスクリプトに寄せ、LLM には判断だけさせる
+- プロダクトを前進させるものは、人間・bot・AI を問わず最大限使う。既存ツールが終端化しない仕事はループが引き取り、足りないツール（GitHub App・Action・外部サービス）は導入を提案する。信頼の軸は名義の種類でなく、書き込み権限と変更内容
 - 人間にしかできない判断を `hold` で依頼するときは、その判断に使う観点を監査定義（[audit スキル](skills/audit/SKILL.md)の `audits/`）として資産化する。人間の判断は一度きりでも観点は再利用でき、次回から AI が一次レビューを再現できる
 - スキルは誰の好みでも動く汎用の仕組みに保つ。特定ユーザの興味・好みはデータ（preferences.md 等）に置き、スキルやスクリプトに焼き込まない
 - 状態は GitHub ネイティブなもので表し、専用のラベル・プロトコル・カウンタを増やさない

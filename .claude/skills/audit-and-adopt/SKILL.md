@@ -14,7 +14,7 @@ description: "ループ自身の資産（スキル・ルール・ワークフロ
 4つのレンズを fresh context の subagent で回し、自分は PdM として取捨する:
 
 1. **資産批評** — `.claude/` 配下と VISION.md / DESIGN.md / README.md から今週の対象を1〜2個選ぶ（前回監査の status 記録を見てローテーション、最終更新が古いものを優先）。外部の専門家として批評させる: 正確性・肥大化・日付つき事実の失効・pin したバージョンの乖離・公式ベストプラクティスとの差分
-2. **エコシステム** — Claude Code の changelog（https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md）・公式 docs（https://code.claude.com/docs/）・公式スキル集（https://github.com/anthropics/skills）を確認させ、この repo が使っていない有用な新機能・取り込む価値のある外部スキルを採用判断つきで報告させる。判断の物差しは GUARDRAILS の設計原則と DESIGN.md（目新しさより整合を優先）
+2. **エコシステム** — Claude Code の changelog（https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md）・公式 docs（https://code.claude.com/docs/）・公式スキル集（https://github.com/anthropics/skills）を確認させ、この repo が使っていない有用な新機能・取り込む価値のある外部スキルを採用判断つきで報告させる。Claude Code の外も対象にする: ループが今やっている作業や人間に残っている作業を肩代わりできるツール（GitHub App・Action・外部サービス。依存更新の Renovate が先例）があれば、導入の issue として提案する。判断の物差しは GUARDRAILS の設計原則と DESIGN.md（目新しさより整合を優先）
 3. **プロセス監査** — 直近1週間のマージ済み PR が無ければ subagent を起動せず「該当なし」とする（早期終了の原則）。あれば、それらと status issue の記録を、各スキルが定める手順の痕跡（UI PR のスクショ確認コメント、複数案の検討記録、reflect の実施、issue の受け入れ条件との突合コメント）と照合させ、手順が守られなかった事例を挙げさせる。違反には「なぜ守られなかったか」の仮説（手順が重い・曖昧・知られていない）まで付けさせる
 4. **プロダクト監査** — [audit スキル](../audit/SKILL.md)を引数なしで実行する。該当監査の選定（再監査トリガーと履歴の突合）・実行・記録はスキル側が担い、該当が無ければ「該当なし」で戻る。対象はループ環境でなくプロダクト・事業側（法務・収益化準備など）で、環境しか見ないレンズ1〜3の死角をここで受け持つ
 
