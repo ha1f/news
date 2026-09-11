@@ -34,13 +34,12 @@ open PR をレビューし、合格したものをマージする。実装セッ
 
 ### 依存更新 PR（`bot: true`）
 
-Renovate は digest / patch / minor を自分で自動マージするので、ここに来るのは major・Renovate 設定の移行・自動マージが止まった PR。Renovate は自分のルールで動く独立したツールとして扱い、ループはその判断を補う:
+Renovate は digest / patch / minor を自分で自動マージするので、ここに来るのは major・Renovate 設定の移行・自動マージが止まった PR。linked issue は無いので、正とするのは PR body の更新表（パッケージ・更新種別・変更範囲）とそこからリンクされる changelog / release notes。上の終端化ルールに次を加える:
 
-- 正とするのは PR body の更新表（パッケージ・更新種別・変更範囲）と、そこからリンクされる changelog / release notes。linked issue は無い
-- diff がバージョン・digest 文字列の置換と Renovate 設定（`.github/renovate.json5`）の範囲に収まっているか確認する。超えていれば bot の異常として `hold` + 理由コメントで人間に委ねる（保護パスと同じ扱い）
-- major は release notes の breaking changes をこの repo の使い方（workflow の inputs・permissions・Node ランタイム）に照らす。影響が無ければ合格。workflow 側の追従が要るなら**要修正（linked issue なし）**として issue を起票して close する（Renovate は close した PR の更新を再提案しないため、追従は develop ステージが自分の PR で行う）
-- checks は `renovate/stability-days` を含めて全て見る。pending（minimumReleaseAge 待ち）なら `not_ready` と同じく触らず次の run に委ねる。red なら Renovate の rebase チェックボックス（body の `rebase-check`）を1回だけ有効化して次の run に委ねる。同じ head で再び red なら要修正として扱う
-- 合格の後は通常と同じくマージ後の main ビルドを確認する。deploy 系 action（`actions/deploy-pages` 等）は PR の CI では実行されず main でしか検証できないため、この確認が唯一のテストになる
+- diff がバージョン・digest 文字列の置換と Renovate 設定（`.github/renovate.json5`）の範囲を超えていれば、bot の異常として `hold` + 理由コメントで人間に委ねる（bot の PR は保護パス判定を免除しているため、この確認がその代わり）
+- major は release notes の breaking changes をこの repo の使い方（workflow の inputs・permissions・Node ランタイム）に照らす。workflow 側の追従が要る・CI が red のときは**要修正（linked issue なし）**で issue を起票して close する。Renovate は close した PR の更新を再提案しないため、追従は develop ステージが自分の PR で行う
+- `renovate/stability-days` が pending（minimumReleaseAge 待ち）なら `not_ready` と同じく触らず次の run に委ねる
+- deploy 系 action（`actions/deploy-pages` 等）は PR の CI では実行されず main でしか検証できないため、マージ後の main ビルド確認が唯一のテストになる
 
 `auto_merge_mode` が `dry-run` の間は、マージ・close・draft 化・ラベル付与を実行せず、各 PR に判定コメントだけを残す。判定コメントの1行目は `[dry-run] 合格` / `[dry-run] 不合格` で始め、同一 head SHA に既にこのループの判定コメントがある PR はレビューし直さない（毎日同じ diff に subagent を使わない）。
 
