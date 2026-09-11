@@ -33,7 +33,7 @@
   automergeStrategy: 'squash',
 
   // automerge しない更新（major・pin・Renovate 設定の移行）は日次ループの review ステージが
-  // レビューしてマージ・close まで終端化する（.claude/GUARDRAILS.md の trusted_bots）
+  // レビューしてマージ・close まで終端化する（.claude/GUARDRAILS.md の信頼の軸）
   packageRules: [
     {
       description: 'GitHub Actions と workflow 内の *_VERSION は digest/patch/minor を CI green で自動マージする（pin と major はループがレビューする）',

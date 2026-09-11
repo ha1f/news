@@ -84,7 +84,7 @@ GitHub Actions と workflow 内でピン留めしているバージョン（Play
 - **digest 固定** — Actions は `@v7` のようなタグではなく commit SHA に固定される（タグは付け替え可能なため、サプライチェーン攻撃を受けにくくする）
 - **実行タイミング** — 月曜早朝（JST）にまとめて PR を作る。日次ループのステージと重ならない時間帯
 - **自動マージ** — digest / patch / minor は公開から3日経過し CI が green なら Renovate 自身がマージする
-- **ループによる引き取り** — Renovate が自動マージしない更新（major・Renovate 設定の移行・自動マージが止まった PR）は、日次ループの review ステージが changelog と CI を確認してマージまたは close する（[.claude/GUARDRAILS.md](.claude/GUARDRAILS.md) の `trusted_bots`）。人間の手は要らない。レビューで踏まえる Renovate の挙動:
+- **ループによる引き取り** — Renovate が自動マージしない更新（major・Renovate 設定の移行・自動マージが止まった PR）は、日次ループの review ステージが changelog と CI を確認してマージまたは close する（[.claude/GUARDRAILS.md](.claude/GUARDRAILS.md) の信頼の軸: この repo に書き込める名義なら人間・bot を問わず対象）。人間の手は要らない。レビューで踏まえる Renovate の挙動:
   - 書き込み範囲は workflow 内のバージョン・digest 文字列と `.github/renovate.json5` のみ。diff がそれを超えていれば異常
   - minimumReleaseAge の待機中は status check `renovate/stability-days` が pending になる（待てば解ける）
   - close した PR の更新は再提案しない（Dependency Dashboard のチェックボックスで再開できる）。workflow 側の追従が要る major は issue にして、ループ自身の PR で更新する

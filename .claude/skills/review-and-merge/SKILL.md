@@ -9,12 +9,12 @@ open PR をレビューし、合格したものをマージする。実装セッ
 
 ## 手順
 
-1. `python3 .claude/skills/review-and-merge/scripts/classify_prs.py` を実行する。`gh` CLI が使えない環境では、MCP ツールで PR データ（number, title, draft, labels, author_association, author（user.login）, body, files, last_commit_at）を取得し、JSON 配列として stdin に渡す（`--stdin` フラグまたはパイプ）。draft / hold / 作者の信頼 / quiescence / 保護パスは機械判定済みで、`merge_candidates` / `protected` / `not_ready` / `drafts` / `hold` / `external` に分類された JSON が返る。信頼名義は collaborator と GUARDRAILS の `trusted_bots` で、bot の PR には `bot: true` が付く
+1. `python3 .claude/skills/review-and-merge/scripts/classify_prs.py` を実行する。`gh` CLI が使えない環境では、MCP ツールで PR データ（number, title, draft, labels, author_association, author, head_in_repo（head branch がこの repo にあるか）, body, files, patches（ファイル名→diff）, last_commit_at）を取得し、JSON 配列として stdin に渡す（`--stdin` フラグまたはパイプ）。draft / hold / 作者の信頼 / quiescence / 保護パスは機械判定済みで、`merge_candidates` / `protected` / `not_ready` / `drafts` / `hold` / `external` に分類された JSON が返る
 2. 全カテゴリが空なら status issue に「対象なし」を記録し、reflect-and-improve を実行して終了する（レビューの subagent は起動しない）
 3. `drafts` / `hold` / `not_ready` には触れない（作業中の可能性がある。次の run が拾う）
-4. `external`（信頼名義以外の ready PR）はレビューコメントのみ。同一 head SHA に既にこのループのコメントがあれば何もしない。マージはしない
+4. `external`（この repo に書き込めない名義の ready PR）はレビューコメントのみ。同一 head SHA に既にこのループのコメントがあれば何もしない。マージはしない
 5. `protected` はレビューのうえ `hold` + 理由コメントを付けて人間に委ねる。マージはしない
-6. `merge_candidates` を番号の古い順にレビューして終端化する（`bot: true` の候補は下の「bot の PR」に従う）
+6. `merge_candidates` を番号の古い順にレビューして終端化する
 
 ## レビューと終端化
 
@@ -32,13 +32,12 @@ open PR をレビューし、合格したものをマージする。実装セッ
 - **要修正**（linked issue なし）→ 有効な学びを含むなら指摘内容を issue に起票してから、理由をコメントして close する（学びを黙って失わない）
 - **不採用** → 理由をコメントして close する
 
-### bot の PR（`bot: true`）
+### ツールが作る PR
 
-bot は自分のルールで動く独立したツールで、ループはそのルールが終端化しない PR を引き取る。bot のルールと固有の挙動は [README の「依存関係の更新」](../../../README.md#依存関係の更新)と bot の設定ファイルを正とし、ここには書かない。上の終端化ルールに次を加える:
+オーナーが導入したツール（依存更新など）の PR は、そのツール自身が終端化しないものがここに来る。ツールのルールと固有の挙動は [README の「依存関係の更新」](../../../README.md#依存関係の更新)とツールの設定ファイルを正とし、ここには書かない。上の終端化ルールに次を加える:
 
-- linked issue は無い。正とするのは PR body（bot が書く更新内容）とそこからリンクされる上流の changelog
-- diff が bot の書き込み範囲を超えていれば bot の異常として `hold` + 理由コメントで人間に委ねる（bot の PR は保護パス判定を免除しているため、この確認がその代わり）
-- bot 自身の check が pending なら `not_ready` と同じく触らず次の run に委ねる
+- linked issue は無い。正とするのは PR body（ツールが書く更新内容）とそこからリンクされる上流の changelog。`protected_version_bumps` に挙がったファイルは保護パス内の更新なので、上流の変更内容まで確認する
+- ツール自身の check が pending なら `not_ready` と同じく触らず次の run に委ねる
 - 要修正は linked issue なしの規則で扱う（追従は develop ステージが自分の PR で行う）
 
 `auto_merge_mode` が `dry-run` の間は、マージ・close・draft 化・ラベル付与を実行せず、各 PR に判定コメントだけを残す。判定コメントの1行目は `[dry-run] 合格` / `[dry-run] 不合格` で始め、同一 head SHA に既にこのループの判定コメントがある PR はレビューし直さない（毎日同じ diff に subagent を使わない）。
