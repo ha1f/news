@@ -9,7 +9,7 @@ open PR をレビューし、合格したものをマージする。実装セッ
 
 ## 手順
 
-1. `python3 .claude/skills/review-and-merge/scripts/classify_prs.py` を実行する。`gh` CLI が使えない環境では、MCP ツールで PR データ（number, title, draft, labels, author_association, author, head_in_repo（head branch がこの repo にあるか）, body, files, patches（ファイル名→diff）, last_commit_at）を取得し、JSON 配列として stdin に渡す（`--stdin` フラグまたはパイプ）。draft / hold / 作者の信頼 / quiescence / 保護パスは機械判定済みで、`merge_candidates` / `protected` / `not_ready` / `drafts` / `hold` / `external` に分類された JSON が返る
+1. `python3 .claude/skills/review-and-merge/scripts/classify_prs.py` を実行する。`gh` CLI が使えない環境では、MCP ツールで PR データ（number, title, draft, labels, author_association, author, head_in_repo（真偽値。head repo の full_name が base と一致するか）, body, files, patches（ファイル名→diff）, last_commit_at）を取得し、JSON 配列として stdin に渡す（`--stdin` フラグまたはパイプ）。draft / hold / 作者の信頼 / quiescence / 保護パスは機械判定済みで、`merge_candidates` / `protected` / `not_ready` / `drafts` / `hold` / `external` に分類された JSON が返る
 2. 全カテゴリが空なら status issue に「対象なし」を記録し、reflect-and-improve を実行して終了する（レビューの subagent は起動しない）
 3. `drafts` / `hold` / `not_ready` には触れない（作業中の可能性がある。次の run が拾う）
 4. `external`（この repo に書き込めない名義の ready PR）はレビューコメントのみ。同一 head SHA に既にこのループのコメントがあれば何もしない。マージはしない
@@ -36,7 +36,7 @@ open PR をレビューし、合格したものをマージする。実装セッ
 
 オーナーが導入したツール（依存更新など）の PR は、そのツール自身が終端化しないものがここに来る。ツールのルールと固有の挙動は [README の「依存関係の更新」](../../../README.md#依存関係の更新)とツールの設定ファイルを正とし、ここには書かない。上の終端化ルールに次を加える:
 
-- linked issue は無い。正とするのは PR body（ツールが書く更新内容）とそこからリンクされる上流の changelog。`protected_version_bumps` に挙がったファイルは保護パス内の更新なので、上流の変更内容まで確認する
+- linked issue は無い。正とするのは PR body（ツールが書く更新内容）とそこからリンクされる上流の changelog。`protected_version_bumps` に挙がったファイルは保護パス内の更新なので、digest が上流のリリースタグに実際に対応することと、その変更内容まで確認する（スクリプトは置換の形しか見ていない）
 - ツール自身の check が pending なら `not_ready` と同じく触らず次の run に委ねる
 - 要修正は linked issue なしの規則で扱う（追従は develop ステージが自分の PR で行う）
 

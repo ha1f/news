@@ -61,8 +61,9 @@ def parse_guardrails(text):
 def summarize_issues(issues):
     """open issue から status issue 番号と issue 数（status・bot 除く）を出す（純関数）
 
-    bot の issue（Renovate の Dependency Dashboard 等）はループが実装対象にしないため、
-    open_issue_cap の数にも入れない。"""
+    bot の issue（Renovate の Dependency Dashboard 等）は実装依頼でなくトラッキング用の
+    issue なので、open_issue_cap の数に入れない（bot だから信頼しないという意味ではない。
+    GUARDRAILS「状態の持ち方」参照）。"""
     status_issue, open_count = None, 0
     for issue in issues:
         if "pull_request" in issue:

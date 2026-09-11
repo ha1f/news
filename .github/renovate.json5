@@ -32,11 +32,12 @@
   // リポジトリの慣習に合わせて squash でマージする
   automergeStrategy: 'squash',
 
-  // automerge しない更新（major・pin・Renovate 設定の移行）は日次ループの review ステージが
-  // レビューしてマージ・close まで終端化する（.claude/GUARDRAILS.md の信頼の軸）
+  // automerge しない更新（major・Renovate 設定の移行）は日次ループの review ステージが
+  // レビューしてマージ・close まで終端化する（.claude/GUARDRAILS.md の信頼の軸）。
+  // pin（タグ→SHA の一斉置換）はバージョン置換を超える diff なので保護パス判定で人間に渡る
   packageRules: [
     {
-      description: 'GitHub Actions と workflow 内の *_VERSION は digest/patch/minor を CI green で自動マージする（pin と major はループがレビューする）',
+      description: 'GitHub Actions と workflow 内の *_VERSION は digest/patch/minor を CI green で自動マージする（major はループがレビューする）',
       matchManagers: ['github-actions', 'custom.regex'],
       matchUpdateTypes: ['digest', 'patch', 'minor'],
       automerge: true,

@@ -81,6 +81,22 @@ class ClassifyTest(unittest.TestCase):
         self.assertEqual([p["number"] for p in result["merge_candidates"]], [1])
         self.assertEqual([p["number"] for p in result["external"]], [2])
 
+    def test_non_boolean_head_in_repo_falls_back_to_association(self):
+        # MCP 経路で LLM が "false" や repo 名を入れても信頼に倒れない
+        prs = [pr(1, assoc="CONTRIBUTOR", head_in_repo="false"),
+               pr(2, assoc="CONTRIBUTOR", head_in_repo="ha1f/news"),
+               pr(3, assoc="OWNER", head_in_repo="")]
+        result = classify(prs, CONFIG, NOW)
+        self.assertEqual([p["number"] for p in result["external"]], [1, 2])
+        self.assertEqual([p["number"] for p in result["merge_candidates"]], [3])
+
+    def test_guardrail_value_change_stays_protected(self):
+        # 裸の整数の書き換え（quiescence を 0 にする等）はバージョン置換ではない
+        patch = "@@ -8 +8 @@\n-quiescence_minutes: 30\n+quiescence_minutes: 0\n"
+        result = classify([pr(1, files=[".claude/GUARDRAILS.md"],
+                              patches={".claude/GUARDRAILS.md": patch})], CONFIG, NOW)
+        self.assertEqual(result["protected"][0]["protected_files"], [".claude/GUARDRAILS.md"])
+
     def test_version_bump_in_protected_path_is_not_protected(self):
         renovate = pr(1, author="renovate[bot]", head_in_repo=True,
                       files=[".github/workflows/pages.yml"],
@@ -110,11 +126,44 @@ class VersionBumpOnlyTest(unittest.TestCase):
             "@@ -1 +1 @@\n-      PLAYWRIGHT_VERSION: 1.62.1\n+      PLAYWRIGHT_VERSION: 1.63.0\n"))
         self.assertTrue(version_bump_only("@@ -1 +1 @@\n-3.14.7\n+3.14.8\n"))
 
+    def test_tag_to_digest_pin_and_major_tag_bump(self):
+        self.assertTrue(version_bump_only(
+            "@@ -1 +1 @@\n-        uses: actions/checkout@v4\n+        uses: actions/checkout@v5\n"))
+        # pin（タグ→SHA + コメント）は置換を超えるので bump ではない → protected のまま
+        self.assertFalse(version_bump_only(
+            "@@ -1 +1 @@\n-        uses: actions/checkout@v4\n"
+            "+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4\n"))
+
     def test_anything_else_is_not_a_bump(self):
         self.assertFalse(version_bump_only(LOGIC_CHANGE))
         self.assertFalse(version_bump_only("@@ -1 +1,2 @@\n-x: 1.0\n+x: 1.1\n+run: rm -rf /\n"))
         self.assertFalse(version_bump_only(""))
         self.assertFalse(version_bump_only(None))
+
+    def test_bare_integer_changes_are_not_bumps(self):
+        for patch in [
+            "@@ -8 +8 @@\n-quiescence_minutes: 30\n+quiescence_minutes: 0\n",
+            "@@ -1 +1 @@\n-  open_issue_cap: 10\n+  open_issue_cap: 999\n",
+            "@@ -1 +1 @@\n-    - cron: '0 1 * * *'\n+    - cron: '0 23 * * *'\n",
+            "@@ -1 +1 @@\n-    timeout-minutes: 5\n+    timeout-minutes: 500\n",
+            "@@ -1 +1 @@\n-    parents[3]\n+    parents[0]\n",
+            "@@ -1 +1 @@\n-[0-9a-f]{7,64}\n+[0-9a-f]{1,64}\n",
+        ]:
+            self.assertFalse(version_bump_only(patch), patch)
+
+    def test_reorder_and_move_are_not_bumps(self):
+        self.assertFalse(version_bump_only(
+            "@@ -1,2 +1,2 @@\n-      - run: npm ci\n-      - run: npm test\n"
+            "+      - run: npm test\n+      - run: npm ci\n"))
+        self.assertFalse(version_bump_only(
+            "@@ -10,3 +10,2 @@\n gate:\n-      - uses: ./.github/actions/deploy\n"
+            "@@ -30,2 +29,3 @@\n open:\n+      - uses: ./.github/actions/deploy\n"))
+        # 内容が `--` で始まる削除行（frontmatter 等）も数に入る
+        self.assertFalse(version_bump_only(
+            "@@ -1,2 +1 @@\n-PLAYWRIGHT_VERSION: 1.62.1\n---\n+PLAYWRIGHT_VERSION: 1.63.0\n"))
+        self.assertFalse(version_bump_only(
+            "@@ -1 +1 @@\n-        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128\n"
+            "+        uses: evil/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128\n"))
 
 
 class ProtectedHitsTest(unittest.TestCase):

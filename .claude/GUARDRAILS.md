@@ -21,7 +21,7 @@ protected_paths:               # 触れる PR は auto-merge 禁止 → hold を
 
 ## 状態の持ち方
 
-GitHub ネイティブの状態だけで回す: PR の draft（作業中・触らない）/ ready（レビュー・マージ候補）、issue の open / closed、作者の author_association、linked PR、タイムスタンプ。専用ラベルは `hold`（自動処理を止めて人間が見る。人間・ループのどちらが付けてもよく、理由をコメントに書く）の1つだけ。優先度・進捗・完了をラベルやカウンタで管理しない。
+GitHub ネイティブの状態だけで回す: PR の draft（作業中・触らない）/ ready（レビュー・マージ候補）、issue の open / closed、作者の書き込み権限（PR は head branch の所在、issue は author_association。issue 側は bot のトラッキング issue を実装対象から外すため未移行）、linked PR、タイムスタンプ。専用ラベルは `hold`（自動処理を止めて人間が見る。人間・ループのどちらが付けてもよく、理由をコメントに書く）の1つだけ。優先度・進捗・完了をラベルやカウンタで管理しない。
 
 status issue（📊 daily-loop status）へのコメントは1行目を JSON にする（例: `{"stage": "develop", "phase": "end", "ok": true, "summary": "#26 実装 → PR #27"}`。stage は evaluate / develop / review / audit（週次）。スクリプトがこれを読んで前日の健全性を機械判定する（audit は週次のため健全性集計の対象外）。
 

@@ -25,30 +25,31 @@ from pathlib import Path
 
 TRUSTED = {"OWNER", "MEMBER", "COLLABORATOR"}
 LINK_RE = re.compile(r"(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?|refs?)\s+#(\d+)", re.I)
-# commit SHA / digest と v1.2.3 形式のバージョン。置換前後でこれ以外が同じなら「バージョン更新だけ」
-VERSION_TOKEN_RE = re.compile(r"\b(?:[0-9a-f]{7,64}|v?\d+(?:\.\d+)*)\b")
+# バージョンらしい形だけを伏せる: `@` 直後の digest / v始まり / ドットを含む数値。
+# 裸の整数（quiescence_minutes: 30 等の設定値）は伏せない
+VERSION_TOKEN_RE = re.compile(r"(?<=@)[0-9a-f]{7,64}\b|\bv\d+(?:\.\d+)*\b|\b\d+(?:\.\d+)+\b")
 
 
 def version_bump_only(patch):
     """diff がバージョン・digest 文字列の置換だけで構成されているか（純関数）。
-    追加行と削除行が同数で、バージョン token を伏せると一致するとき True。"""
+    削除行と追加行が同数で、行ごとに対にしたとき「生の行は異なるが、バージョン token を
+    伏せると一致する」ときだけ True（同一行の移動・並べ替えは置換ではない）。
+    patch は GitHub files API の形式（@@ から始まり、ファイルヘッダを含まない）。"""
     if not patch:
         return False
-    removed, added = [], []
-    for line in patch.splitlines():
-        if line.startswith("+++") or line.startswith("---"):
-            continue
-        if line.startswith("-"):
-            removed.append(VERSION_TOKEN_RE.sub("§", line[1:]))
-        elif line.startswith("+"):
-            added.append(VERSION_TOKEN_RE.sub("§", line[1:]))
-    return bool(added) and sorted(added) == sorted(removed)
+    removed = [line[1:] for line in patch.splitlines() if line.startswith("-")]
+    added = [line[1:] for line in patch.splitlines() if line.startswith("+")]
+    if not added or len(added) != len(removed):
+        return False
+    return all(r != a and VERSION_TOKEN_RE.sub("§", r) == VERSION_TOKEN_RE.sub("§", a)
+               for r, a in zip(removed, added))
 
 
 def is_trusted(pr):
-    """この repo に書き込める名義か。head branch がこの repo にあれば書き込み権限の証明。"""
-    if pr.get("head_in_repo") is not None:
-        return bool(pr["head_in_repo"])
+    """この repo に書き込める名義か。head branch がこの repo にあれば書き込み権限の証明。
+    head_in_repo が真偽値でない入力（MCP 経路の取り違え等）は author_association で判定する。"""
+    if isinstance(pr.get("head_in_repo"), bool):
+        return pr["head_in_repo"]
     return pr.get("author_association") in TRUSTED
 
 
