@@ -13,11 +13,13 @@ protected_paths:               # 触れる PR は auto-merge 禁止 → hold を
   - .claude/GUARDRAILS.md
   - terms.md                   # 法的文書はオーナー承認必須 (#226)
   - privacy.md                 # 同上
+trusted_bots:                  # この名義の PR は collaborator と同じ経路でレビュー・マージする（保護パス判定は免除）
+  - renovate[bot]
 ```
 
 保護パスにこのファイル自身と review-and-merge が含まれるため、安全装置を緩める変更は必ず人間のマージを通る。
 
-保護パスが縛るのはループの自動マージであり、依存更新 bot の Renovate は自分のルール（[.github/renovate.json5](../.github/renovate.json5)）で動く。Renovate は GitHub Actions の digest/patch/minor と workflow 内の `*_VERSION` を CI green で自動マージし、major と Renovate 設定自体の変更は人間に残す。ループ側は bot の PR / issue を扱わない（collaborator 名義のみが対象）。
+依存更新 bot の Renovate は自分のルール（[.github/renovate.json5](../.github/renovate.json5)）で動き、GitHub Actions の digest/patch/minor と workflow 内の `*_VERSION` を CI green で自動マージする。Renovate が自動マージしないもの（major・Renovate 設定の移行・自動マージが止まった PR）はループが引き取る: `trusted_bots` の名義の PR は review ステージが collaborator の PR と同じ経路でレビューし、マージまたは close まで終端化する。bot の PR に保護パスの判定を適用しないのは、bot が書ける範囲が bot 自身の設定（workflow 内のバージョン文字列と Renovate 設定）で縛られているため。diff がその範囲を超えていればレビューが bot の異常として `hold` にする。bot の issue（Dependency Dashboard）は実装対象・issue 上限に入れない。
 
 ## 状態の持ち方
 
