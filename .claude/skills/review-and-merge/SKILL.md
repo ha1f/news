@@ -9,12 +9,12 @@ open PR をレビューし、合格したものをマージする。実装セッ
 
 ## 手順
 
-1. `python3 .claude/skills/review-and-merge/scripts/classify_prs.py` を実行する。`gh` CLI が使えない環境では、MCP ツールで PR データ（number, title, draft, labels, author_association, body, files, last_commit_at）を取得し、JSON 配列として stdin に渡す（`--stdin` フラグまたはパイプ）。draft / hold / 作者の信頼 / quiescence / 保護パスは機械判定済みで、`merge_candidates` / `protected` / `not_ready` / `drafts` / `hold` / `external` に分類された JSON が返る
+1. `python3 .claude/skills/review-and-merge/scripts/classify_prs.py` を実行する。`gh` CLI が使えない環境では、MCP ツールで PR データ（number, title, draft, labels, author_association, author（user.login）, body, files, last_commit_at）を取得し、JSON 配列として stdin に渡す（`--stdin` フラグまたはパイプ）。draft / hold / 作者の信頼 / quiescence / 保護パスは機械判定済みで、`merge_candidates` / `protected` / `not_ready` / `drafts` / `hold` / `external` に分類された JSON が返る。信頼名義は collaborator と GUARDRAILS の `trusted_bots`（Renovate）で、bot の PR には `bot: true` が付く
 2. 全カテゴリが空なら status issue に「対象なし」を記録し、reflect-and-improve を実行して終了する（レビューの subagent は起動しない）
 3. `drafts` / `hold` / `not_ready` には触れない（作業中の可能性がある。次の run が拾う）
-4. `external`（collaborator 以外の ready PR）はレビューコメントのみ。同一 head SHA に既にこのループのコメントがあれば何もしない。マージはしない
+4. `external`（信頼名義以外の ready PR）はレビューコメントのみ。同一 head SHA に既にこのループのコメントがあれば何もしない。マージはしない
 5. `protected` はレビューのうえ `hold` + 理由コメントを付けて人間に委ねる。マージはしない
-6. `merge_candidates` を番号の古い順にレビューして終端化する
+6. `merge_candidates` を番号の古い順にレビューして終端化する（`bot: true` の候補は下の「依存更新 PR」に従う）
 
 ## レビューと終端化
 
@@ -31,6 +31,16 @@ open PR をレビューし、合格したものをマージする。実装セッ
 - **要修正**（linked issue あり）→ 指摘をコメントして draft に戻す（`gh pr ready --undo`。次の develop run が拾う）
 - **要修正**（linked issue なし）→ 有効な学びを含むなら指摘内容を issue に起票してから、理由をコメントして close する（学びを黙って失わない）
 - **不採用** → 理由をコメントして close する
+
+### 依存更新 PR（`bot: true`）
+
+Renovate は digest / patch / minor を自分で自動マージするので、ここに来るのは major・Renovate 設定の移行・自動マージが止まった PR。Renovate は自分のルールで動く独立したツールとして扱い、ループはその判断を補う:
+
+- 正とするのは PR body の更新表（パッケージ・更新種別・変更範囲）と、そこからリンクされる changelog / release notes。linked issue は無い
+- diff がバージョン・digest 文字列の置換と Renovate 設定（`.github/renovate.json5`）の範囲に収まっているか確認する。超えていれば bot の異常として `hold` + 理由コメントで人間に委ねる（保護パスと同じ扱い）
+- major は release notes の breaking changes をこの repo の使い方（workflow の inputs・permissions・Node ランタイム）に照らす。影響が無ければ合格。workflow 側の追従が要るなら**要修正（linked issue なし）**として issue を起票して close する（Renovate は close した PR の更新を再提案しないため、追従は develop ステージが自分の PR で行う）
+- checks は `renovate/stability-days` を含めて全て見る。pending（minimumReleaseAge 待ち）なら `not_ready` と同じく触らず次の run に委ねる。red なら Renovate の rebase チェックボックス（body の `rebase-check`）を1回だけ有効化して次の run に委ねる。同じ head で再び red なら要修正として扱う
+- 合格の後は通常と同じくマージ後の main ビルドを確認する。deploy 系 action（`actions/deploy-pages` 等）は PR の CI では実行されず main でしか検証できないため、この確認が唯一のテストになる
 
 `auto_merge_mode` が `dry-run` の間は、マージ・close・draft 化・ラベル付与を実行せず、各 PR に判定コメントだけを残す。判定コメントの1行目は `[dry-run] 合格` / `[dry-run] 不合格` で始め、同一 head SHA に既にこのループの判定コメントがある PR はレビューし直さない（毎日同じ diff に subagent を使わない）。
 

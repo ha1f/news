@@ -3,12 +3,15 @@
 
 使い方: python3 classify_prs.py
 出力: {"config", "merge_candidates", "protected", "not_ready", "drafts", "hold", "external"}
-  - merge_candidates: ready かつ collaborator 名義・quiescence 達成・保護パス非該当
+  - merge_candidates: ready かつ信頼名義・quiescence 達成・保護パス非該当
   - protected: 上記のうち保護パスに触れる PR（auto-merge 禁止 → hold + 人間へ）
   - not_ready: ready だが quiescence 未達 → 触らない
   - drafts: draft の PR（作業中）→ 触らない
   - hold: hold ラベル付き → 触らない
-  - external: collaborator 以外の ready PR → レビューコメントのみ
+  - external: 信頼名義以外の ready PR → レビューコメントのみ
+信頼名義は collaborator（OWNER / MEMBER / COLLABORATOR）と GUARDRAILS の trusted_bots
+（Renovate 等の依存更新 bot）。bot の PR は各要素に "bot": true が付き、保護パス判定を
+免除する（bot が書ける範囲は bot 自身の設定で縛られている。diff の範囲はレビューで確認する）。
 diff レビュー・マージの実行はエージェントが行う。
 """
 import json
@@ -64,15 +67,19 @@ def protected_hits(files, patterns):
 
 def classify(prs, config, now):
     """PR リストを分類する（純関数）。各 PR は number/title/draft/labels/
-    author_association/body/files/last_commit_at を持つ dict。"""
+    author_association/author/body/files/last_commit_at を持つ dict。"""
     quiescence = timedelta(minutes=config["quiescence_minutes"])
+    trusted_bots = set(config.get("trusted_bots") or [])
     result = {"merge_candidates": [], "protected": [], "not_ready": [],
               "drafts": [], "hold": [], "external": []}
     for pr in sorted(prs, key=lambda p: p["number"]):
+        is_bot = pr.get("author") in trusted_bots
         summary = {
             "number": pr["number"],
             "title": pr["title"],
+            "author": pr.get("author"),
             "author_association": pr["author_association"],
+            "bot": is_bot,
             "linked_issues": sorted({int(m.group(1))
                                      for m in LINK_RE.finditer(pr.get("body") or "")}),
         }
@@ -82,14 +89,16 @@ def classify(prs, config, now):
         if "hold" in pr["labels"]:
             result["hold"].append(summary)
             continue
-        if pr["author_association"] not in TRUSTED:
+        if pr["author_association"] not in TRUSTED and not is_bot:
             result["external"].append(summary)
             continue
         last_commit = datetime.fromisoformat(pr["last_commit_at"].replace("Z", "+00:00"))
         if now - last_commit < quiescence:
             result["not_ready"].append({**summary, "reason": "quiescence 未達"})
             continue
-        hits = protected_hits(pr["files"], config["protected_paths"])
+        # 保護パスはループ自身の安全装置を守る仕組み。bot が書ける範囲は bot 自身の設定
+        # （renovate.json5 等）で縛られているため、bot の PR は判定を免除する
+        hits = [] if is_bot else protected_hits(pr["files"], config["protected_paths"])
         if hits:
             result["protected"].append({**summary, "protected_files": hits})
         else:
@@ -107,6 +116,7 @@ def fetch_prs_via_gh():
             "title": pr["title"],
             "draft": pr["draft"],
             "labels": [label["name"] for label in pr["labels"]],
+            "author": (pr.get("user") or {}).get("login"),
             "author_association": pr["author_association"],
             "body": pr.get("body") or "",
             "files": [f["filename"] for f in files],
