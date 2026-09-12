@@ -228,7 +228,7 @@ layout: default
   <p class="archive-profile-nav">
     アーカイブで過去の記事を探す:
     {%- for topic in page.topics -%}
-      <a href="{{ '/archive.html' | relative_url }}?tag={{ topic | url_encode }}">{{ topic }}</a>
+      <a href="{{ '/archive.html' | relative_url }}?tag={{ topic | url_encode }}">{{ topic | escape }}</a>
       {%- unless forloop.last %} / {% endunless -%}
     {%- endfor -%}
   </p>
