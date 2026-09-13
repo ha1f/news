@@ -153,8 +153,11 @@ layout: default
   }
 
   var mainUrlsEl = document.getElementById('main-feed-urls');
-  if (mainUrlsEl) {
-    var mainUrls = mainUrlsEl.getAttribute('data-urls').split('|');
+  if (mainUrlsEl && mainUrlsEl.getAttribute('data-urls')) {
+    var mainUrls = mainUrlsEl.getAttribute('data-urls').split('|').filter(function(u) { return u; });
+    if (mainUrls.length === 0) mainUrlsEl = null;
+  }
+  if (mainUrlsEl && mainUrls && mainUrls.length > 0) {
     var articles = document.querySelectorAll('.post-content li');
     var exclusiveCount = 0;
     for (var i = 0; i < articles.length; i++) {
@@ -174,6 +177,7 @@ layout: default
         label.textContent = 'メインにも掲載';
         var br = articles[i].querySelector('br');
         if (br) articles[i].insertBefore(label, br);
+        else articles[i].appendChild(label);
       } else {
         exclusiveCount++;
       }
