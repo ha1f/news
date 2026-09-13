@@ -30,4 +30,4 @@ ha1f はソフトウェアエンジニアのハンドルネームです。iOS / 
 
 ## お問い合わせ
 
-記事の誤りの報告、機能のリクエスト、その他のフィードバックは [GitHub Issues](https://github.com/ha1f/news/issues) で受け付けています。お気軽にお寄せください。
+記事の誤りの報告、機能のリクエスト、その他のフィードバックは{% if site.contact_email and site.contact_email != "" %} [メール](mailto:{{ site.contact_email }})または{% endif %} [GitHub Issues](https://github.com/ha1f/news/issues) で受け付けています。お気軽にお寄せください。
