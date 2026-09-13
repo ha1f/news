@@ -69,6 +69,32 @@ layout: default
     {%- endif -%}
   </header>
 
+  {%- if page.profile -%}
+    {%- assign main_post_for_date = nil -%}
+    {%- for p in site.posts -%}
+      {%- assign p_date = p.date | date: '%Y-%m-%d' -%}
+      {%- if p_date == current_date_str and p.profile == nil -%}
+        {%- assign main_post_for_date = p -%}
+        {%- break -%}
+      {%- endif -%}
+    {%- endfor -%}
+    {%- if main_post_for_date -%}
+      {%- assign main_hrefs = "" -%}
+      {%- assign md_parts = main_post_for_date.content | split: '](' -%}
+      {%- for part in md_parts offset: 1 -%}
+        {%- assign extracted_url = part | split: ')' | first -%}
+        {%- if extracted_url contains '://' -%}
+          {%- if main_hrefs == "" -%}
+            {%- assign main_hrefs = extracted_url -%}
+          {%- else -%}
+            {%- assign main_hrefs = main_hrefs | append: "|" | append: extracted_url -%}
+          {%- endif -%}
+        {%- endif -%}
+      {%- endfor -%}
+      <div id="main-feed-urls" data-urls="{{ main_hrefs | escape }}" hidden></div>
+    {%- endif -%}
+  {%- endif -%}
+
   <div class="post-content e-content" itemprop="articleBody">
     {{ content }}
   </div>
@@ -123,6 +149,45 @@ layout: default
       a.target = '_blank';
       a.rel = 'noopener noreferrer';
       a.classList.add('external-link');
+    }
+  }
+
+  var mainUrlsEl = document.getElementById('main-feed-urls');
+  if (mainUrlsEl && mainUrlsEl.getAttribute('data-urls')) {
+    var mainUrls = mainUrlsEl.getAttribute('data-urls').split('|').filter(function(u) { return u; });
+    if (mainUrls.length === 0) mainUrlsEl = null;
+  }
+  if (mainUrlsEl && mainUrls && mainUrls.length > 0) {
+    var articles = document.querySelectorAll('.post-content li');
+    var exclusiveCount = 0;
+    for (var i = 0; i < articles.length; i++) {
+      var link = articles[i].querySelector('a[href]');
+      if (!link || link.hostname === host) continue;
+      var isShared = false;
+      for (var j = 0; j < mainUrls.length; j++) {
+        if (link.href === mainUrls[j] || link.getAttribute('href') === mainUrls[j]) {
+          isShared = true;
+          break;
+        }
+      }
+      if (isShared) {
+        articles[i].classList.add('shared-with-main');
+        var label = document.createElement('span');
+        label.className = 'shared-label';
+        label.textContent = 'メインにも掲載';
+        var br = articles[i].querySelector('br');
+        if (br) articles[i].insertBefore(label, br);
+        else articles[i].appendChild(label);
+      } else {
+        exclusiveCount++;
+      }
+    }
+    if (exclusiveCount > 0) {
+      var header = document.querySelector('.post-header');
+      var note = document.createElement('p');
+      note.className = 'profile-exclusive-note';
+      note.textContent = exclusiveCount + '件はこのプロファイルだけの記事です';
+      header.appendChild(note);
     }
   }
 

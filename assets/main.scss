@@ -306,6 +306,21 @@
   color: $grey-color;
 }
 
+.profile-exclusive-note {
+  font-size: $base-font-size * 0.875;
+  color: $grey-color;
+}
+
+.shared-with-main {
+  opacity: 0.75;
+}
+
+.shared-label {
+  font-size: $base-font-size * 0.75;
+  color: $grey-color;
+  margin-left: 0.5em;
+}
+
 .footer-legal {
   font-size: $base-font-size * 0.8125;
   color: $grey-color;
@@ -508,6 +523,14 @@
   }
 
   .cross-profile-nav {
+    color: #8b949e;
+  }
+
+  .profile-exclusive-note {
+    color: #8b949e;
+  }
+
+  .shared-label {
     color: #8b949e;
   }
 
