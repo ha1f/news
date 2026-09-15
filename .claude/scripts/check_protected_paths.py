@@ -1,18 +1,21 @@
 #!/usr/bin/env python3
 """GUARDRAILS.md の protected_paths に該当するファイルがあるか判定する。
+UI 変更パス（.claude/rules/ui-changes.md の paths）への該当も検出する。
 
 使い方:
   python3 check_protected_paths.py file1 file2 ...
   python3 check_protected_paths.py --diff origin/main
   echo '["file1", "file2"]' | python3 check_protected_paths.py --stdin
 
-exit 0: 該当なし
-exit 1: 該当あり（該当ファイルを JSON で stdout に出力）
+exit 0: 保護パス該当なし
+exit 1: 保護パス該当あり
+stdout: JSON（protected, files, patterns に加え ui_changes）
 """
 import json
 import re
 import subprocess
 import sys
+from fnmatch import fnmatch
 from pathlib import Path
 
 
@@ -38,6 +41,30 @@ def parse_guardrails(text):
     return config
 
 
+def parse_rule_paths(rule_path):
+    """ルールファイルの YAML front matter から paths を抽出する。"""
+    if not rule_path.exists():
+        return []
+    text = rule_path.read_text()
+    m = re.match(r"^---\n(.*?)\n---", text, re.S)
+    if not m:
+        return []
+    paths = []
+    in_paths = False
+    for line in m.group(1).splitlines():
+        stripped = line.strip()
+        if stripped.startswith("paths:"):
+            in_paths = True
+            continue
+        if in_paths:
+            if stripped.startswith("- "):
+                val = stripped[2:].strip().strip('"').strip("'")
+                paths.append(val)
+            else:
+                break
+    return paths
+
+
 def protected_hits(files, patterns):
     hits = []
     for pattern in patterns:
@@ -49,10 +76,25 @@ def protected_hits(files, patterns):
     return sorted(set(hits))
 
 
+def ui_hits(files, ui_patterns):
+    """fnmatch でファイルを UI パターンに照合する。"""
+    hits = []
+    for f in files:
+        for pattern in ui_patterns:
+            if fnmatch(f, pattern):
+                hits.append(f)
+                break
+    return sorted(set(hits))
+
+
 def main():
-    guardrails_path = Path(__file__).resolve().parents[1] / "GUARDRAILS.md"
+    base_dir = Path(__file__).resolve().parents[1]
+    guardrails_path = base_dir / "GUARDRAILS.md"
     config = parse_guardrails(guardrails_path.read_text())
     patterns = config.get("protected_paths", [])
+
+    ui_rule_path = base_dir / "rules" / "ui-changes.md"
+    ui_patterns = parse_rule_paths(ui_rule_path)
 
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     if "--diff" in sys.argv:
@@ -73,16 +115,19 @@ def main():
         files = []
 
     hits = protected_hits(files, patterns)
-    if hits:
-        json.dump({"protected": True, "files": hits, "patterns": patterns},
-                  sys.stdout, ensure_ascii=False, indent=1)
-        print()
-        sys.exit(1)
-    else:
-        json.dump({"protected": False, "files": [], "patterns": patterns},
-                  sys.stdout, ensure_ascii=False, indent=1)
-        print()
-        sys.exit(0)
+    ui_changed = ui_hits(files, ui_patterns) if ui_patterns else []
+
+    result = {
+        "protected": bool(hits),
+        "files": hits,
+        "patterns": patterns,
+    }
+    if ui_changed:
+        result["ui_changes"] = ui_changed
+
+    json.dump(result, sys.stdout, ensure_ascii=False, indent=1)
+    print()
+    sys.exit(1 if hits else 0)
 
 
 if __name__ == "__main__":
