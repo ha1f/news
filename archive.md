@@ -33,6 +33,13 @@ title: "アーカイブ"
 </div>
 {%- endif -%}
 
+<p id="archive-tag-feed" class="profile-feed-link" hidden>
+  <a id="archive-tag-feed-link" href="#">
+    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: -2px; margin-right: 4px;"><circle cx="6.18" cy="17.82" r="2.18"/><path d="M4 4.44v2.83c7.03 0 12.73 5.7 12.73 12.73h2.83c0-8.59-6.97-15.56-15.56-15.56zm0 5.66v2.83c3.9 0 7.07 3.17 7.07 7.07h2.83c0-5.47-4.43-9.9-9.9-9.9z"/></svg>
+    「<span id="archive-tag-feed-name"></span>」を RSS で購読
+  </a>
+</p>
+
 <div class="archive-search">
   <input type="text" id="archive-filter" placeholder="キーワードで絞り込み…" autocomplete="off">
 </div>
@@ -65,6 +72,10 @@ title: "アーカイブ"
   var months = document.querySelectorAll('.archive-month');
   var tagButtons = document.querySelectorAll('.archive-tag');
   var activeTag = null;
+  var tagFeedEl = document.getElementById('archive-tag-feed');
+  var tagFeedLink = document.getElementById('archive-tag-feed-link');
+  var tagFeedName = document.getElementById('archive-tag-feed-name');
+  var tagsBaseUrl = '{{ "/tags/" | relative_url }}';
   var showAll = months.length <= INITIAL_MONTHS;
   var moreBtn = null;
 
@@ -121,6 +132,15 @@ title: "アーカイブ"
 
     if (moreBtn) moreBtn.hidden = showAll || isFiltering;
     noResults.hidden = totalVisible > 0 || (!query && !activeTag);
+    if (tagFeedEl) {
+      if (activeTag) {
+        tagFeedLink.href = tagsBaseUrl + encodeURIComponent(activeTag) + '/feed.xml';
+        tagFeedName.textContent = activeTag;
+        tagFeedEl.hidden = false;
+      } else {
+        tagFeedEl.hidden = true;
+      }
+    }
   }
 
   applyFilters();
