@@ -321,6 +321,19 @@
   margin-left: 0.5em;
 }
 
+.post-footer-nav {
+  font-size: $base-font-size * 0.875;
+  color: $grey-color;
+  margin-top: $spacing-unit / 2;
+  text-align: center;
+
+  a {
+    color: $grey-color;
+    text-decoration: none;
+    &:hover { color: $brand-color; }
+  }
+}
+
 .footer-legal {
   font-size: $base-font-size * 0.8125;
   color: $grey-color;
@@ -532,6 +545,14 @@
 
   .shared-label {
     color: #8b949e;
+  }
+
+  .post-footer-nav {
+    color: #8b949e;
+    a {
+      color: #8b949e;
+      &:hover { color: #58a6ff; }
+    }
   }
 
   .footer-legal {
