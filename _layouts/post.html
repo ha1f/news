@@ -132,6 +132,10 @@ layout: default
   </nav>
   {%- endif -%}
 
+  <nav class="post-footer-nav">
+    <a href="{{ '/' | relative_url }}">トップ</a> / <a href="{{ '/profiles/' | relative_url }}">プロファイル</a> / <a href="{{ '/archive.html' | relative_url }}">アーカイブ</a>
+  </nav>
+
   {%- if site.disqus.shortname -%}
     {%- include disqus_comments.html -%}
   {%- endif -%}
