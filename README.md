@@ -65,17 +65,24 @@ flowchart LR
 
 ### trigger 定義（claude.ai 上にあり repo 外のため記録）
 
-| JST | cron (UTC) | メッセージ |
-|-----|-----------|-----------|
-| 9:00 | `0 0 * * *` | `/publish-pages` |
-| 10:00 | `0 1 * * *` | `/evaluate-and-triage` |
-| 12:00 | `0 3 * * *` | `/select-and-develop` |
-| 15:00 | `0 6 * * *` | `/review-and-merge` |
-| 16:00 | `0 7 * * *` | `/select-and-develop` |
-| 18:00 | `0 9 * * *` | `/review-and-merge` |
-| 日曜 11:00 | `0 2 * * 0` | `/audit-and-adopt` |
+| JST | cron (UTC) | メッセージ | モデル |
+|-----|-----------|-----------|--------|
+| 9:00 | `0 0 * * *` | `/publish-pages` | `claude-opus-5` |
+| 10:00 | `0 1 * * *` | `/evaluate-and-triage` | `claude-opus-5` |
+| 12:00 | `0 3 * * *` | `/select-and-develop` | `claude-opus-5` |
+| 15:00 | `0 6 * * *` | `/review-and-merge` | `claude-opus-5` |
+| 16:00 | `0 7 * * *` | `/select-and-develop` | `claude-opus-5` |
+| 18:00 | `0 9 * * *` | `/review-and-merge` | `claude-opus-5` |
+| 日曜 11:00 | `0 2 * * 0` | `/audit-and-adopt` | `claude-fable-5-1` |
 
-週次監査の trigger だけは、モデルにその時点の最上位モデル（Fable 系）を指定する（監査は最上位モデルで行うオーナー方針）。他のステージは既定のモデルのまま。
+モデル指定の方針（最終確認 2026-09-17）:
+
+- **日次ステージ** — その時点の Opus 系最新を指定する
+- **週次監査だけは最上位モデル（Fable 系）** — 監査は最上位モデルで行うオーナー方針
+
+モデル ID にコンテキスト長のサフィックス（`[1m]` 等）は付けない。現行世代はいずれも 1M コンテキストが既定のため不要で、旧世代の指定が残る原因になる。
+
+trigger は claude.ai 上にあり、API 経由で作られたものはエージェントから変更できない（human のみ編集可）。モデル世代が変わった際の反映は人間の作業になるため、下の棚卸しで検出して issue に落とす。
 
 ## 依存関係の更新
 
