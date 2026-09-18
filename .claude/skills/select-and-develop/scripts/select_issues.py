@@ -3,7 +3,7 @@
 
 使い方:
   python3 select_issues.py                    # gh CLI でデータ取得
-  echo '{"issues": [...], "prs": [...]}' | python3 select_issues.py --stdin
+  python3 select_issues.py --stdin < data.json # MCP 等で取得した JSON を渡す
 
 --stdin の JSON に "collaborators" (login の文字列リスト) を含めると、
 issue の author_association が欠落していても author が collaborator なら
@@ -17,6 +17,7 @@ issue の author_association が欠落していても author が collaborator �
 """
 import json
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -112,19 +113,34 @@ def fetch_via_gh():
     return issues, prs
 
 
+USAGE_WITHOUT_GH = """gh CLI が見つかりません。MCP ツール等でデータを取得し、--stdin で渡してください:
+
+  python3 .claude/skills/select-and-develop/scripts/select_issues.py --stdin < data.json
+
+data.json の形:
+  {"issues": [...],          # list_issues (state=OPEN) の結果
+   "prs": [...],             # list_pull_requests (state=open) の結果
+   "collaborators": ["..."]}  # list_repository_collaborators の login のリスト (任意)
+"""
+
+
 def main():
     config = parse_guardrails(
         (Path(__file__).resolve().parents[3] / "GUARDRAILS.md").read_text())
 
-    use_stdin = "--stdin" in sys.argv or not sys.stdin.isatty()
-    if use_stdin:
+    # エージェントの Bash ツールから起動すると stdin は常に非 tty になるため、
+    # tty 判定では JSON を渡していなくても stdin モードに入ってしまう (PR #329 と同じ罠)
+    if "--stdin" in sys.argv:
         data = json.load(sys.stdin)
         issues = data["issues"]
         prs = data["prs"]
         collaborators = data.get("collaborators")
-    else:
+    elif shutil.which("gh"):
         issues, prs = fetch_via_gh()
         collaborators = None
+    else:
+        print(USAGE_WITHOUT_GH, file=sys.stderr)
+        return 1
 
     status_issue, in_progress, backlog = build_candidates(issues, prs, collaborators)
     json.dump({
@@ -133,7 +149,8 @@ def main():
         "in_progress": in_progress,
         "backlog": backlog,
     }, sys.stdout, ensure_ascii=False, indent=1)
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
