@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """daily-loop: 評価前の配信状態・ループ健全性を機械判定して JSON で出力する。
 
-使い方: python3 check_state.py
+使い方: python3 check_state.py          # gh CLI からデータを取得する
+      cat state.json | python3 check_state.py --stdin  # gh が無い環境
 出力: {"config", "today", "post_in_main", "publish_in_progress", "pages_url",
        "pages_build", "status_issue", "open_issues", "health",
        "recent_status_comments"}
@@ -13,6 +14,7 @@
 """
 import json
 import re
+import shutil
 import subprocess
 import sys
 from datetime import datetime, timedelta, timezone
@@ -23,6 +25,17 @@ STAGES = ("evaluate", "develop", "review")
 JST = timezone(timedelta(hours=9))
 COMMENT_LIMIT = 10
 BODY_LIMIT = 200
+
+NO_GH_HINT = """gh CLI が見つかりません。MCP ツール等でデータを取得し、--stdin で渡してください:
+
+  python3 check_state.py --stdin <<'EOF'
+  {"post_exists": true,
+   "pages": {"html_url": "..."},
+   "pages_build": {"status": "completed", "conclusion": "success", ...},
+   "prs": [...], "issues": [...], "comments": [...]}
+  EOF
+
+取得元は .claude/skills/evaluate-and-triage/SKILL.md の Step 0 を参照。"""
 
 
 def gh_json(path, ok_404=False, paginate=True):
@@ -172,7 +185,7 @@ def main():
     now = datetime.now(JST)
     today = now.strftime("%Y-%m-%d")
 
-    if "--stdin" in sys.argv or not sys.stdin.isatty():
+    if "--stdin" in sys.argv:
         data = json.load(sys.stdin)
         result = assemble_output(
             config, today,
@@ -183,6 +196,8 @@ def main():
             issues=data.get("issues", []),
             comments=data.get("comments", []),
         )
+    elif shutil.which("gh") is None:
+        sys.exit(NO_GH_HINT)
     else:
         result = fetch_via_gh(config, today, now)
 
