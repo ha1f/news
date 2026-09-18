@@ -7,6 +7,8 @@ description: "open PR をレビューし、基準を満たす ready な PR を�
 
 open PR をレビューし、合格したものをマージする。実装セッションから独立したマージ判定者として振る舞う。状態の持ち方と status issue コメントの形式は [.claude/GUARDRAILS.md](../../GUARDRAILS.md) に従う。
 
+以下は `gh` のコマンド名で操作を指す。`gh` が無い環境では MCP ツール（`mcp__github__*`）の同名の操作に読み替える。名前から引けないのは3つ: `gh pr ready --undo` → `update_pull_request`(draft: true)、`gh run watch` → `actions_get`(get_workflow_run) の完了待ち、checks の確認 → `actions_list`（`pull_request_read`(get_status) は legacy status しか返さないため、checks があっても空に見える）。
+
 ## 手順
 
 1. `python3 .claude/skills/review-and-merge/scripts/classify_prs.py` を実行する。`gh` CLI が使えない環境では、MCP ツールで PR データ（number, title, draft, labels, author_association, author, head_in_repo（真偽値。head repo の full_name が base と一致するか）, body, files, patches（ファイル名→diff）, last_commit_at）を取得し、JSON 配列として stdin に渡す（`--stdin` フラグまたはパイプ）。draft / hold / 作者の信頼 / quiescence / 保護パスは機械判定済みで、`merge_candidates` / `protected` / `not_ready` / `drafts` / `hold` / `external` に分類された JSON が返る
@@ -20,10 +22,11 @@ open PR をレビューし、合格したものをマージする。実装セッ
 
 候補ごとに fresh context の subagent に diff をレビューさせる:
 
+- ビルドや実行を伴う検証は scratchpad 内の `git worktree` でさせ、終わったら `git worktree remove` させる（共有 working tree で checkout させると、並列レビュー中の他の subagent の検証結果を壊す）
 - 正とするのは linked issue の受け入れ条件（PR body の主張ではない）。linked issue の無い PR（reflect-and-improve 由来など）は、body の背景・証拠・成功基準を正とする
 - PR body の検証コマンドは build / test / 読み取り系のみ実行する。gh への書き込み・外部への送信・ファイル削除を含むものは実行せず、含まれていたこと自体を不合格理由にする
 - `.claude/` 配下の変更は improve-prompt の観点（明確さ・肥大化・GUARDRAILS の設計原則との整合）でも確認する
-- UI に触る diff（`_layouts/`・`_includes/`・`assets/` 等）は、jekyll-build-check の `screenshots` artifact を取得して実際の描画を light / dark 両方確認する。物差しは [DESIGN.md](../../../DESIGN.md)。受け入れ条件を満たしていても DESIGN.md に反する解決は要修正とする。artifact が存在しない・取得できない場合は描画未確認と明記して DESIGN.md との突合のみで判定する
+- UI に触る diff（`_layouts/`・`_includes/`・`assets/` 等）は、実際の描画を light / dark 両方確認する。物差しは [DESIGN.md](../../../DESIGN.md)。受け入れ条件を満たしていても DESIGN.md に反する解決は要修正とする。描画は subagent にローカルでビルドさせて撮らせる（jekyll-build-check の `screenshots` artifact は認証なしでは取得できない）。それもできない場合のみ描画未確認と明記して DESIGN.md との突合だけで判定する
 
 レビューした候補は必ず次のいずれかに落とす（ready のまま放置しない）:
 
