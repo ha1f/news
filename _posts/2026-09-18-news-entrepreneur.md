@@ -17,7 +17,8 @@ AIデータセンター投資はなお膨張中——CrusoeがAI工場向けに3
 3. [Huawei、対Nvidia新型AIチップの投入を2027年第1四半期に前倒し](https://techcrunch.com/2026/09/17/huawei-plans-q1-2027-launch-of-new-ai-chip-as-it-takes-on-nvidia/) (TechCrunch)<br>
    米中のAI半導体競争が激化、中国勢が巻き返しを急ぐ構図が見える。
 
-4. [SBI、ライブドアを75億円で買収　NTTデータ・ミンカブと金融データ協業](https://www.nikkei.com/article/DGXZQOUB170VA0X10C26A9000000/) (日経)
+4. [SBI、ライブドアを75億円で買収　NTTデータ・ミンカブと金融データ協業](https://www.nikkei.com/article/DGXZQOUB170VA0X10C26A9000000/) (日経)<br>
+   日経の報道。買収の座組みと金融データ協業の狙いを原文で確認できる。
 
 5. [楽天市場、出店料を4割値上げへ　27年2月から](https://www.nikkei.com/article/DGXZQOUC178EI0X10C26A9000000/) (日経)<br>
    物価高対応と店舗支援強化を両立できるか、プラットフォーム値上げの試金石。
@@ -31,7 +32,8 @@ AIデータセンター投資はなお膨張中——CrusoeがAI工場向けに3
 8. [『マネーフォワード ME』、「Apps in ChatGPT」での提供を開始](https://prtimes.jp/main/html/rd/p/000001675.000008962.html) (はてブ)<br>
    ChatGPT内で家計データを扱える新チャネル、SaaSの配信先拡大の一例。
 
-9. [Pitchfire for Startups——自分と相性の合う投資家を見つけるツール](https://www.producthunt.com/products/pitchfire-for-startups) (PH)
+9. [Pitchfire for Startups——自分と相性の合う投資家を見つけるツール](https://www.producthunt.com/products/pitchfire-for-startups) (PH)<br>
+   Product Hunt 掲載のツール紹介。機能と利用者の反応を確認できる。
 
 10. [9歳の息子がYouTubeで1800万円超の広告を無断出稿](https://gigazine.net/news/20260917-son-spent-money-youtube-campaign/) (GIGAZINE)<br>
     親の法人カードで3週間、広告アカウントの権限管理の甘さを笑えない教訓として。
