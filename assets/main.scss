@@ -170,6 +170,12 @@
   }
 }
 
+// トップページ・プロファイルページの見出しから #article-N で着地したとき、
+// 対象の記事が画面上端に貼り付かないよう余白を確保する
+.post-content li[id] {
+  scroll-margin-top: $spacing-unit / 2;
+}
+
 .external-link::after {
   content: "\2197";
   font-size: 0.75em;
