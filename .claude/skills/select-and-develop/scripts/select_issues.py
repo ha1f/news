@@ -11,6 +11,7 @@ issue の author_association が欠落していても author が collaborator �
 
 出力: {"config", "status_issue", "in_progress", "backlog"}
   - in_progress: open な linked PR を持つ issue（要対応かはエージェントが判断）
+    linked_open_prs の各要素は {number, draft, hold}。hold は人間の判断待ちの印
   - backlog: linked PR の無い issue。作成日の古い順
 フィルタ（collaborator 名義のみ・hold と status issue を除外）は適用済み。
 優先度・着手順の判断はエージェントが issue を読んで行う。
@@ -80,9 +81,12 @@ def build_candidates(issues, prs, collaborators=None):
         for m in BRANCH_ISSUE_RE.finditer(branch):
             seen.add(int(m.group(1)))
         for issue_num in seen:
+            pr_labels = {(label["name"] if isinstance(label, dict) else label)
+                         for label in pr.get("labels", [])}
             links.setdefault(issue_num, []).append({
                 "number": pr["number"],
                 "draft": pr["draft"],
+                "hold": "hold" in pr_labels,
             })
     status_issue, in_progress, backlog = None, [], []
     for issue in issues:
