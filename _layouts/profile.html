@@ -73,7 +73,7 @@ layout: default
             {%- if link_text.size > 1 -%}
               {%- assign article_count = article_count | plus: 1 -%}
               {%- if article_count <= 3 -%}
-              <li><a href="{{ post.url | relative_url }}">{{ link_text }}</a></li>
+              <li><a href="{{ post.url | relative_url }}#article-{{ forloop.index }}">{{ link_text }}</a></li>
               {%- endif -%}
             {%- endif -%}
           {%- endif -%}

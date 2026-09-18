@@ -96,7 +96,15 @@ layout: default
   {%- endif -%}
 
   <div class="post-content e-content" itemprop="articleBody">
-    {{ content }}
+    {%- comment -%}
+      記事ごとの着地点（#article-N）を付ける。トップページ・プロファイルページの見出しリンクは
+      同じ `split: '<li>'` の位置番号で href を作るため、番号は常に一致する。
+    {%- endcomment -%}
+    {%- assign content_parts = content | split: '<li>' -%}
+    {{- content_parts.first -}}
+    {%- for part in content_parts offset: 1 -%}
+      <li id="article-{{ forloop.index }}">{{- part -}}
+    {%- endfor -%}
   </div>
 
   {%- if page.profile -%}
