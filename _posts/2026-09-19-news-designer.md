@@ -32,7 +32,6 @@ macOS 27ではSiri刷新と同時にウィンドウ・アイコンの一貫性�
 8. [Daydream、服装写真をSiri経由でそのまま購入へ](https://techcrunch.com/2026/09/14/fashion-discovery-app-daydream-uses-apple-intelligence-to-help-you-shop-the-outfits-saved-in-your-camera-roll/) (TechCrunch・英語)<br>
    iOS 27の画像解析で写真の服を品目ごとに分け、約300万点の商品と突き合わせる。
 
-
 9. [「Unicode 18.0」公開、絵文字9種・17万文字収録に](https://forest.watch.impress.co.jp/docs/news/2142260.html) (はてブ)<br>
    秦代の「小篆」や女真文字の追加など、新版の変更点を文字数の内訳とともに確認できる。
 
