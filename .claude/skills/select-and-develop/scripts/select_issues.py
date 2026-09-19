@@ -3,7 +3,7 @@
 
 使い方:
   python3 select_issues.py                    # gh CLI でデータ取得
-  echo '{"issues": [...], "prs": [...]}' | python3 select_issues.py --stdin
+  python3 select_issues.py --stdin < data.json # MCP 等で取得した JSON を渡す
 
 --stdin の JSON に "collaborators" (login の文字列リスト) を含めると、
 issue の author_association が欠落していても author が collaborator なら
@@ -11,12 +11,14 @@ issue の author_association が欠落していても author が collaborator �
 
 出力: {"config", "status_issue", "in_progress", "backlog"}
   - in_progress: open な linked PR を持つ issue（要対応かはエージェントが判断）
+    linked_open_prs の各要素は {number, draft, hold}。hold は人間の判断待ちの印
   - backlog: linked PR の無い issue。作成日の古い順
 フィルタ（collaborator 名義のみ・hold と status issue を除外）は適用済み。
 優先度・着手順の判断はエージェントが issue を読んで行う。
 """
 import json
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -72,6 +74,10 @@ def build_candidates(issues, prs, collaborators=None):
     collaborators = frozenset(collaborators) if collaborators else frozenset()
     links = {}
     for pr in prs:
+        # MCP の list_pull_requests は labels を文字列リストで返し、ラベルが無い PR では
+        # キー自体を返さない。gh CLI は dict のリスト。どちらでも同じ集合になるようにする
+        pr_labels = {(label["name"] if isinstance(label, dict) else label)
+                     for label in pr.get("labels", [])}
         seen = set()
         for m in LINK_RE.finditer(pr.get("body") or ""):
             seen.add(int(m.group(1)))
@@ -82,6 +88,7 @@ def build_candidates(issues, prs, collaborators=None):
             links.setdefault(issue_num, []).append({
                 "number": pr["number"],
                 "draft": pr["draft"],
+                "hold": "hold" in pr_labels,
             })
     status_issue, in_progress, backlog = None, [], []
     for issue in issues:
@@ -112,19 +119,46 @@ def fetch_via_gh():
     return issues, prs
 
 
+USAGE_WITHOUT_GH = """gh CLI が見つかりません。MCP ツール等でデータを取得し、--stdin で渡してください:
+
+  python3 .claude/skills/select-and-develop/scripts/select_issues.py --stdin < data.json
+
+data.json の形:
+  {"issues": [...],          # list_issues (state=OPEN) の結果
+   "prs": [...],             # list_pull_requests (state=open) の結果
+   "collaborators": ["..."]}  # list_repository_collaborators の login のリスト (任意)
+"""
+
+
 def main():
     config = parse_guardrails(
         (Path(__file__).resolve().parents[3] / "GUARDRAILS.md").read_text())
 
-    use_stdin = "--stdin" in sys.argv or not sys.stdin.isatty()
-    if use_stdin:
-        data = json.load(sys.stdin)
-        issues = data["issues"]
-        prs = data["prs"]
+    # エージェントの Bash ツールから起動すると stdin は常に非 tty になるため、
+    # tty 判定では JSON を渡していなくても stdin モードに入ってしまう (PR #329 と同じ罠)
+    if "--stdin" in sys.argv:
+        try:
+            data = json.load(sys.stdin)
+            issues = data["issues"]
+            prs = data["prs"]
+        except (json.JSONDecodeError, KeyError, TypeError) as error:
+            print(f"--stdin に渡された JSON を読めません: "
+                  f"{type(error).__name__} {error}\n", file=sys.stderr)
+            print(USAGE_WITHOUT_GH, file=sys.stderr)
+            return 1
         collaborators = data.get("collaborators")
-    else:
-        issues, prs = fetch_via_gh()
+    elif shutil.which("gh"):
+        try:
+            issues, prs = fetch_via_gh()
+        except (subprocess.CalledProcessError, json.JSONDecodeError) as error:
+            print(f"gh でのデータ取得に失敗しました: "
+                  f"{type(error).__name__} {error}\n", file=sys.stderr)
+            print(USAGE_WITHOUT_GH, file=sys.stderr)
+            return 1
         collaborators = None
+    else:
+        print(USAGE_WITHOUT_GH, file=sys.stderr)
+        return 1
 
     status_issue, in_progress, backlog = build_candidates(issues, prs, collaborators)
     json.dump({
@@ -133,7 +167,8 @@ def main():
         "in_progress": in_progress,
         "backlog": backlog,
     }, sys.stdout, ensure_ascii=False, indent=1)
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
