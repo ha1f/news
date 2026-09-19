@@ -30,7 +30,7 @@ tags: [AI, ビジネス, 経済, 社会, 科学]
    生成AI検索での自店舗の露出を追跡・改善するGEO特化ツール。
 
 8. [Googleレビューと導入事例を1つにまとめるReviewMix](https://www.producthunt.com/products/reviewmix) (Product Hunt)<br>
-   投稿者はアカウント無しで修正・取り下げが可能。ドイツ運用で無料枠あり。
+   投稿者はアカウント無しで修正・取り下げが可能。アプリとDBはドイツでホスティング。
 
 9. [LLMを使って文章を書くということ](https://sockpuppet.org/blog/2026/09/17/how-to-write-with-an-llm/) (Hacker News)<br>
    提案された語は一語も使わない、褒めさせない。校正役に徹させる2つの規則。

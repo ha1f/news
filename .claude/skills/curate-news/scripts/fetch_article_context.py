@@ -18,8 +18,12 @@
   python3 fetch_article_context.py --stdin < urls.txt
 
 出力: {URL: {"ok": bool, "thin": bool, "title": str, "meta": str, "body": str, "note": str}}
-  - ok=false は取得そのものの失敗（ネットワーク・HTTP エラー）
+  - ok=false は取得できなかったもの（ネットワーク・HTTP エラー・robots.txt の拒否）。
+    1 URL の失敗が他の URL の結果を巻き込むことはない
   - thin=true は本文がほとんど取れなかったページ（JS で描画する SPA 等）
+
+フィードでなく記事ページ本体を取りに行くため、robots.txt を見て取得可否を決める。
+ソースが AI クローラを拒否しているかどうかの方針判断は #241（オーナー判断）にある。
 
 材料から見出し以上の事実が書けるかどうかは、このスクリプトでは判定しない。
 閾値で判定すると、汎用の meta（「新機能を使うようアプリを更新しましょう」等）を
@@ -34,7 +38,9 @@ import json
 import re
 import sys
 import urllib.error
+import urllib.parse
 import urllib.request
+import urllib.robotparser
 import zlib
 from concurrent.futures import ThreadPoolExecutor
 
@@ -42,7 +48,10 @@ USER_AGENT = "Mozilla/5.0 (compatible; ha1f-news/1.0; +https://ha1f.github.io/ne
 # 明示しないと CDN が brotli を返してくることがあり、そのまま読むと文字化けする。
 # 展開できる形式だけを要求する
 ACCEPT_ENCODING = "gzip, deflate, identity"
+# PDF や巨大ページを丸ごとメモリに載せないための上限
+MAX_BYTES = 4 * 1024 * 1024
 TIMEOUT = 15
+_ROBOTS_CACHE: dict = {}
 # 本文はページによって桁違いに長い。事実を拾うのに十分な範囲だけ返す
 BODY_CHARS = 1500
 # これ未満しか取れないページは JS で本文を描画している可能性が高い（材料としては薄い）
@@ -56,6 +65,7 @@ META_KEY_RE = re.compile(
     re.I)
 CONTENT_RE = re.compile(r"""content\s*=\s*(?:"([^"]*)"|'([^']*)')""", re.I)
 TITLE_RE = re.compile(r"(?is)<title[^>]*>(.*?)</title>")
+CHARSET_RE = re.compile(rb"""(?i)<meta[^>]+charset\s*=\s*["']?([\w-]+)""")
 
 
 def _clean(text: str) -> str:
@@ -77,30 +87,79 @@ def _meta_description(doc: str) -> str:
     return best
 
 
+def _decompress(raw: bytes, compression: str) -> bytes:
+    """Content-Encoding に従って展開する。未知の形式は例外にする。
+
+    展開できない形式を素通りさせると、文字化けした本文が ok で返り、
+    「材料が取れた」と誤って扱われる。
+    """
+    if compression in ("", "identity"):
+        return raw
+    if compression == "gzip":
+        return gzip.decompress(raw)
+    if compression == "deflate":
+        try:  # zlib ラップ形式（実サーバはこちらが多い）
+            return zlib.decompress(raw)
+        except zlib.error:  # raw deflate
+            return zlib.decompress(raw, -zlib.MAX_WBITS)
+    raise ValueError(f"未対応の Content-Encoding: {compression}")
+
+
+def _charset(doc_bytes: bytes, header_charset: str | None) -> str:
+    if header_charset:
+        return header_charset
+    found = CHARSET_RE.search(doc_bytes[:4096])
+    return found.group(1).decode("ascii", "replace") if found else "utf-8"
+
+
+def _robots_allows(url: str) -> bool:
+    """robots.txt がこの User-Agent の取得を許しているか。
+
+    フィードでなく記事ページ本体を取りに行くため、ソース側の意思表示に従う。
+    robots.txt が読めないときは許可扱いにする（取得側の都合で記事を落とさない）。
+    """
+    parts = urllib.parse.urlsplit(url)
+    robots_url = urllib.parse.urlunsplit(
+        (parts.scheme, parts.netloc, "/robots.txt", "", ""))
+    parser = _ROBOTS_CACHE.get(robots_url)
+    if parser is None:
+        parser = urllib.robotparser.RobotFileParser()
+        parser.set_url(robots_url)
+        try:
+            parser.read()
+        except Exception:
+            parser = None
+        _ROBOTS_CACHE[robots_url] = parser
+    if parser is None:
+        return True
+    return parser.can_fetch(USER_AGENT, url)
+
+
 def fetch_one(url: str) -> dict:
     result = {"ok": False, "thin": False, "title": "", "meta": "", "body": "",
               "note": ""}
     try:
+        if not _robots_allows(url):
+            result["note"] = "robots.txt がこの User-Agent の取得を許可していません"
+            return result
+
         request = urllib.request.Request(url, headers={
             "User-Agent": USER_AGENT, "Accept-Encoding": ACCEPT_ENCODING})
         with urllib.request.urlopen(request, timeout=TIMEOUT) as response:
-            raw = response.read()
-            encoding = response.headers.get_content_charset() or "utf-8"
+            raw = response.read(MAX_BYTES)
+            header_charset = response.headers.get_content_charset()
             compression = (response.headers.get("Content-Encoding") or "").lower()
-    except (urllib.error.URLError, urllib.error.HTTPError, OSError) as error:
+
+        raw = _decompress(raw, compression)
+        doc = raw.decode(_charset(raw, header_charset), errors="replace")
+    except LookupError as error:  # 未知の charset 名
+        result["note"] = f"文字コードを解釈できません: {error}"
+        return result
+    except Exception as error:
+        # 1 URL の失敗でバッチ全体を落とさない（docstring の契約）
         result["note"] = f"取得できません: {type(error).__name__} {error}"
         return result
 
-    try:
-        if compression == "gzip":
-            raw = gzip.decompress(raw)
-        elif compression == "deflate":
-            raw = zlib.decompress(raw, -zlib.MAX_WBITS)
-    except (OSError, zlib.error) as error:
-        result["note"] = f"展開できません（Content-Encoding: {compression}）: {error}"
-        return result
-
-    doc = raw.decode(encoding, errors="replace")
     title = TITLE_RE.search(doc)
     result["title"] = _clean(TAG_RE.sub(" ", title.group(1))) if title else ""
     result["meta"] = _meta_description(doc)

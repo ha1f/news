@@ -153,9 +153,11 @@ python3 .claude/skills/curate-news/scripts/fetch_feeds.py --source hatena --cate
   python3 .claude/skills/curate-news/scripts/fetch_article_context.py "URL" ["URL" ...]
   ```
 
-  `meta`（og:description 等）と `body`（本文冒頭）が材料になる。日経のような会員限定記事でも冒頭は取れることが多い
+  `meta`（og:description 等）と `body`（本文冒頭）が材料になる。**公開されている範囲だけを使う**（会員限定記事なら、無料で表示されるリード部分まで）。`ok: false` は robots.txt の拒否か取得失敗で、いずれも取りに行かない
 
-- 取得しても見出し以上の事実が書けない項目（`thin: true` で `meta` も汎用文の SPA など）は**採用しない**。別の記事に差し替える。情報が手元に無い項目に1行を書かせると、必ず出どころの紹介に退化する
+- `meta` を訳しただけの1行にしない。媒体が書いた紹介文をなぞるのではなく、そこから事実を取り出して自分の言葉にする（GUARDRAILS.md のコンテンツの権利ガードレール）
+- 取得できない・`thin: true` で `meta` も汎用文の場合は、**別の一次経路**を当たる（論文なら DOI から Crossref、GitHub なら raw、Apple の docs なら `developer.apple.com/tutorials/data/...json` など、そのページの内容を返す公開エンドポイント）
+- それでも見出し以上の事実が書けない項目は**採用しない**。別の記事に差し替える。情報が手元に無い項目に1行を書かせると、必ず出どころの紹介に退化する
 - 読んでいない記事の結論・数値・評価は書かない。確認できた事実だけで書く（GUARDRAILS.md のコンテンツの権利ガードレールにも沿う: 事実の提示にとどめ、原文の翻案をしない。取得した本文は事実を拾うための材料であって、転載・詳細要約の材料ではない）
 
 #### 記事の並び順
