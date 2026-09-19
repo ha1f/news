@@ -25,8 +25,12 @@ def issue(number, title="t", assoc="OWNER", labels=(), created="2026-07-01T00:00
     return data
 
 
-def pr(number, body="", draft=True):
-    return {"number": number, "body": body, "draft": draft}
+def pr(number, body="", draft=True, branch="feature", labels=None):
+    data = {"number": number, "body": body, "draft": draft,
+            "head": {"ref": branch}}
+    if labels is not None:  # MCP はラベルが無い PR でキー自体を返さない
+        data["labels"] = labels
+    return data
 
 
 class BuildCandidatesTest(unittest.TestCase):
@@ -58,7 +62,7 @@ class BuildCandidatesTest(unittest.TestCase):
         _, in_progress, backlog = build_candidates(issues, prs)
         self.assertEqual([e["number"] for e in in_progress], [1])
         self.assertEqual(in_progress[0]["linked_open_prs"],
-                         [{"number": 10, "draft": True}])
+                         [{"number": 10, "draft": True, "hold": False}])
         self.assertEqual([e["number"] for e in backlog], [2])
 
     def test_link_keywords_variants(self):
@@ -67,6 +71,30 @@ class BuildCandidatesTest(unittest.TestCase):
         _, in_progress, _ = build_candidates(issues, prs)
         self.assertEqual([e["number"] for e in in_progress], [1, 2, 3])
 
+    def test_bare_issue_number_does_not_link(self):
+        # キーワードの無い「#1」は言及であってリンクではない
+        _, in_progress, backlog = build_candidates(
+            [issue(1)], [pr(10, body="関連: #1 の議論を参照")])
+        self.assertEqual(in_progress, [])
+        self.assertEqual([e["number"] for e in backlog], [1])
+
+    def test_branch_name_links(self):
+        for branch in ("feat/1-something", "1-something", "fix/1_something"):
+            with self.subTest(branch=branch):
+                _, in_progress, _ = build_candidates([issue(1)],
+                                                     [pr(10, branch=branch)])
+                self.assertEqual([e["number"] for e in in_progress], [1])
+
+    def test_branch_without_issue_number_does_not_link(self):
+        _, in_progress, backlog = build_candidates(
+            [issue(1)], [pr(10, branch="improve/develop-loop-env")])
+        self.assertEqual(in_progress, [])
+        self.assertEqual([e["number"] for e in backlog], [1])
+
+    def test_same_issue_is_not_linked_twice(self):
+        _, in_progress, _ = build_candidates(
+            [issue(1)], [pr(10, body="Closes #1", branch="feat/1-x")])
+        self.assertEqual(len(in_progress[0]["linked_open_prs"]), 1)
 
     def test_collaborators_fallback_when_author_association_missing(self):
         issues = [
@@ -91,6 +119,46 @@ class BuildCandidatesTest(unittest.TestCase):
         _, _, backlog = build_candidates(issues, [],
                                          collaborators=["owner-user"])
         self.assertEqual([e["number"] for e in backlog], [2])
+
+
+class PullRequestLabelsTest(unittest.TestCase):
+    """MCP は labels を文字列リストで返し、ラベルが無い PR ではキー自体が無い。
+    gh CLI は dict のリスト。どちらでも hold を拾えること"""
+
+    def test_string_labels(self):
+        _, in_progress, _ = build_candidates(
+            [issue(1)], [pr(10, body="Closes #1", labels=["hold"])])
+        self.assertTrue(in_progress[0]["linked_open_prs"][0]["hold"])
+
+    def test_dict_labels(self):
+        _, in_progress, _ = build_candidates(
+            [issue(1)], [pr(10, body="Closes #1", labels=[{"name": "hold"}])])
+        self.assertTrue(in_progress[0]["linked_open_prs"][0]["hold"])
+
+    def test_missing_labels_key(self):
+        _, in_progress, _ = build_candidates(
+            [issue(1)], [pr(10, body="Closes #1")])
+        self.assertFalse(in_progress[0]["linked_open_prs"][0]["hold"])
+
+    def test_other_labels_do_not_set_hold(self):
+        _, in_progress, _ = build_candidates(
+            [issue(1)], [pr(10, body="Closes #1", labels=["bug", "enhancement"])])
+        self.assertFalse(in_progress[0]["linked_open_prs"][0]["hold"])
+
+    def test_hold_is_per_pr_not_shared(self):
+        issues = [issue(1), issue(2)]
+        prs = [pr(10, body="Closes #1", labels=["hold"]),
+               pr(11, body="Closes #2", labels=[])]
+        _, in_progress, _ = build_candidates(issues, prs)
+        self.assertEqual([e["linked_open_prs"][0]["hold"] for e in in_progress],
+                         [True, False])
+
+    def test_one_pr_closing_two_issues_carries_hold_to_both(self):
+        _, in_progress, _ = build_candidates(
+            [issue(1), issue(2)],
+            [pr(10, body="Closes #1\nCloses #2", labels=["hold"])])
+        self.assertEqual([e["linked_open_prs"][0]["hold"] for e in in_progress],
+                         [True, True])
 
 
 class ParseGuardrailsTest(unittest.TestCase):
