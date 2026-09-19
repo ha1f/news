@@ -18,11 +18,12 @@
 `gem install` で数分。GitHub Pages のビルドを十分に再現でき、UI 変更は必ずここまでやる。`_config.yml` の `plugins` に並ぶ gem が1つでも欠けると `Dependency Error` で落ちるので、まとめて入れる:
 
 ```bash
-export PATH="/opt/rbenv/versions/3.3.6/bin:$PATH"   # ruby 3.3.6 / gem の EXECUTABLE DIRECTORY
 gem install --no-document jekyll:3.9.5 minima:2.5.1 jekyll-feed jekyll-seo-tag \
     jekyll-sitemap jekyll-paginate kramdown-parser-gfm
 jekyll build -d _site
 ```
+
+ruby は 3.3.6 で、`jekyll` は既定の PATH（rbenv の shims）から引ける。`PATH` を足す必要はない。
 
 描画確認は Playwright。**グローバルに入っている `playwright` をそのまま使う**（`/opt/pw-browsers` の chromium と組み合わせで動く）:
 
@@ -34,15 +35,29 @@ playwright screenshot --browser chromium --full-page \
 `npx playwright@<CI のバージョン>` は使えない。CI がピンしている版は `/opt/pw-browsers` にあるものと違う build 番号を要求し、`Executable doesn't exist at /opt/pw-browsers/chromium_headless_shell-<別番号>/...` で落ちる。
 
 - 配信は `python3 -m http.server <port> --directory <dir>` で。`baseurl: /news` を再現するため `<dir>/news/` に `_site` の中身を置く（CI の workflow と同じやり方）
-- Node の API を直接使う場合、dark mode は `browser.newContext({ colorScheme: 'dark' })` で。`newPage({ colorScheme })` は効かない
-- CI の screenshot artifact は認証なしでは取得できない。ローカルで同じ Chromium・同じ viewport で撮るのが既定の手段（`.claude/rules/ui-changes.md` 参照）
+- Node の API を直接使う場合、dark mode は `browser.newContext({ colorScheme })` か `browser.newPage({ colorScheme })` で。`context.newPage({ colorScheme })` は**黙って無視される**（実測）
+
+### CI の screenshot artifact を取る
+
+push 後はこちらも見る。ローカルで撮るのは1〜2枚だが、CI は6ページ × light/dark をデスクトップ幅とモバイル幅で撮っている。MCP 経由なら認証込みで取得できる（実測）:
+
+```
+mcp__github__actions_list(method=list_workflow_run_artifacts, resource_id=<run id>)
+mcp__github__actions_get(method=download_workflow_run_artifact, resource_id=<artifact id>)
+  → 期限付きの署名 URL が返る。curl でそのまま落として unzip
+```
+
+ローカルの Chromium は CI と同じ版ではない（ローカル 1.56.1 / `chromium-1194`、CI は 1.62.1 ピン）ので、最終確認は artifact のほうが CI の見え方に近い。
 
 ## 検証コマンド
 
 - 保護パス判定: `python3 .claude/scripts/check_protected_paths.py --diff origin/main`（`ui_changes` が出たら `.claude/rules/ui-changes.md` に従う）
 - 見出しリンクの着地点: `python3 .claude/scripts/check_article_anchors.py <_site>`
 - 読みどころの欠落: `python3 .claude/scripts/check_article_notes.py`
-- ユニットテスト: `cd .claude/scripts && python3 -m unittest discover -p 'test_*.py'`
+- ユニットテスト: スクリプトと同じディレクトリで `python3 -m unittest discover -p 'test_*.py'`。
+  置き場が分かれているので、触ったものを個別に回す（repo ルートからの discover は 0 件になる）:
+  `.claude/scripts` / `.claude/skills/select-and-develop/scripts` /
+  `.claude/skills/review-and-merge/scripts` / `.claude/skills/evaluate-and-triage/scripts`
 - gitignore が効いているか: `git check-ignore -v <path>`
 - 意図しないファイルの混入: `git ls-files | grep <pattern>`
 

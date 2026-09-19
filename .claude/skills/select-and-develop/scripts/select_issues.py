@@ -137,12 +137,24 @@ def main():
     # エージェントの Bash ツールから起動すると stdin は常に非 tty になるため、
     # tty 判定では JSON を渡していなくても stdin モードに入ってしまう (PR #329 と同じ罠)
     if "--stdin" in sys.argv:
-        data = json.load(sys.stdin)
-        issues = data["issues"]
-        prs = data["prs"]
+        try:
+            data = json.load(sys.stdin)
+            issues = data["issues"]
+            prs = data["prs"]
+        except (json.JSONDecodeError, KeyError, TypeError) as error:
+            print(f"--stdin に渡された JSON を読めません: "
+                  f"{type(error).__name__} {error}\n", file=sys.stderr)
+            print(USAGE_WITHOUT_GH, file=sys.stderr)
+            return 1
         collaborators = data.get("collaborators")
     elif shutil.which("gh"):
-        issues, prs = fetch_via_gh()
+        try:
+            issues, prs = fetch_via_gh()
+        except (subprocess.CalledProcessError, json.JSONDecodeError) as error:
+            print(f"gh でのデータ取得に失敗しました: "
+                  f"{type(error).__name__} {error}\n", file=sys.stderr)
+            print(USAGE_WITHOUT_GH, file=sys.stderr)
+            return 1
         collaborators = None
     else:
         print(USAGE_WITHOUT_GH, file=sys.stderr)
