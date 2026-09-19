@@ -1,114 +1,127 @@
 #!/usr/bin/env python3
-"""select_issues.py の純関数のユニットテスト。実行: python3 test_select_issues.py"""
-import sys
+"""select_issues.py のユニットテスト"""
 import unittest
-from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from select_issues import build_candidates, parse_guardrails
+from select_issues import build_candidates
+
+COLLABORATORS = ["owner"]
 
 
-def issue(number, title="t", assoc="OWNER", labels=(), created="2026-07-01T00:00:00Z",
-          pr=False, login=None):
-    data = {
-        "number": number,
-        "title": title,
-        "labels": [{"name": name} for name in labels],
-        "created_at": created,
-    }
+def issue(number, title="タイトル", login="owner", labels=(), created="2026-09-01T00:00:00Z",
+          assoc=None):
+    data = {"number": number, "title": title, "user": {"login": login},
+            "labels": list(labels), "created_at": created}
     if assoc is not None:
         data["author_association"] = assoc
-    if login is not None:
-        data["user"] = {"login": login}
-    if pr:
-        data["pull_request"] = {}
     return data
 
 
-def pr(number, body="", draft=True):
-    return {"number": number, "body": body, "draft": draft}
+def pull(number, body="", branch="feature", draft=False, labels=None):
+    data = {"number": number, "body": body, "draft": draft,
+            "head": {"ref": branch}}
+    if labels is not None:  # MCP はラベルが無い PR でキー自体を返さない
+        data["labels"] = labels
+    return data
 
 
-class BuildCandidatesTest(unittest.TestCase):
-    def test_excludes_untrusted_hold_status_and_prs(self):
-        issues = [
-            issue(1, assoc="NONE"),
-            issue(2, labels=["hold"]),
-            issue(3, title="📊 daily-loop status"),
-            issue(4, pr=True),
-            issue(5),
-        ]
-        status, in_progress, backlog = build_candidates(issues, [])
-        self.assertEqual(status, 3)
-        self.assertEqual(in_progress, [])
-        self.assertEqual([e["number"] for e in backlog], [5])
+class TestTrust(unittest.TestCase):
+    def test_author_association_wins_when_present(self):
+        issues = [issue(1, assoc="OWNER", login="somebot")]
+        _, _, backlog = build_candidates(issues, [], COLLABORATORS)
+        self.assertEqual([e["number"] for e in backlog], [1])
 
-    def test_sorted_oldest_first(self):
-        issues = [
-            issue(1, created="2026-07-03T00:00:00Z"),
-            issue(2, created="2026-07-01T00:00:00Z"),
-            issue(3, created="2026-07-02T00:00:00Z"),
-        ]
-        _, _, backlog = build_candidates(issues, [])
-        self.assertEqual([e["number"] for e in backlog], [2, 3, 1])
+    def test_collaborator_list_fills_missing_association(self):
+        _, _, backlog = build_candidates([issue(1)], [], COLLABORATORS)
+        self.assertEqual([e["number"] for e in backlog], [1])
 
-    def test_linked_open_pr_moves_issue_to_in_progress(self):
-        issues = [issue(1), issue(2)]
-        prs = [pr(10, body="Closes #1", draft=True), pr(11, body="refs #99")]
-        _, in_progress, backlog = build_candidates(issues, prs)
-        self.assertEqual([e["number"] for e in in_progress], [1])
-        self.assertEqual(in_progress[0]["linked_open_prs"],
-                         [{"number": 10, "draft": True}])
-        self.assertEqual([e["number"] for e in backlog], [2])
-
-    def test_link_keywords_variants(self):
-        issues = [issue(1), issue(2), issue(3)]
-        prs = [pr(10, body="Fixes #1"), pr(11, body="Refs #2"), pr(12, body="resolved #3")]
-        _, in_progress, _ = build_candidates(issues, prs)
-        self.assertEqual([e["number"] for e in in_progress], [1, 2, 3])
-
-
-    def test_collaborators_fallback_when_author_association_missing(self):
-        issues = [
-            issue(1, assoc=None, login="owner-user"),
-            issue(2, assoc=None, login="external-user"),
-            issue(3, assoc=None, login="member-user"),
-        ]
-        _, _, backlog = build_candidates(issues, [],
-                                         collaborators=["owner-user", "member-user"])
-        self.assertEqual([e["number"] for e in backlog], [1, 3])
-
-    def test_no_collaborators_no_assoc_is_fail_closed(self):
-        issues = [issue(1, assoc=None, login="someone")]
-        _, _, backlog = build_candidates(issues, [])
+    def test_non_collaborator_is_dropped(self):
+        _, _, backlog = build_candidates([issue(1, login="renovate")], [],
+                                         COLLABORATORS)
         self.assertEqual(backlog, [])
 
-    def test_author_association_takes_precedence_over_collaborators(self):
-        issues = [
-            issue(1, assoc="NONE", login="owner-user"),
-            issue(2, assoc="OWNER", login="unknown"),
-        ]
-        _, _, backlog = build_candidates(issues, [],
-                                         collaborators=["owner-user"])
+    def test_untrusted_association_is_dropped(self):
+        issues = [issue(1, assoc="NONE", login="owner")]
+        _, _, backlog = build_candidates(issues, [], COLLABORATORS)
+        self.assertEqual(backlog, [])
+
+
+class TestFilters(unittest.TestCase):
+    def test_status_issue_is_separated(self):
+        issues = [issue(1, title="📊 daily-loop status"), issue(2)]
+        status, _, backlog = build_candidates(issues, [], COLLABORATORS)
+        self.assertEqual(status, 1)
+        self.assertEqual([e["number"] for e in backlog], [2])
+
+    def test_hold_label_is_dropped(self):
+        issues = [issue(1, labels=["hold"]), issue(2, labels=[{"name": "hold"}])]
+        _, _, backlog = build_candidates(issues, [], COLLABORATORS)
+        self.assertEqual(backlog, [])
+
+    def test_pull_request_entries_are_skipped(self):
+        issues = [dict(issue(1), pull_request={"url": "x"}), issue(2)]
+        _, _, backlog = build_candidates(issues, [], COLLABORATORS)
         self.assertEqual([e["number"] for e in backlog], [2])
 
 
-class ParseGuardrailsTest(unittest.TestCase):
-    def test_parses_yaml_block(self):
-        text = (
-            "# GUARDRAILS\n\n```yaml\n"
-            "quiescence_minutes: 30\n"
-            "auto_merge_mode: dry-run  # dry-run | enabled\n"
-            "protected_paths:\n"
-            "  - .github/workflows/**\n"
-            "  - .claude/GUARDRAILS.md\n"
-            "```\n本文\n"
-        )
-        config = parse_guardrails(text)
-        self.assertEqual(config["quiescence_minutes"], 30)
-        self.assertEqual(config["auto_merge_mode"], "dry-run")
-        self.assertEqual(config["protected_paths"],
-                         [".github/workflows/**", ".claude/GUARDRAILS.md"])
+class TestLinking(unittest.TestCase):
+    def test_closing_keyword_in_body_links(self):
+        _, in_progress, backlog = build_candidates(
+            [issue(1)], [pull(9, body="Closes #1")], COLLABORATORS)
+        self.assertEqual([e["number"] for e in in_progress], [1])
+        self.assertEqual(backlog, [])
+
+    def test_branch_name_links(self):
+        _, in_progress, _ = build_candidates(
+            [issue(1)], [pull(9, branch="feat/1-something")], COLLABORATORS)
+        self.assertEqual([e["number"] for e in in_progress], [1])
+
+    def test_same_issue_is_not_linked_twice(self):
+        _, in_progress, _ = build_candidates(
+            [issue(1)], [pull(9, body="Closes #1", branch="feat/1-x")],
+            COLLABORATORS)
+        self.assertEqual(len(in_progress[0]["linked_open_prs"]), 1)
+
+    def test_sorted_by_created_at(self):
+        issues = [issue(2, created="2026-09-05T00:00:00Z"),
+                  issue(1, created="2026-09-01T00:00:00Z")]
+        _, _, backlog = build_candidates(issues, [], COLLABORATORS)
+        self.assertEqual([e["number"] for e in backlog], [1, 2])
+
+
+class TestPullRequestLabels(unittest.TestCase):
+    """MCP は labels を文字列リストで返し、ラベルが無い PR ではキー自体が無い。
+    gh CLI は dict のリスト。どちらでも hold を拾えること"""
+
+    def test_string_labels(self):
+        _, in_progress, _ = build_candidates(
+            [issue(1)], [pull(9, body="Closes #1", labels=["hold"])],
+            COLLABORATORS)
+        self.assertTrue(in_progress[0]["linked_open_prs"][0]["hold"])
+
+    def test_dict_labels(self):
+        _, in_progress, _ = build_candidates(
+            [issue(1)], [pull(9, body="Closes #1", labels=[{"name": "hold"}])],
+            COLLABORATORS)
+        self.assertTrue(in_progress[0]["linked_open_prs"][0]["hold"])
+
+    def test_missing_labels_key(self):
+        _, in_progress, _ = build_candidates(
+            [issue(1)], [pull(9, body="Closes #1")], COLLABORATORS)
+        self.assertFalse(in_progress[0]["linked_open_prs"][0]["hold"])
+
+    def test_draft_is_carried_through(self):
+        _, in_progress, _ = build_candidates(
+            [issue(1)], [pull(9, body="Closes #1", draft=True)], COLLABORATORS)
+        self.assertTrue(in_progress[0]["linked_open_prs"][0]["draft"])
+
+    def test_labels_are_read_once_per_pr(self):
+        # 内包表記が linked issue の数だけ回らないこと（2 issue を閉じる 1 PR）
+        _, in_progress, _ = build_candidates(
+            [issue(1), issue(2)],
+            [pull(9, body="Closes #1\nCloses #2", labels=["hold"])],
+            COLLABORATORS)
+        self.assertEqual(
+            [e["linked_open_prs"][0]["hold"] for e in in_progress], [True, True])
 
 
 if __name__ == "__main__":

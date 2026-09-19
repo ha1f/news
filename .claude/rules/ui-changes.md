@@ -19,5 +19,5 @@ UI に触る変更（レンダリング結果が変わるもの）の進め方:
   ```
 
 - `check_protected_paths.py --diff` の出力に `ui_changes` がある場合、以下のスクリーンショット確認を必ず行う（このフィールドは上記 paths に該当するファイルが diff に含まれるとき自動で出力される）
-- PR を push したら、jekyll-build-check が生成する screenshot artifact をダウンロードして実際に見る。DESIGN.md の判定基準で自己レビューしてから ready 化する
-- artifact が存在しない・取得できない場合は、変更後の HTML/CSS を DESIGN.md のパレット・原則と突合し、描画未確認である旨を PR に明記する
+- ローカルビルドを配信して実際に撮り、DESIGN.md の判定基準で自己レビューしてから ready 化する。手元の環境でのビルド・配信・撮影の手順は [.claude/notes/develop-issue.md](../notes/develop-issue.md) にある（CI が生成する screenshot artifact は認証なしでは取得できないため、そちらを先に試さない）
+- 撮影できない事情があるときは、変更後の HTML/CSS を DESIGN.md のパレット・原則と突合し、描画未確認である旨を PR に明記する

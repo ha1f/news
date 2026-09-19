@@ -74,6 +74,10 @@ def build_candidates(issues, prs, collaborators=None):
     collaborators = frozenset(collaborators) if collaborators else frozenset()
     links = {}
     for pr in prs:
+        # MCP の list_pull_requests は labels を文字列リストで返し、ラベルが無い PR では
+        # キー自体を返さない。gh CLI は dict のリスト。どちらでも同じ集合になるようにする
+        pr_labels = {(label["name"] if isinstance(label, dict) else label)
+                     for label in pr.get("labels", [])}
         seen = set()
         for m in LINK_RE.finditer(pr.get("body") or ""):
             seen.add(int(m.group(1)))
@@ -81,8 +85,6 @@ def build_candidates(issues, prs, collaborators=None):
         for m in BRANCH_ISSUE_RE.finditer(branch):
             seen.add(int(m.group(1)))
         for issue_num in seen:
-            pr_labels = {(label["name"] if isinstance(label, dict) else label)
-                         for label in pr.get("labels", [])}
             links.setdefault(issue_num, []).append({
                 "number": pr["number"],
                 "draft": pr["draft"],
