@@ -137,7 +137,7 @@ PR を squash マージしてブランチを削除する。
 gh pr merge --squash --delete-branch
 ```
 
-`gh` が使えなければ MCP ツールで squash マージする。
+`gh` が使えなければ MCP ツールで squash マージする（`merge_pull_request` に `--delete-branch` 相当のオプションは無い）。リポジトリの「Automatically delete head branches」設定が有効なら、マージ後に GitHub 側でブランチは自動削除される。手動で `git push origin --delete pages/{ブランチ名}` を試みても、既に削除済みなら `remote ref does not exist` で失敗するだけで実害はないため、成功を確認する必要はない。
 
 ### 7. 元のブランチに戻る
 
