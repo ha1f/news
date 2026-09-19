@@ -112,24 +112,43 @@ def _charset(doc_bytes: bytes, header_charset: str | None) -> str:
     return found.group(1).decode("ascii", "replace") if found else "utf-8"
 
 
+def _fetch_robots(robots_url: str):
+    """robots.txt を取得してパーサを返す。読めなければ None（＝許可扱い）。
+
+    `RobotFileParser.read()` は urllib 既定の UA (`Python-urllib/3.x`) で
+    取得するため、多くの CDN が 403 を返し、robotparser がそれを
+    disallow_all に変換してしまう（許可しているサイトまで拒否になる）。
+    必ずスクリプト自身の UA で robots.txt を取り、401/403 だけを
+    明示的な拒否の意思表示として扱う（それ以外は「読めなかっただけ」）。
+    """
+    request = urllib.request.Request(robots_url, headers={"User-Agent": USER_AGENT})
+    try:
+        with urllib.request.urlopen(request, timeout=TIMEOUT) as response:
+            body = response.read().decode("utf-8", "replace")
+    except urllib.error.HTTPError as error:
+        if error.code in (401, 403):
+            deny_all = urllib.robotparser.RobotFileParser()
+            deny_all.parse(["User-agent: *", "Disallow: /"])
+            return deny_all
+        return None
+    except Exception:
+        return None
+    parser = urllib.robotparser.RobotFileParser()
+    parser.parse(body.splitlines())
+    return parser
+
+
 def _robots_allows(url: str) -> bool:
     """robots.txt がこの User-Agent の取得を許しているか。
 
     フィードでなく記事ページ本体を取りに行くため、ソース側の意思表示に従う。
-    robots.txt が読めないときは許可扱いにする（取得側の都合で記事を落とさない）。
     """
     parts = urllib.parse.urlsplit(url)
     robots_url = urllib.parse.urlunsplit(
         (parts.scheme, parts.netloc, "/robots.txt", "", ""))
-    parser = _ROBOTS_CACHE.get(robots_url)
-    if parser is None:
-        parser = urllib.robotparser.RobotFileParser()
-        parser.set_url(robots_url)
-        try:
-            parser.read()
-        except Exception:
-            parser = None
-        _ROBOTS_CACHE[robots_url] = parser
+    if robots_url not in _ROBOTS_CACHE:
+        _ROBOTS_CACHE[robots_url] = _fetch_robots(robots_url)
+    parser = _ROBOTS_CACHE[robots_url]
     if parser is None:
         return True
     return parser.can_fetch(USER_AGENT, url)
