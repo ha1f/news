@@ -18,16 +18,16 @@ AnthropicとOpenAIのトップが相次いでAIリスクに言及し、バイオ
    小型LLM2つが協調し、低コストでローカル実行可能な材料研究エージェントを実現。
 
 4. [量子化された「音」のゆらぎを実験観測](https://www.science.org/doi/abs/10.1126/science.aeh7535?af=R) (Science)<br>
-   原論文。手法と検証条件を一次情報で確認できる。
+   超伝導量子ビットでフォノン数を非破壊測定。機械振動子の寿命は2.1ミリ秒。
 
 5. [2系統の神経外胚葉前駆細胞が脳形成に寄与](https://www.newscientist.com/article/2589739-our-brain-evolved-from-two-primitive-nervous-systems-that-merged/) (HN)<br>
-   Hacker News経由で話題になった1本。
+   マウス胚で前脳と後脳が別系統の前駆細胞から育つと示したスタンフォードの研究。
 
 6. [科学と社会の信頼低下、脱却への論説](https://www.science.org/doi/abs/10.1126/science.ael6948?af=R) (Science)<br>
-   Science誌のExpert Voices欄に掲載された論説。
+   信頼低下を「科学と説明責任の下降スパイラル」と捉え、そこからの脱出を説く。
 
 7. [学会ポスター発表を広く届ける新基盤](https://www.science.org/doi/abs/10.1126/science.aem4441?af=R) (Science)<br>
-   Science誌のIn Depth欄によるニュース解説記事。
+   定番のポスター形式そのものを見直すべきという研究者の声も併せて伝える。
 
 8. [NeurIPS落選、ジャーナル投稿先を探る議論](https://www.reddit.com/r/MachineLearning/comments/1wjnruv/how_competitive_are_journals_compared_to_top_ai/) (Reddit)<br>
    NeurIPSで2/3/3評価だった投稿者が、査読基準の緩いジャーナル候補を尋ねるスレッド。
@@ -36,4 +36,4 @@ AnthropicとOpenAIのトップが相次いでAIリスクに言及し、バイオ
    低ランク残差アダプタで挙動を追加・着脱可能にする手法。GitHubにコードと再現手順を公開。
 
 10. [1542年の教皇暗号、焼きなまし法で解読](https://simonklee.dk/farnese-letter) (HN)<br>
-    作者本人による解説記事。使ったアルゴリズムの選択を自ら説明している。
+    差出人は21歳で教皇庁書記局長だったファルネーゼ枢機卿。鍵と本文を復元する。

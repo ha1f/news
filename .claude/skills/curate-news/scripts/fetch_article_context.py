@@ -28,15 +28,20 @@ check_article_notes.py が結果を機械的に検査する。
 """
 from __future__ import annotations
 
+import gzip
 import html
 import json
 import re
 import sys
 import urllib.error
 import urllib.request
+import zlib
 from concurrent.futures import ThreadPoolExecutor
 
 USER_AGENT = "Mozilla/5.0 (compatible; ha1f-news/1.0; +https://ha1f.github.io/news/)"
+# 明示しないと CDN が brotli を返してくることがあり、そのまま読むと文字化けする。
+# 展開できる形式だけを要求する
+ACCEPT_ENCODING = "gzip, deflate, identity"
 TIMEOUT = 15
 # 本文はページによって桁違いに長い。事実を拾うのに十分な範囲だけ返す
 BODY_CHARS = 1500
@@ -76,12 +81,23 @@ def fetch_one(url: str) -> dict:
     result = {"ok": False, "thin": False, "title": "", "meta": "", "body": "",
               "note": ""}
     try:
-        request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+        request = urllib.request.Request(url, headers={
+            "User-Agent": USER_AGENT, "Accept-Encoding": ACCEPT_ENCODING})
         with urllib.request.urlopen(request, timeout=TIMEOUT) as response:
             raw = response.read()
             encoding = response.headers.get_content_charset() or "utf-8"
+            compression = (response.headers.get("Content-Encoding") or "").lower()
     except (urllib.error.URLError, urllib.error.HTTPError, OSError) as error:
         result["note"] = f"取得できません: {type(error).__name__} {error}"
+        return result
+
+    try:
+        if compression == "gzip":
+            raw = gzip.decompress(raw)
+        elif compression == "deflate":
+            raw = zlib.decompress(raw, -zlib.MAX_WBITS)
+    except (OSError, zlib.error) as error:
+        result["note"] = f"展開できません（Content-Encoding: {compression}）: {error}"
         return result
 
     doc = raw.decode(encoding, errors="replace")
