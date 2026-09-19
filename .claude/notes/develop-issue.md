@@ -15,7 +15,7 @@
 
 ## ローカルでビルド・描画確認する（Gemfile は無い）
 
-`gem install` で数分。GitHub Pages のビルドを十分に再現でき、UI 変更は必ずここまでやる。`_config.yml` の `plugins` に並ぶ gem が1つでも欠けると `Dependency Error` で落ちるので、まとめて入れる:
+`gem install` で数分。GitHub Pages のビルドを十分に再現でき、UI 変更は必ずここまでやる。minima 2.5.1 とビルドに必要な依存をまとめて入れる（`_config.yml` の `plugins` は `jekyll-sitemap` だけだが、`jekyll-feed` / `jekyll-seo-tag` は minima 2.5.1 の依存として要る）:
 
 ```bash
 gem install --no-document jekyll:3.9.5 minima:2.5.1 jekyll-feed jekyll-seo-tag \
@@ -23,7 +23,13 @@ gem install --no-document jekyll:3.9.5 minima:2.5.1 jekyll-feed jekyll-seo-tag \
 jekyll build -d _site
 ```
 
-ruby は 3.3.6 で、`jekyll` は既定の PATH（rbenv の shims）から引ける。`PATH` を足す必要はない。
+ruby は 3.3.6。**`gem install` した実行ファイルが PATH に現れないことがある**ので、`jekyll: command not found` になったら足す:
+
+```bash
+export PATH="$(gem env | awk '/EXECUTABLE DIRECTORY/{print $NF}'):$PATH"
+```
+
+実測（2026-09-19）: `gem env` の EXECUTABLE DIRECTORY は `/opt/rbenv/versions/3.3.6/bin` だが、`echo $PATH` に出る rbenv 系は `/opt/rbenv/bin` だけで、このディレクトリも `/opt/rbenv/shims` も含まれない（`rbenv version` は `system`、`/usr/local/bin/{ruby,gem}` は `/opt/ruby-3.3.6/bin/` への個別 symlink）。
 
 描画確認は Playwright。**グローバルに入っている `playwright` をそのまま使う**（`/opt/pw-browsers` の chromium と組み合わせで動く）:
 
@@ -54,6 +60,7 @@ mcp__github__actions_get(method=download_workflow_run_artifact, resource_id=<art
 - 保護パス判定: `python3 .claude/scripts/check_protected_paths.py --diff origin/main`（`ui_changes` が出たら `.claude/rules/ui-changes.md` に従う）
 - 見出しリンクの着地点: `python3 .claude/scripts/check_article_anchors.py <_site>`
 - 読みどころの欠落: `python3 .claude/scripts/check_article_notes.py`
+- ソース表記が定義と一致するか: `python3 .claude/scripts/check_source_hints.py`
 - ユニットテスト: スクリプトと同じディレクトリで `python3 -m unittest discover -p 'test_*.py'`。
   置き場が分かれているので、触ったものを個別に回す（repo ルートからの discover は 0 件になる）:
   `.claude/scripts` / `.claude/skills/select-and-develop/scripts` /
@@ -66,4 +73,5 @@ mcp__github__actions_get(method=download_workflow_run_artifact, resource_id=<art
 - `.claude/skills/` 配下のスキルは repo 自身に置かれている。branch を切り替えても開始時に読んだ版に従う
 - スキルのスクリプトは「エージェントの Bash から起動すると stdin が非 tty」を踏まえた分岐になっているか確認する（`not sys.stdin.isatty()` で stdin モードに入る実装は必ず壊れる）
 - 毎朝9時のキュレーションで当日分の投稿が main に入る。`_posts/` の中身に関わるルールを足す PR は、rebase のたびに当日分を揃え直す必要がある
+- GitHub のデータを MCP で集めるとき、**PR の files / patches はローカル git から組み立てる**（`git merge-base origin/main origin/<branch>` → `git diff --name-only` / `git diff -- <file>`）。`pull_request_read(get_files)` は全ファイルの patch を返すので、ファイル数の多い PR ではコンテキストを桁違いに食う。number / title / draft / labels / body のような git に無いものだけ MCP で取る
 - squash マージされた PR にスタックしたブランチは `git rebase --onto origin/main <スタック元の最後の commit>` で自分の commit だけ載せ替える（素直な rebase は squash 済みの内容と全面衝突する）
