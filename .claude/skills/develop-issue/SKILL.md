@@ -59,10 +59,7 @@ issue はドラフト。文面でなく背後の問題と目的を掴む:
 
 ## 学びと改善
 
-- 開始時に repo ノートと [LESSONS.md](LESSONS.md) を読む。repo ノートの正本は 1 つだけ選ぶ:
-  - **対象 repo が `.claude/notes/` を持ち、その repo の CLAUDE.md から参照している場合はそれ** (実行環境が run ごとに作り直される構成では、ホーム配下に書いても翌日に残らない)
-  - 無ければ `~/.claude/skills/develop-issue/notes/<owner>--<repo>.md` (`<owner>--<repo>` は remote の URL から起こす)
-  - どちらも無ければ、run で確認した検証コマンド・CI の癖・レビュー bot・環境の制約をまとめて後者に作成する
+- 開始時に repo ノートと [LESSONS.md](LESSONS.md) を読む。repo ノートは **run をまたいで残る場所に 1 つだけ**置く: 対象 repo に `.claude/notes/develop-issue.md` があればそれが正本で、更新はその run の PR に含めて push する (残らなければ書く意味がない)。無ければ `~/.claude/skills/develop-issue/notes/<owner>--<repo>.md` (remote の URL から起こす) に、run で確認した検証コマンド・CI の癖・レビュー bot・環境の制約をまとめて作る。両方にあれば正本へ寄せて他方を消す
 - 学びも書き分ける: repo 固有はノートへ、repo によらない教訓は LESSONS へ (書き方は同ファイル冒頭)。どちらも追記だけでなく刈り込む
-- run をやりにくくした環境の不足 (ルールの欠落、検証コマンドの権限不足、古いライブラリ) は、issue の枠外でも別 PR / issue で提案する (同じ対象の open PR が既にあれば追記する)
+- run をやりにくくした環境の不足 (ルールの欠落、検証コマンドの権限不足、古いライブラリ、ホーム配下が run をまたいで残らないのに repo 側にノートの置き場が無いこと) は、issue の枠外でも別 PR / issue で提案する (同じ対象の open PR が既にあれば追記する)
 - 最後に毎回 reflect-and-improve スキルで振り返る。改善対象は skill に限らない。このスキル自体を変えるときは [DESIGN.md](DESIGN.md) に従う
