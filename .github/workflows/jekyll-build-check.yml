@@ -18,6 +18,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          # 変更された _posts だけを検査するため base ブランチとの diff を取れるようにする
+          fetch-depth: 0
       - name: Setup Pages
         uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6
       - name: Build with Jekyll
@@ -72,3 +75,18 @@ jobs:
         with:
           name: screenshots
           path: screenshots/
+      # スクリーンショットを撮り終えたあとに置く。ここが失敗しても撮れた分は
+      # 上のステップで既にアップロード済みなので、レビュー材料が失われない
+      - name: Check article quality
+        run: |
+          python3 .claude/scripts/check_article_anchors.py _site
+          changed=$(git diff --name-only --diff-filter=d \
+            "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}" \
+            -- '_posts/*.md')
+          if [ -n "$changed" ]; then
+            echo "$changed"
+            python3 .claude/scripts/check_article_notes.py $changed
+            python3 .claude/scripts/check_source_hints.py $changed
+          else
+            echo "この PR は _posts を変更していないためスキップ"
+          fi
