@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from check_state import parse_status_records, summarize_health, summarize_issues
+from check_state import parse_link_header, parse_status_records, summarize_health, summarize_issues
 
 
 def issue(number, title="t", labels=(), pr=False, bot=False):
@@ -104,6 +104,24 @@ class HealthTest(unittest.TestCase):
         comments = [status_comment("evaluate", "start", "2026-07-09T23:00:00Z")]
         health = summarize_health(parse_status_records(comments), "2026-07-11")
         self.assertFalse(health["no_records"])
+
+
+class ParseLinkHeaderTest(unittest.TestCase):
+    def test_extracts_rel_urls(self):
+        header = ('<https://api.github.com/repositories/1/issues?page=2>; rel="next", '
+                   '<https://api.github.com/repositories/1/issues?page=5>; rel="last"')
+        links = parse_link_header(header)
+        self.assertEqual(links["next"], "https://api.github.com/repositories/1/issues?page=2")
+        self.assertEqual(links["last"], "https://api.github.com/repositories/1/issues?page=5")
+
+    def test_empty_header_returns_empty_dict(self):
+        self.assertEqual(parse_link_header(""), {})
+        self.assertEqual(parse_link_header(None), {})
+
+    def test_single_link(self):
+        header = '<https://api.github.com/repositories/1/issues?page=2>; rel="next"'
+        self.assertEqual(parse_link_header(header),
+                         {"next": "https://api.github.com/repositories/1/issues?page=2"})
 
 
 if __name__ == "__main__":

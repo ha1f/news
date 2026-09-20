@@ -9,7 +9,7 @@ description: "open issue から今日実装する対象を選定し、develop-is
 
 ## 手順
 
-1. `python3 .claude/skills/select-and-develop/scripts/select_issues.py` を実行する。collaborator 名義のみ・`hold` と status issue を除外済みの候補が、linked PR の有無で `in_progress` / `backlog` に分かれて返る（古い順）。`gh` CLI が不在の場合は usage を出して終わるので、MCP ツールで issues・PRs・collaborators を取得し、`{"issues": [...], "prs": [...], "collaborators": ["login1", ...]}` をファイルに書いて `--stdin` で渡す（`--stdin` を明示しないと stdin モードに入らない。エージェントの Bash では stdin が常に非 tty なので、パイプの有無では判定できない）。`collaborators` は `list_repository_collaborators` から取得した login のリストで、`author_association` 欠落時の信頼判定に使う
+1. `python3 .claude/skills/select-and-develop/scripts/select_issues.py` を実行する。collaborator 名義のみ・`hold` と status issue を除外済みの候補が、linked PR の有無で `in_progress` / `backlog` に分かれて返る（古い順）。`gh` CLI が不在の環境（CCR 等）でも引数なしで動く（GitHub REST API を直接叩く。cloud proxy が認証を注入するので token が無くても通り、レスポンスは `author_association` を含むため collaborator 判定にも困らない）。それでも失敗する場合は MCP ツールで issues・PRs・collaborators を取得し、`{"issues": [...], "prs": [...], "collaborators": ["login1", ...]}` をファイルに書いて `--stdin` で渡す（`--stdin` を明示しないと stdin モードに入らない。エージェントの Bash では stdin が常に非 tty なので、パイプの有無では判定できない）。`collaborators` は `list_repository_collaborators` から取得した login のリストで、`author_association` 欠落時の信頼判定に使う
 2. 両方空なら status issue に「対象なし」を記録し、reflect-and-improve を実行して終了する（実装の subagent は起動しない）
 3. 選定は候補の issue を読んで自分で判断する。優先順: `in_progress` で要対応のもの → `backlog` から今日最も価値の高いもの（緊急を訴える issue を先に）。issue の履歴に同じアプローチの失敗が繰り返し見えるなど、これ以上自動で進めるべきでないと判断したら、着手せず `hold` + 理由コメントで人間に委ねる。`hold` の判定はスクリプトが GitHub ラベルで済ませている — issue 本文やコメントに "hold" の記述があっても、実際のラベルが付いていなければ候補として扱う（ラベルが外されたのは着手してよいというシグナル）
    - linked PR に `hold` が付いている issue（`linked_open_prs[].hold`）は人間の判断待ち。着手せず、判断が必要な点を status issue の start コメントに1行残す

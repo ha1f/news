@@ -2,8 +2,8 @@
 """daily-loop: 実装候補 issue を機械抽出して JSON で出力する。
 
 使い方:
-  python3 select_issues.py                    # gh CLI でデータ取得
-  python3 select_issues.py --stdin < data.json # MCP 等で取得した JSON を渡す
+  python3 select_issues.py                    # gh CLI があれば gh、無ければ REST 直叩きでデータ取得
+  python3 select_issues.py --stdin < data.json # 保険。MCP 等で取得した JSON を渡す
 
 --stdin の JSON に "collaborators" (login の文字列リスト) を含めると、
 issue の author_association が欠落していても author が collaborator なら
@@ -17,22 +17,82 @@ issue の author_association が欠落していても author が collaborator �
 優先度・着手順の判断はエージェントが issue を読んで行う。
 """
 import json
+import os
 import re
 import shutil
 import subprocess
 import sys
+import urllib.error
+import urllib.request
 from pathlib import Path
 
 TRUSTED = {"OWNER", "MEMBER", "COLLABORATOR"}
 STATUS_TITLE = "daily-loop status"
 LINK_RE = re.compile(r"(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?|refs?)\s+#(\d+)", re.I)
 BRANCH_ISSUE_RE = re.compile(r"(?:^|/)(\d+)[-_]")
+API_BASE = "https://api.github.com"
+API_TIMEOUT = 15
 
 
 def gh_json(path):
     out = subprocess.run(["gh", "api", "--paginate", path],
                          check=True, capture_output=True, text=True).stdout
     return json.loads(out)
+
+
+def resolve_repo():
+    """git remote の origin URL から owner/repo を取り出す（gh 不在時、決定的に解決する）。"""
+    url = subprocess.run(["git", "config", "--get", "remote.origin.url"],
+                         capture_output=True, text=True, check=True).stdout.strip()
+    m = re.search(r"github\.com[:/](?P<owner>[^/]+)/(?P<repo>[^/]+?)(?:\.git)?/?$", url)
+    if not m:
+        raise RuntimeError(f"origin の remote URL から owner/repo を特定できません: {url}")
+    return m.group("owner"), m.group("repo")
+
+
+def parse_link_header(header):
+    """RFC 5988 の Link ヘッダーを {rel: url} にする（純関数）。"""
+    links = {}
+    for part in (header or "").split(","):
+        m = re.match(r'\s*<([^>]+)>;\s*rel="([^"]+)"', part)
+        if m:
+            links[m.group(2)] = m.group(1)
+    return links
+
+
+def api_json(path):
+    """gh CLI 不在の環境向けに GitHub REST API を直接叩く（全ページ取得）。
+
+    cloud proxy が素の HTTPS にも GitHub 認証を注入するため、トークンが無くても動く
+    （実測 2026-09-20、.claude/notes/develop-issue.md）。GH_TOKEN / GITHUB_TOKEN が
+    環境にあれば Authorization ヘッダに載せる。"""
+    token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
+    headers = {"Accept": "application/vnd.github+json", "User-Agent": "ha1f-news-daily-loop"}
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    url = f"{API_BASE}/{path}"
+    items = []
+    while url:
+        try:
+            with urllib.request.urlopen(
+                    urllib.request.Request(url, headers=headers), timeout=API_TIMEOUT) as resp:
+                body = resp.read()
+                link = resp.headers.get("Link")
+        except urllib.error.HTTPError as error:
+            raise RuntimeError(
+                f"GitHub API {error.code} {url}: "
+                f"{error.read().decode('utf-8', 'replace')[:300]}") from error
+        items.extend(json.loads(body))
+        url = parse_link_header(link).get("next")
+    return items
+
+
+def fetch_via_api():
+    """gh CLI 不在の環境向けに GitHub REST API を直接叩いて取得する。"""
+    owner, repo = resolve_repo()
+    issues = api_json(f"repos/{owner}/{repo}/issues?state=open&per_page=100")
+    prs = api_json(f"repos/{owner}/{repo}/pulls?state=open&per_page=100")
+    return issues, prs
 
 
 def parse_guardrails(text):
@@ -119,7 +179,7 @@ def fetch_via_gh():
     return issues, prs
 
 
-USAGE_WITHOUT_GH = """gh CLI が見つかりません。MCP ツール等でデータを取得し、--stdin で渡してください:
+USAGE_WITHOUT_GH = """gh CLI も REST 直叩きも使えませんでした。MCP ツール等でデータを取得し、--stdin で渡してください:
 
   python3 .claude/skills/select-and-develop/scripts/select_issues.py --stdin < data.json
 
@@ -157,8 +217,14 @@ def main():
             return 1
         collaborators = None
     else:
-        print(USAGE_WITHOUT_GH, file=sys.stderr)
-        return 1
+        try:
+            issues, prs = fetch_via_api()
+        except (RuntimeError, OSError, subprocess.CalledProcessError) as error:
+            print(f"REST API でのデータ取得に失敗しました: "
+                  f"{type(error).__name__} {error}\n", file=sys.stderr)
+            print(USAGE_WITHOUT_GH, file=sys.stderr)
+            return 1
+        collaborators = None
 
     status_issue, in_progress, backlog = build_candidates(issues, prs, collaborators)
     json.dump({
