@@ -2,7 +2,7 @@
 
 一次情報 (skill に転記せず、必要なときここから参照する):
 
-- [Prompting Claude Fable 5](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-fable-5)
+- [Prompting Claude Fable 5.1](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-fable-5-1) — 5.1 固有の癖（バッチ指示・targeted edit）。5 共通の goal-oriented パターンは [Prompting Claude Fable 5](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-fable-5)
 - [Prompting Claude Sonnet 5](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-sonnet-5)
 - [Claude Code system prompts](https://platform.claude.com/docs/en/release-notes/system-prompts) — harness の指示と重複させないための照合先
 - [Getting started with loops](https://claude.com/blog/getting-started-with-loops) — 停止条件つきループの設計
