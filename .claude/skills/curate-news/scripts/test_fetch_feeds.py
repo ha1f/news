@@ -42,6 +42,16 @@ def _make_feed():
                       custom_fetcher=_slow_fetcher)
 
 
+def _writer(cache_dir, tag, size, rounds):
+    """同じキャッシュファイルを別内容で繰り返し書く子プロセス。"""
+    feed_config.CACHE_DIR = cache_dir
+    fetch_feeds.CACHE_DIR = cache_dir
+    path = os.path.join(cache_dir, "dummy-テスト.json")
+    for _ in range(rounds):
+        fetch_feeds._write_cache(path, {"writer": tag,
+                                        "items": [{"title": tag * size}]})
+
+
 def _child(cache_dir):
     """子プロセス側のエントリポイント（fork 前提にしないため引数で受け渡す）。"""
     feed_config.CACHE_DIR = cache_dir
@@ -91,6 +101,43 @@ class TestConcurrentFetch(CacheDirTestCase):
         self.assertTrue(os.path.exists(cache_path + ".lock"))
         leftovers = [n for n in os.listdir(self.cache_dir) if n.startswith(".tmp-")]
         self.assertEqual(leftovers, [])
+
+
+class TestConcurrentWrite(CacheDirTestCase):
+    def test_reader_never_sees_a_mix_of_two_writers(self):
+        """同時書き込みでも、読み手は必ずどちらか一方の完全な内容だけを見る。
+
+        素の open(path, "w") + json.dump だと、長さが揃っている場合に
+        「構文としては正しいが複数プロセスの内容が混ざった JSON」が残りうる。
+        JSONDecodeError にならないぶん、壊れたことに気づかないままキュレーションへ
+        流れ込む。ロックではなく atomic write が防いでいるのはこちらの壊れ方。
+        """
+        ctx = multiprocessing.get_context("spawn")
+        tags = ["A", "B", "C", "D"]
+        procs = [ctx.Process(target=_writer, args=(self.cache_dir, t, 20000, 15))
+                 for t in tags]
+        for p in procs:
+            p.start()
+
+        path = os.path.join(self.cache_dir, "dummy-テスト.json")
+        seen = set()
+        while any(p.is_alive() for p in procs):
+            try:
+                with open(path, encoding="utf-8") as f:
+                    data = json.load(f)
+            except FileNotFoundError:
+                continue  # まだどの writer も書き終えていない
+            except json.JSONDecodeError as error:
+                self.fail(f"読み手が壊れたキャッシュを掴んだ: {error}")
+            tag = data["writer"]
+            self.assertEqual(data["items"][0]["title"], tag * 20000,
+                             "writer と items の書き手が食い違っている（内容が混ざった）")
+            seen.add(tag)
+
+        for p in procs:
+            p.join(timeout=60)
+        self.assertEqual([p.exitcode for p in procs], [0] * len(tags))
+        self.assertTrue(seen, "書き込み中に一度も読めていない（検証が空振りしている）")
 
 
 class TestWriteCacheAtomicity(CacheDirTestCase):

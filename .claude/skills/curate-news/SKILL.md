@@ -203,7 +203,7 @@ python3 .claude/scripts/check_source_hints.py _posts/{YYYY-MM-DD}-*.md
 python3 .claude/skills/curate-news/scripts/preference_hash.py [--profile <プロファイル>]
 ```
 
-`{YYYY-MM-DD}` は JST (Asia/Tokyo) 基準の日付とする。推測せず、以下のコマンドで取得する:
+`{YYYY-MM-DD}` は JST (Asia/Tokyo) 基準の日付とする。**呼び出し元から日付を渡されていればそれを使う**（日跨ぎで呼び出し元と食い違わないため）。渡されていなければ推測せず、以下のコマンドで取得する:
 
 ```bash
 TZ=Asia/Tokyo date +%F

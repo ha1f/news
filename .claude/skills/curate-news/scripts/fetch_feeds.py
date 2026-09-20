@@ -70,14 +70,17 @@ def fetch_feed(feed: FeedConfig, force: bool = False) -> bool:
     キャッシュが有効（TTL内）な場合はスキップする（forceで上書き可）。
     成功時は "ok {cache_key}" をstdoutに、失敗時は "FAIL {cache_key}" をstderrに出力する。
     """
-    os.makedirs(CACHE_DIR, exist_ok=True)
-
     try:
+        os.makedirs(CACHE_DIR, exist_ok=True)
+
         # キャッシュキー単位の排他ロック。プロファイルの好みが被れば複数プロセスが
         # 同じソース・カテゴリを取りにいくため（実測: hatena-テクノロジーは5/5 プロファイル）、
         # 有効性チェック〜書き込みを丸ごと囲う。待たされた側はロック取得後の再チェックで
-        # 有効なキャッシュを見つけて skip するので、同じフィードへの重複リクエストも消える。
+        # 有効なキャッシュを見つけて skip するので、同じフィードへの重複リクエストも消える
+        # （`--force` は再チェックを飛ばすので直列化されるだけで重複は消えない）。
         # 別のキャッシュキー同士はロックを共有しないため、並列性は落ちない。
+        # 取得中もロックを保持するので、custom_fetcher は必ず timeout を持たせること
+        # （待つ側の flock にタイムアウトが無く、ハングすると同じキーの全員が止まる）。
         with open(feed.cache_path + ".lock", "w") as lock:
             fcntl.flock(lock, fcntl.LOCK_EX)
 
