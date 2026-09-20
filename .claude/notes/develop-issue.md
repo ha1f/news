@@ -15,15 +15,18 @@
 
 ## ローカルでビルド・描画確認する（Gemfile は無い）
 
-`gem install` で数分。GitHub Pages のビルドを十分に再現でき、UI 変更は必ずここまでやる。`_config.yml` の `plugins` に並ぶ gem が1つでも欠けると `Dependency Error` で落ちるので、まとめて入れる:
+`gem install` で数分。GitHub Pages のビルドを十分に再現でき、UI 変更は必ずここまでやる。`_config.yml` の `plugins` に並ぶのは `jekyll-sitemap` だけだが、`jekyll-feed` と `jekyll-seo-tag` は minima 2.5.1 の依存なので欠けると `Dependency Error` で落ちる。まとめて入れる:
 
 ```bash
 gem install --no-document jekyll:3.9.5 minima:2.5.1 jekyll-feed jekyll-seo-tag \
     jekyll-sitemap jekyll-paginate kramdown-parser-gfm
-jekyll build -d _site
 ```
 
-ruby は 3.3.6 で、`jekyll` は既定の PATH（rbenv の shims）から引ける。`PATH` を足す必要はない。
+**`gem install` した実行ファイルは PATH に現れないので、必ず PATH を足す。** `gem` の EXECUTABLE DIRECTORY は Bash ツールのシェル（非ログイン）の PATH に無く、rbenv の shim も作られない（`rbenv version` が `system` のため）。`export` は次の Bash 呼び出しに引き継がれないので、**使うコマンドと同じ行に置く**:
+
+```bash
+export PATH="$(gem env | awk '/EXECUTABLE DIRECTORY/{print $NF}'):$PATH" && jekyll build -d _site
+```
 
 描画確認は Playwright。**グローバルに入っている `playwright` をそのまま使う**（`/opt/pw-browsers` の chromium と組み合わせで動く）:
 
@@ -54,6 +57,7 @@ mcp__github__actions_get(method=download_workflow_run_artifact, resource_id=<art
 - 保護パス判定: `python3 .claude/scripts/check_protected_paths.py --diff origin/main`（`ui_changes` が出たら `.claude/rules/ui-changes.md` に従う）
 - 見出しリンクの着地点: `python3 .claude/scripts/check_article_anchors.py <_site>`
 - 読みどころの欠落: `python3 .claude/scripts/check_article_notes.py`
+- ソース表記の不一致: `python3 .claude/scripts/check_source_hints.py`（どちらも引数なしで当日 JST 分を検査。`_posts/{YYYY-MM-DD}-*.md` を渡せば日付を固定できる）
 - ユニットテスト: スクリプトと同じディレクトリで `python3 -m unittest discover -p 'test_*.py'`。
   置き場が分かれているので、触ったものを個別に回す（repo ルートからの discover は 0 件になる）:
   `.claude/scripts` / `.claude/skills/select-and-develop/scripts` /
@@ -66,4 +70,5 @@ mcp__github__actions_get(method=download_workflow_run_artifact, resource_id=<art
 - `.claude/skills/` 配下のスキルは repo 自身に置かれている。branch を切り替えても開始時に読んだ版に従う
 - スキルのスクリプトは「エージェントの Bash から起動すると stdin が非 tty」を踏まえた分岐になっているか確認する（`not sys.stdin.isatty()` で stdin モードに入る実装は必ず壊れる）
 - 毎朝9時のキュレーションで当日分の投稿が main に入る。`_posts/` の中身に関わるルールを足す PR は、rebase のたびに当日分を揃え直す必要がある
+- 複数の PR を同じ run でマージするときは、候補同士のマージ順を `git merge-tree --write-tree` で先に当てる（ローカルで完結し、マージ後に初めて conflict を知る順序にならない）
 - squash マージされた PR にスタックしたブランチは `git rebase --onto origin/main <スタック元の最後の commit>` で自分の commit だけ載せ替える（素直な rebase は squash 済みの内容と全面衝突する）
