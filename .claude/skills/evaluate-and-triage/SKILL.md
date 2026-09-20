@@ -11,9 +11,9 @@ description: "デプロイ済みのニュースサイトをサービスユーザ
 
 `python3 .claude/skills/evaluate-and-triage/scripts/check_state.py` を実行する。設定値・今日の投稿の有無・Pages のビルド状態・status issue 番号・open issue 数・前日の健全性集計（`health`）が JSON で返る。
 
-`gh` CLI が使えない環境（CCR 等）では、MCP ツールでデータを取得し `--stdin` で渡す（渡す JSON の形は `check_state.py --stdin` の usage を参照）。取得元:
+`gh` CLI が使えない環境（CCR 等）では、MCP ツールでデータを取得し `--stdin` で渡す（渡す JSON の形は、`--stdin` を付けずに実行したときに `check_state.py` が出すヒントに載っている）。取得元:
 
-- `post_exists`: `git fetch origin main` 後に `git cat-file -e origin/main:_posts/{today}-news.md`（exit 0 なら true）。ワークツリーの checkout 状態に依存しないよう、必ず `origin/main` を直接見る（`git fetch` はリモート追跡参照を更新するだけでワークツリーは変えない。実行環境はセッションごとに作り直されるため、コンテナが9時の publish より前に起動しているとワークツリーが publish 前の commit のままになりうる）
+- `post_exists`: `{today}` は `TZ=Asia/Tokyo date +%F`（`check_state.py` が返す `today` と同じ JST 基準。コンテナは UTC なので素の `date` では JST 00:00〜09:00 に1日ずれる）。`git fetch origin main` 後に `git cat-file -e origin/main:_posts/{today}-news.md`（exit 0 なら true）。ワークツリーの checkout 状態に依存しないよう、必ず `origin/main` を直接見る
 - `pages_build`: `actions_list` で `pages.yml` の最新 run から（`method: list_workflow_runs` が必須。省略すると `missing required parameter: method` で失敗する）
 - `prs` / `issues` / `comments`: `list_pull_requests` / `list_issues` / `issue_read`
 - `pages.html_url`: Pages の URL を返す MCP エンドポイントは無いので、README の GitHub Pages URL を使う
