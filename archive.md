@@ -54,6 +54,9 @@ title: "アーカイブ"
 
 <ul class="archive-list">
 {% for post in group.items %}
+  {%- comment -%}data-content はキーワード絞り込みの対象。truncatewords は空白区切りの語数を
+  数えるので日本語では実質 no-op で、いまは本文全文が入っている。絞り込みの当たり幅を変えて
+  しまうため本 PR では挙動を変えない{%- endcomment -%}
   <li data-content="{{ post.content | strip_html | strip_newlines | truncatewords: 100 | escape }}" data-tags="{{ post.tags | join: ',' | escape }}">
     <a href="{{ post.url | relative_url }}">{{ post.title }}</a>
     {% if post.tags.size > 0 %}<span class="archive-item-tags">{{ post.tags | join: " / " }}</span>{% endif %}
@@ -152,7 +155,7 @@ title: "アーカイブ"
         continue;
       }
 
-      var items = months[i].querySelectorAll('.archive-list li');
+      var items = months[i].querySelectorAll('.archive-list > li');
       var monthVisible = 0;
 
       for (var j = 0; j < items.length; j++) {
