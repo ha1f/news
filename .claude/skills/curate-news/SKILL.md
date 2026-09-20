@@ -58,7 +58,7 @@ python3 .claude/skills/curate-news/scripts/fetch_feeds.py --source hackernews --
 
 #### 取得失敗時のfallback
 
-スクリプトが失敗（FAIL表示）した場合は、`references/sources/{ソースID}.md` を読み、記載されている取得方法・フィールドマッピングに従って自前で取得・キャッシュ保存する。手段は自由（python3ワンライナー、subagent等）。
+スクリプトが失敗（FAIL表示）した場合は、`references/sources/{ソースID}.md` を読み、記載されている取得方法・フィールドマッピングに従って自前で取得・キャッシュ保存する。手段は自由（python3ワンライナー、subagent等）。ただしキャッシュへの書き込みは、他プロファイルの並列実行と競合しうるので `fetch_feeds.py` と同じく一時ファイル + `os.replace` で差し替える（素の `open(path, "w")` は書きかけの不正な JSON を残しうる）。
 
 #### キャッシュ形式
 
