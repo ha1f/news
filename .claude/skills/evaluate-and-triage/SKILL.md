@@ -11,14 +11,15 @@ description: "デプロイ済みのニュースサイトをサービスユーザ
 
 `python3 .claude/skills/evaluate-and-triage/scripts/check_state.py` を実行する。設定値・今日の投稿の有無・Pages のビルド状態・status issue 番号・open issue 数・前日の健全性集計（`health`）が JSON で返る。
 
-`gh` CLI が使えない環境（CCR 等）では、MCP ツールでデータを取得し `--stdin` で渡す（渡す JSON の形は、`--stdin` を付けずに実行したときに `check_state.py` が出すヒントに載っている）。取得元:
+`gh` CLI が使えない環境（CCR 等）では、データを自分で取得して `--stdin` で渡す（渡す JSON の形は、`--stdin` を付けずに実行したときに `check_state.py` が stderr に出すヒントに載っている）。取得元:
 
 - `post_exists`: `{today}` は `TZ=Asia/Tokyo date +%F`（JST 基準。コンテナは UTC なので素の `date` では1日ずれる）。`git fetch origin main` 後に `git cat-file -e origin/main:_posts/{today}-news.md`（exit 0 なら true。checkout 状態に依存しないよう必ず `origin/main` を直接見る）
 - `pages_build`: `actions_list`（`method: list_workflow_runs`, `resource_id: pages.yml`, `perPage: 1`）。`method` を省くと失敗し、`resource_id` を省くと repo 全体の run が返って PR の CI run を掴む
-- `prs` / `issues` / `comments`: `list_pull_requests`（`state: open`）/ `list_issues`（`state: OPEN`。省くと closed も返り `open_issues` が水増しされる）/ `issue_read`（`method` が必須）
+- `prs` / `issues` / `comments`: `urllib` で `https://api.github.com/repos/{owner}/{repo}/` の `pulls?state=open&per_page=100` / `issues?state=open&per_page=100` / `issues/{status_issue}/comments?per_page=100` を叩く。cloud 環境では proxy が GitHub 認証を注入するので `gh` が無くても 200 が返り、`gh` 経路とまったく同じ形になる。100件を超えるときは `Link` ヘッダの `rel="last"` から**ページ番号だけ**取り、同じ `/repos/{owner}/{repo}/` の URL に `&page=N` を足して取り直す（ヘッダ内の URL は `/repositories/{id}/` 形式で、proxy がこの形を 403 で弾く）
+  - MCP の `list_issues` は使わない。`user.type` を落とすため `check_state.py` の bot 除外が効かず、bot のトラッキング issue が `open_issues` に混ざって `open_issue_cap` の判定がずれる（実測で1件差）
 - `pages.html_url`: Pages の URL を返す MCP エンドポイントは無いので、README の GitHub Pages URL を使う
 
-コメントのページネーション: MCP の `issue_read`/`get_comments` は `since` フィルタを持たず、古い順に返す。status issue のコメントが100件を超えたら、最後のページから取得して直近1〜2日分を確保する（health check は前日のレコードだけを使う）。perPage=30 を使う（100だとコメント本文の合計が MCP レスポンスサイズ上限を超える）。ページ数の見積もり: `list_issues` で `comments` フィールドを含めてコメント数を取得し、`ceil(count / 30)` で最終ページを算出する。
+コメントは古い順に返る。status issue は500件を超えているので、上のやり方で最終ページだけ取れば直近1〜2日分が揃う（health check は前日のレコードだけを使う）。
 
 - `post_in_main` が false → `publish_in_progress` が true なら publish がまだ走行中。status issue に記録だけして終了する。false なら 9時の失敗として緊急の ops issue を起票し、評価はスキップする
 - `pages_build.conclusion` が failure → ログを確認して build job と deploy job のどちらが失敗したか切り分ける。build job が失敗していればコードが壊れているので緊急の ops issue を起票する。deploy job のみの失敗（503 等の一過性エラー）は failed jobs の再実行を試み、再実行も失敗したら ops issue を起票する
