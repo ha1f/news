@@ -79,11 +79,11 @@ flowchart LR
 
 ## 依存関係の更新
 
-GitHub Actions と workflow 内でピン留めしているバージョン（Playwright・Python）は [Renovate](https://docs.renovatebot.com/) が更新する。設定は [.github/renovate.json5](.github/renovate.json5) で、Renovate 公式の `config:best-practices` をベースにしている。
+GitHub Actions・workflow 内の `*_VERSION`（Playwright）・`.python-version` のバージョンは [Renovate](https://docs.renovatebot.com/) が更新する。設定は [.github/renovate.json5](.github/renovate.json5) で、Renovate 公式の `config:best-practices` をベースにしている。
 
 - **digest 固定** — Actions は `@v7` のようなタグではなく commit SHA に固定される（タグは付け替え可能なため、サプライチェーン攻撃を受けにくくする）
 - **実行タイミング** — 月曜早朝（JST）にまとめて PR を作る。日次ループのステージと重ならない時間帯
-- **自動マージ** — digest / patch / minor は公開から3日経過し CI が green なら Renovate 自身がマージする
+- **自動マージ** — Actions と workflow 内バージョンは digest / patch / minor、Python は patch のみ、公開から3日経過し CI が green なら Renovate 自身がマージする
 - **ループによる引き取り** — Renovate が自動マージしない更新（major・Renovate 設定の移行・自動マージが止まった PR）は、日次ループの review ステージが changelog と CI を確認してマージまたは close する（[.claude/GUARDRAILS.md](.claude/GUARDRAILS.md) の信頼の軸: この repo に書き込める名義なら人間・bot を問わず対象）。バージョン・digest の置換に収まる diff なら人間の手は要らない。置換を超える diff（初回の pin など）が保護パスに触れる場合は `hold` で人間に渡る。レビューで踏まえる Renovate の挙動:
   - 書き込み範囲は workflow 内のバージョン・digest 文字列、`.python-version`、`.github/renovate.json5` のみ。diff がそれを超えていれば異常
   - minimumReleaseAge の待機中は status check `renovate/stability-days` が pending になる（待てば解ける。PR #280 で観測）
@@ -160,7 +160,7 @@ GitHub Actions と workflow 内でピン留めしているバージョン（Play
 
 ### ソースの追加
 
-`references/sources/` にマークダウンファイルを追加する。フォーマットは `STYLEGUIDE.md` を参照。
+利用条件（規約・robots.txt）を一次情報で確認し、`references/sources/{id}.md` と `scripts/feed_sources/{id}.py` を追加する。手順とフォーマットは `STYLEGUIDE.md` の「新ソース追加の手順」を参照。AI 利用を明示的に制限するソースは採用しない。
 
 ## Forkして使う
 
@@ -169,7 +169,7 @@ GitHub Actions と workflow 内でピン留めしているバージョン（Play
 1. **Fork** — GitHubで [Fork](https://github.com/ha1f/news/fork) を作成し、ローカルにcloneする
 2. **好みの編集** — `preferences.md` を自分の興味・関心に書き換える（[書き方](#好みの設定)）
 3. **ソースの調整** — 不要なソースを削除したり、読んでいるメディアを追加する（[追加方法](#ソースの追加)）
-4. **GitHub Pagesの有効化** — リポジトリの **Settings → Pages** で Source を `main` ブランチに設定する。公開URLは `https://{ユーザー名}.github.io/news/` になる
+4. **GitHub Pagesの有効化** — リポジトリの **Settings → Pages** で Source を **GitHub Actions** に設定する（`.github/workflows/pages.yml` が main への push でビルド・デプロイする）。公開URLは `https://{ユーザー名}.github.io/news/` になる
 5. **実行** — Claude Code で `/publish-pages` を実行し、PRをマージすれば公開される
 6. **（任意）毎日の自動ループ** — [毎日の自動ループ](#毎日の自動ループ) を使う場合は、pinned の status issue（📊 daily-loop status）と `hold` ラベルを作成し、claude.ai で trigger を設定する（[trigger 定義](#trigger-定義claudeai-上にあり-repo-外のため記録)参照）。評価対象の URL は Pages API から自動解決される
 
@@ -179,7 +179,8 @@ GitHub Actions と workflow 内でピン留めしているバージョン（Play
 .claude/skills/curate-news/
 ├── SKILL.md           # ワークフロー定義
 ├── STYLEGUIDE.md      # 設計方針・ファイル構成ガイド
-├── preferences.md     # ユーザーの好み
+├── preferences.md     # ユーザーの好み（デフォルトプロファイル）
+├── profiles/          # 追加プロファイル（`--profile {name}` で選択。publish-pages は全件を生成）
 ├── scripts/           # フィード取得スクリプト
 ├── references/sources/ # ニュースソース定義
 ├── cache/             # フィード取得キャッシュ（git管理外）

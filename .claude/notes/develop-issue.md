@@ -12,6 +12,7 @@
 - `.gitignore` は toptal の macOS テンプレート + `.claude/` 用セクションで構成済み
 - theme は `minima` を指定しているが、GitHub Pages が実際にビルドに使うバージョンは 2.5.1 に固定 ([pages.github.com/versions](https://pages.github.com/versions/) で確認)。minima 3.x系の設定書式 (`minima.social_links` の配列、`author:` のハッシュ形式等) は 2.5.1 では無視されるかそのまま文字列化されて壊れる。`_config.yml` の `minima.*` / theme依存の設定を変更するときは [2.5.1 のテンプレ実物](https://github.com/jekyll/minima/tree/v2.5.1) と照合してから進める
 - `gh` CLI は無い。GitHub の操作は MCP ツール（`mcp__github__*`）で行う
+  - ただし cloud proxy が素の HTTPS にも GitHub 認証を注入するので、**REST の読み取りは `curl` / Python `urllib` で `https://api.github.com/...` を直接叩ける**（実測 2026-09-20: `X-RateLimit-Limit: 15000`、`Link` ヘッダのページネーション有効。status issue のコメント 500件超も `per_page=100` で辿れる）。MCP のレスポンス上限や `--stdin` の往復を避けたい大量取得はこちら。`/repos/{owner}/{repo}/collaborators` と GraphQL は proxy が 403 を返すので MCP を使う。書き込みは MCP に統一する
 
 ## ローカルでビルド・描画確認する（Gemfile は無い）
 

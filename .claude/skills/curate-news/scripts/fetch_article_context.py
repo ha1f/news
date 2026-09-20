@@ -45,6 +45,10 @@ import zlib
 from concurrent.futures import ThreadPoolExecutor
 
 USER_AGENT = "Mozilla/5.0 (compatible; ha1f-news/1.0; +https://ha1f.github.io/news/)"
+# robots.txt の照合に使う製品トークン。RobotFileParser.can_fetch は "/" より前の先頭トークンで
+# User-agent 行を選ぶため、USER_AGENT 全文を渡すと "Mozilla" として評価され、ha1f-news を
+# 名指しで拒否する記述が効かない（週次 audit 2026-09-20 で実測）。USER_AGENT 内の名前と揃える
+ROBOTS_TOKEN = "ha1f-news"
 # 明示しないと CDN が brotli を返してくることがあり、そのまま読むと文字化けする。
 # 展開できる形式だけを要求する
 ACCEPT_ENCODING = "gzip, deflate, identity"
@@ -139,9 +143,10 @@ def _fetch_robots(robots_url: str):
 
 
 def _robots_allows(url: str) -> bool:
-    """robots.txt がこの User-Agent の取得を許しているか。
+    """robots.txt がこのクローラ（製品トークン ROBOTS_TOKEN）の取得を許しているか。
 
     フィードでなく記事ページ本体を取りに行くため、ソース側の意思表示に従う。
+    名指しの拒否（User-agent: ha1f-news）と `*` の両方が効くよう、製品トークンで照合する。
     """
     parts = urllib.parse.urlsplit(url)
     robots_url = urllib.parse.urlunsplit(
@@ -151,7 +156,7 @@ def _robots_allows(url: str) -> bool:
     parser = _ROBOTS_CACHE[robots_url]
     if parser is None:
         return True
-    return parser.can_fetch(USER_AGENT, url)
+    return parser.can_fetch(ROBOTS_TOKEN, url)
 
 
 def fetch_one(url: str) -> dict:
