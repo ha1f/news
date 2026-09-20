@@ -13,9 +13,11 @@
 from __future__ import annotations
 
 import argparse
+import fcntl
 import json
 import os
 import sys
+import tempfile
 
 # このスクリプトと同じディレクトリをモジュール検索パスに追加
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -41,36 +43,63 @@ def _is_cache_valid(cache_path: str, ttl_minutes: int) -> bool:
         return False
 
 
+def _write_cache(cache_path: str, cache_data: dict) -> None:
+    """キャッシュを atomic に書き出す。
+
+    同じキャッシュを複数プロセスが同時に書くと、json.dump は複数回の write() に
+    分解されるため、素の open(path, "w") では両者の内容が混ざった不正な JSON が
+    残りうる。同じディレクトリの一時ファイルに書いてから os.replace で差し替える
+    ことで、読み手には常に「差し替え前の完全な内容」か「差し替え後の完全な内容」
+    のどちらかしか見えなくなる。
+    """
+    fd, tmp_path = tempfile.mkstemp(
+        dir=os.path.dirname(cache_path), prefix=".tmp-", suffix=".json")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            json.dump(cache_data, f, ensure_ascii=False, indent=2)
+        os.replace(tmp_path, cache_path)
+    except BaseException:
+        if os.path.exists(tmp_path):
+            os.unlink(tmp_path)
+        raise
+
+
 def fetch_feed(feed: FeedConfig, force: bool = False) -> bool:
     """1フィードを取得してキャッシュに保存する。
 
     キャッシュが有効（TTL内）な場合はスキップする（forceで上書き可）。
     成功時は "ok {cache_key}" をstdoutに、失敗時は "FAIL {cache_key}" をstderrに出力する。
     """
-    if not force and _is_cache_valid(feed.cache_path, feed.ttl_minutes):
-        print(f"  skip {feed.cache_key} (cache valid)")
-        return True
+    os.makedirs(CACHE_DIR, exist_ok=True)
 
     try:
-        if feed.custom_fetcher:
-            items = feed.custom_fetcher(feed)
-        else:
-            parser = PARSERS[feed.fmt]
-            content = fetch_url(feed.feed_url, feed.user_agent)
-            items = parser(content, feed)
+        # キャッシュキー単位の排他ロック。プロファイルの好みが被れば複数プロセスが
+        # 同じソース・カテゴリを取りにいくため（実測: hatena-テクノロジーは5/5 プロファイル）、
+        # 有効性チェック〜書き込みを丸ごと囲う。待たされた側はロック取得後の再チェックで
+        # 有効なキャッシュを見つけて skip するので、同じフィードへの重複リクエストも消える。
+        # 別のキャッシュキー同士はロックを共有しないため、並列性は落ちない。
+        with open(feed.cache_path + ".lock", "w") as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX)
 
-        cache_data = {
-            "source_id": feed.source_id,
-            "category": feed.category,
-            "feed_url": feed.feed_url,
-            "fetched_at": datetime.now(JST).isoformat(),
-            "ttl_minutes": feed.ttl_minutes,
-            "items": items,
-        }
+            if not force and _is_cache_valid(feed.cache_path, feed.ttl_minutes):
+                print(f"  skip {feed.cache_key} (cache valid)")
+                return True
 
-        os.makedirs(CACHE_DIR, exist_ok=True)
-        with open(feed.cache_path, "w", encoding="utf-8") as f:
-            json.dump(cache_data, f, ensure_ascii=False, indent=2)
+            if feed.custom_fetcher:
+                items = feed.custom_fetcher(feed)
+            else:
+                parser = PARSERS[feed.fmt]
+                content = fetch_url(feed.feed_url, feed.user_agent)
+                items = parser(content, feed)
+
+            _write_cache(feed.cache_path, {
+                "source_id": feed.source_id,
+                "category": feed.category,
+                "feed_url": feed.feed_url,
+                "fetched_at": datetime.now(JST).isoformat(),
+                "ttl_minutes": feed.ttl_minutes,
+                "items": items,
+            })
 
         print(f"  ok   {feed.cache_key} ({len(items)} items)")
         return True
