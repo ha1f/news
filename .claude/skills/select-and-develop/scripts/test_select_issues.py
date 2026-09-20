@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from select_issues import build_candidates, parse_guardrails, parse_link_header
+from select_issues import build_candidates, parse_guardrails, parse_link_header, with_page
 
 
 def issue(number, title="t", assoc="OWNER", labels=(), created="2026-07-01T00:00:00Z",
@@ -190,6 +190,18 @@ class ParseLinkHeaderTest(unittest.TestCase):
     def test_empty_header_returns_empty_dict(self):
         self.assertEqual(parse_link_header(""), {})
         self.assertEqual(parse_link_header(None), {})
+
+
+class WithPageTest(unittest.TestCase):
+    def test_adds_page_param_when_absent(self):
+        url = "https://api.github.com/repos/o/r/issues?state=open&per_page=100"
+        self.assertEqual(with_page(url, 2),
+                         "https://api.github.com/repos/o/r/issues?state=open&per_page=100&page=2")
+
+    def test_replaces_existing_page_param(self):
+        url = "https://api.github.com/repos/o/r/issues?state=open&page=2&per_page=100"
+        self.assertEqual(with_page(url, 3),
+                         "https://api.github.com/repos/o/r/issues?state=open&page=3&per_page=100")
 
 
 if __name__ == "__main__":

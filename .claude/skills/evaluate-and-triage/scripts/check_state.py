@@ -73,6 +73,18 @@ def parse_link_header(header):
     return links
 
 
+def with_page(url, page):
+    """url に page=N を足す（既にあれば置き換える）純関数。
+
+    GitHub の Link ヘッダーが返す next の URL は `/repositories/{id}/...` 形式で、
+    proxy がこの形を 403 で弾く（実測 2026-09-20）。ヘッダの URL をそのまま辿らず、
+    ページ番号だけ次に進めて `/repos/{owner}/{repo}/...` 形式の URL を自前で組み立てる。"""
+    if re.search(r"[?&]page=\d+", url):
+        return re.sub(r"([?&]page=)\d+", r"\g<1>" + str(page), url)
+    sep = "&" if "?" in url else "?"
+    return f"{url}{sep}page={page}"
+
+
 def api_json(path, ok_404=False, ok_missing=(), paginate=True):
     """gh CLI 不在の環境向けに GitHub REST API を直接叩く。
 
@@ -88,26 +100,31 @@ def api_json(path, ok_404=False, ok_missing=(), paginate=True):
     headers = {"Accept": "application/vnd.github+json", "User-Agent": "ha1f-news-daily-loop"}
     if token:
         headers["Authorization"] = f"Bearer {token}"
-    url = f"{API_BASE}/{path}"
-    items, is_list = [], False
-    while url:
+    request_url = f"{API_BASE}/{path}"
+    items, is_list, page = [], False, 1
+    while request_url:
         try:
             with urllib.request.urlopen(
-                    urllib.request.Request(url, headers=headers), timeout=API_TIMEOUT) as resp:
+                    urllib.request.Request(request_url, headers=headers),
+                    timeout=API_TIMEOUT) as resp:
                 body = resp.read()
                 link = resp.headers.get("Link")
         except urllib.error.HTTPError as error:
             if (ok_404 and error.code == 404) or error.code in ok_missing:
                 return None
             raise RuntimeError(
-                f"GitHub API {error.code} {url}: "
+                f"GitHub API {error.code} {request_url}: "
                 f"{error.read().decode('utf-8', 'replace')[:300]}") from error
         data = json.loads(body) if body else None
         if not isinstance(data, list):
             return data
         items.extend(data)
         is_list = True
-        url = parse_link_header(link).get("next") if paginate else None
+        if paginate and "next" in parse_link_header(link):
+            page += 1
+            request_url = with_page(f"{API_BASE}/{path}", page)
+        else:
+            request_url = None
     return items if is_list else None
 
 

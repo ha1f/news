@@ -6,7 +6,8 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from check_state import parse_link_header, parse_status_records, summarize_health, summarize_issues
+from check_state import (parse_link_header, parse_status_records, summarize_health,
+                         summarize_issues, with_page)
 
 
 def issue(number, title="t", labels=(), pr=False, bot=False):
@@ -122,6 +123,22 @@ class ParseLinkHeaderTest(unittest.TestCase):
         header = '<https://api.github.com/repositories/1/issues?page=2>; rel="next"'
         self.assertEqual(parse_link_header(header),
                          {"next": "https://api.github.com/repositories/1/issues?page=2"})
+
+
+class WithPageTest(unittest.TestCase):
+    def test_adds_page_param_when_absent(self):
+        url = "https://api.github.com/repos/o/r/issues?state=open&per_page=100"
+        self.assertEqual(with_page(url, 2),
+                         "https://api.github.com/repos/o/r/issues?state=open&per_page=100&page=2")
+
+    def test_replaces_existing_page_param(self):
+        url = "https://api.github.com/repos/o/r/issues?state=open&page=2&per_page=100"
+        self.assertEqual(with_page(url, 3),
+                         "https://api.github.com/repos/o/r/issues?state=open&page=3&per_page=100")
+
+    def test_no_query_string_yet(self):
+        self.assertEqual(with_page("https://api.github.com/repos/o/r/pages", 2),
+                         "https://api.github.com/repos/o/r/pages?page=2")
 
 
 if __name__ == "__main__":
