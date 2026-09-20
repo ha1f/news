@@ -5,6 +5,7 @@ paths:
   - "assets/**"
   - "index.md"
   - "archive.md"
+  - "profiles/**"
   - "about.md"
   - "404.html"
 ---

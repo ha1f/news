@@ -61,7 +61,7 @@ layout: default
     <li data-date="{{ post.date | date: '%Y-%m-%d' }}" data-content="{{ post.content | strip_html | strip_newlines | truncatewords: 100 | escape }}" data-tags="{{ post.tags | join: ',' | escape }}">
       <a href="{{ post.url | relative_url }}">{{ post.title }}</a>
       {%- if post.tags.size > 0 %}<span class="archive-item-tags">{{ post.tags | join: " / " }}</span>{% endif -%}
-      {%- if post.excerpt -%}<p class="archive-excerpt">{{ post.excerpt | strip_html | truncatewords: 30 }}</p>{%- endif -%}
+      {%- if post.excerpt -%}<p class="archive-excerpt">{{ post.excerpt | strip_html | truncate: 100 }}</p>{%- endif -%}
       {%- if post.content contains '<li>' -%}
       {%- assign article_items = post.content | split: '<li>' -%}
       {%- assign article_count = 0 -%}

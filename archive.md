@@ -54,10 +54,33 @@ title: "アーカイブ"
 
 <ul class="archive-list">
 {% for post in group.items %}
+  {%- comment -%}data-content はキーワード絞り込みの対象。truncatewords は空白区切りの語数を
+  数えるので日本語では実質 no-op で、いまは本文全文が入っている。絞り込みの当たり幅を変えて
+  しまうため本 PR では挙動を変えない{%- endcomment -%}
   <li data-content="{{ post.content | strip_html | strip_newlines | truncatewords: 100 | escape }}" data-tags="{{ post.tags | join: ',' | escape }}">
     <a href="{{ post.url | relative_url }}">{{ post.title }}</a>
     {% if post.tags.size > 0 %}<span class="archive-item-tags">{{ post.tags | join: " / " }}</span>{% endif %}
-    {% if post.excerpt %}<p class="archive-excerpt">{{ post.excerpt | strip_html | truncatewords: 30 }}</p>{% endif %}
+    {% if post.excerpt %}<p class="archive-excerpt">{{ post.excerpt | strip_html | truncate: 100 }}</p>{% endif %}
+    {%- if post.content contains '<li>' -%}
+    {%- assign article_items = post.content | split: '<li>' -%}
+    {%- assign article_count = 0 -%}
+    <ul class="archive-article-titles">
+      {%- for item in article_items offset: 1 -%}
+        {%- if item contains '</a>' -%}
+          {%- assign before_close_a = item | split: '</a>' | first -%}
+          {%- assign link_text = before_close_a | strip_html -%}
+          {%- if link_text.size > 1 -%}
+            {%- assign article_count = article_count | plus: 1 -%}
+            <li{% if article_count > 3 %} class="archive-article-extra" hidden{% endif %}><a href="{{ post.url | relative_url }}#article-{{ forloop.index }}">{{ link_text }}</a></li>
+          {%- endif -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {%- assign remaining = article_count | minus: 3 -%}
+      {%- if remaining > 0 -%}
+      <li class="archive-article-more"><a href="{{ post.url | relative_url }}">他{{ remaining }}件</a></li>
+      {%- endif -%}
+    </ul>
+    {%- endif -%}
   </li>
 {% endfor %}
 </ul>
@@ -91,6 +114,36 @@ title: "アーカイブ"
     });
   }
 
+  // 既定は先頭3件だけを見せる。キーワードで絞ったときは一致した見出し「だけ」を
+  // 残して、何が一致したのかを結果から読み取れるようにする。見出しが1件も一致
+  // しない日（概況文や本文で一致した日）は既定の3件に戻す
+  function revealMatchingTitles(item, query) {
+    var titles = item.querySelectorAll('.archive-article-titles > li:not(.archive-article-more)');
+    var more = item.querySelector('.archive-article-more');
+    var matched = [];
+
+    if (query) {
+      for (var i = 0; i < titles.length; i++) {
+        if (titles[i].textContent.toLowerCase().indexOf(query) !== -1) matched.push(titles[i]);
+      }
+    }
+
+    var hiddenCount = 0;
+    for (var j = 0; j < titles.length; j++) {
+      var show = matched.length > 0
+        ? matched.indexOf(titles[j]) !== -1
+        : !titles[j].classList.contains('archive-article-extra');
+      titles[j].hidden = !show;
+      if (!show) hiddenCount++;
+    }
+
+    if (more) {
+      more.hidden = hiddenCount === 0;
+      var link = more.querySelector('a');
+      if (link && hiddenCount > 0) link.textContent = '他' + hiddenCount + '件';
+    }
+  }
+
   function applyFilters() {
     var query = (input ? input.value : '').toLowerCase().trim();
     var isFiltering = !!(query || activeTag);
@@ -102,7 +155,7 @@ title: "アーカイブ"
         continue;
       }
 
-      var items = months[i].querySelectorAll('.archive-list li');
+      var items = months[i].querySelectorAll('.archive-list > li');
       var monthVisible = 0;
 
       for (var j = 0; j < items.length; j++) {
@@ -123,7 +176,10 @@ title: "アーカイブ"
 
         var visible = matchTag && matchQuery;
         items[j].style.display = visible ? '' : 'none';
-        if (visible) monthVisible++;
+        if (visible) {
+          monthVisible++;
+          revealMatchingTitles(items[j], query);
+        }
       }
 
       months[i].style.display = monthVisible > 0 ? '' : 'none';
