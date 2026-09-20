@@ -13,9 +13,9 @@ description: "デプロイ済みのニュースサイトをサービスユーザ
 
 `gh` CLI が使えない環境（CCR 等）では、MCP ツールでデータを取得し `--stdin` で渡す（渡す JSON の形は、`--stdin` を付けずに実行したときに `check_state.py` が出すヒントに載っている）。取得元:
 
-- `post_exists`: `{today}` は `TZ=Asia/Tokyo date +%F`（`check_state.py` が返す `today` と同じ JST 基準。コンテナは UTC なので素の `date` では JST 00:00〜09:00 に1日ずれる）。`git fetch origin main` 後に `git cat-file -e origin/main:_posts/{today}-news.md`（exit 0 なら true）。ワークツリーの checkout 状態に依存しないよう、必ず `origin/main` を直接見る
-- `pages_build`: `actions_list` で `pages.yml` の最新 run から（`method: list_workflow_runs` が必須。省略すると `missing required parameter: method` で失敗する）
-- `prs` / `issues` / `comments`: `list_pull_requests` / `list_issues` / `issue_read`
+- `post_exists`: `{today}` は `TZ=Asia/Tokyo date +%F`（JST 基準。コンテナは UTC なので素の `date` では1日ずれる）。`git fetch origin main` 後に `git cat-file -e origin/main:_posts/{today}-news.md`（exit 0 なら true。checkout 状態に依存しないよう必ず `origin/main` を直接見る）
+- `pages_build`: `actions_list`（`method: list_workflow_runs`, `resource_id: pages.yml`, `perPage: 1`）。`method` を省くと失敗し、`resource_id` を省くと repo 全体の run が返って PR の CI run を掴む
+- `prs` / `issues` / `comments`: `list_pull_requests`（`state: open`）/ `list_issues`（`state: OPEN`。省くと closed も返り `open_issues` が水増しされる）/ `issue_read`（`method` が必須）
 - `pages.html_url`: Pages の URL を返す MCP エンドポイントは無いので、README の GitHub Pages URL を使う
 
 コメントのページネーション: MCP の `issue_read`/`get_comments` は `since` フィルタを持たず、古い順に返す。status issue のコメントが100件を超えたら、最後のページから取得して直近1〜2日分を確保する（health check は前日のレコードだけを使う）。perPage=30 を使う（100だとコメント本文の合計が MCP レスポンスサイズ上限を超える）。ページ数の見積もり: `list_issues` で `comments` フィールドを含めてコメント数を取得し、`ceil(count / 30)` で最終ページを算出する。
