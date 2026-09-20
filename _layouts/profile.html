@@ -21,6 +21,7 @@ layout: default
   </header>
 
   {%- assign profile_posts = site.posts | where: "profile", page.profile -%}
+  {%- assign date_format = site.minima.date_format | default: "%Y年%-m月%-d日" -%}
 
   {%- if profile_posts.size == 0 -%}
   <p class="profile-empty">このプロファイルの記事はまだありません。</p>
@@ -58,7 +59,11 @@ layout: default
 
   <ul class="archive-list">
   {%- for post in group.items -%}
+    {%- comment -%}#341 より前の投稿は title が「日付（表示名）」のまま。バッジを足すと日付が
+    隣に2回並ぶため、その形と一致するときだけバッジを省く{%- endcomment -%}
+    {%- assign date_only_title = post.date | date: date_format | append: "（" | append: page.title | append: "）" -%}
     <li data-date="{{ post.date | date: '%Y-%m-%d' }}" data-content="{{ post.content | strip_html | strip_newlines | truncatewords: 100 | escape }}" data-tags="{{ post.tags | join: ',' | escape }}">
+      {%- unless post.title == date_only_title %}<span class="archive-item-date">{{ post.date | date: date_format }}</span>{% endunless %}
       <a href="{{ post.url | relative_url }}">{{ post.title }}</a>
       {%- if post.tags.size > 0 %}<span class="archive-item-tags">{{ post.tags | join: " / " }}</span>{% endif -%}
       {%- if post.excerpt -%}<p class="archive-excerpt">{{ post.excerpt | strip_html | truncate: 100 }}</p>{%- endif -%}
