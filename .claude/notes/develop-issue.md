@@ -1,6 +1,6 @@
-# develop-issue 向け repo ノート
+# repo ノート（環境・検証・この repo の癖）
 
-この repo で作業するときの環境メモ。手順は各スキルの SKILL.md 側、ここには this repo・この実行環境でしか通用しない事実だけ書く。CLAUDE.md からここを指しているので、毎回調べ直さずにここを読む。
+この repo で作業するときの環境メモ。develop-issue が正本として読むが、「この repo の癖」は review など他のステージも対象。手順は各スキルの SKILL.md 側、ここには this repo・この実行環境でしか通用しない事実だけ書く。CLAUDE.md からここを指しているので、毎回調べ直さずにここを読む。
 
 書いてある内容が実際と違っていたら、その run で直す（古いまま残すと次の run を誤導する）。**ここに載せる検証コマンドは main に実在するものだけにする。** 未マージの PR にしかないスクリプトを載せると、次の run がそのまま叩いて `No such file or directory` を踏む。
 
@@ -22,7 +22,7 @@ gem install --no-document jekyll:3.9.5 minima:2.5.1 jekyll-feed jekyll-seo-tag \
     jekyll-sitemap jekyll-paginate kramdown-parser-gfm
 ```
 
-**`gem install` した実行ファイルは PATH に現れないので、必ず PATH を足す。** `gem` の EXECUTABLE DIRECTORY は Bash ツールのシェル（非ログイン）の PATH に無く、rbenv の shim も作られない（`rbenv version` が `system` のため）。`export` は次の Bash 呼び出しに引き継がれないので、**使うコマンドと同じ行に置く**:
+**`gem install` した実行ファイルは PATH に現れないので、必ず PATH を足す。** rbenv の shim 経由でも動かない（shim は作られるが `rbenv version` が `system` なので system ruby を見にいき `rbenv: <cmd>: command not found` になる）。`bash -lc` で回り道しても同じ。`export` は次の Bash 呼び出しに引き継がれないので、**使うコマンドと同じ行に置く**:
 
 ```bash
 export PATH="$(gem env | awk '/EXECUTABLE DIRECTORY/{print $NF}'):$PATH" && jekyll build -d _site
@@ -57,7 +57,8 @@ mcp__github__actions_get(method=download_workflow_run_artifact, resource_id=<art
 - 保護パス判定: `python3 .claude/scripts/check_protected_paths.py --diff origin/main`（`ui_changes` が出たら `.claude/rules/ui-changes.md` に従う）
 - 見出しリンクの着地点: `python3 .claude/scripts/check_article_anchors.py <_site>`
 - 読みどころの欠落: `python3 .claude/scripts/check_article_notes.py`
-- ソース表記の不一致: `python3 .claude/scripts/check_source_hints.py`（どちらも引数なしで当日 JST 分を検査。`_posts/{YYYY-MM-DD}-*.md` を渡せば日付を固定できる）
+- ソース表記の不一致: `python3 .claude/scripts/check_source_hints.py`
+  （上の2つは引数なしで当日 JST 分を検査。`_posts/{YYYY-MM-DD}-*.md` を渡せば日付を固定できる）
 - ユニットテスト: スクリプトと同じディレクトリで `python3 -m unittest discover -p 'test_*.py'`。
   置き場が分かれているので、触ったものを個別に回す（repo ルートからの discover は 0 件になる）:
   `.claude/scripts` / `.claude/skills/select-and-develop/scripts` /
@@ -70,5 +71,8 @@ mcp__github__actions_get(method=download_workflow_run_artifact, resource_id=<art
 - `.claude/skills/` 配下のスキルは repo 自身に置かれている。branch を切り替えても開始時に読んだ版に従う
 - スキルのスクリプトは「エージェントの Bash から起動すると stdin が非 tty」を踏まえた分岐になっているか確認する（`not sys.stdin.isatty()` で stdin モードに入る実装は必ず壊れる）
 - 毎朝9時のキュレーションで当日分の投稿が main に入る。`_posts/` の中身に関わるルールを足す PR は、rebase のたびに当日分を揃え直す必要がある
-- 複数の PR を同じ run でマージするときは、候補同士のマージ順を `git merge-tree --write-tree` で先に当てる（ローカルで完結し、マージ後に初めて conflict を知る順序にならない）
+- レビュー stage で PR を調べるときは、git で足りるものを MCP で取らない。実測で往復したのは次の3つ:
+  - **conflict の有無**: `git fetch origin` のうえ `git merge-tree --write-tree origin/<先にマージする head> origin/<次の head>`（exit 0 なら clean）。この loop の PR head は repo 内ブランチなのでローカルで完結し、候補同士のマージ順も先に当てられる（マージ後に初めて conflict を知る順序にならない）。`pull_request_read(minimal_output=true)` は **PR body を削らない**ので、`mergeable_state` を見るためだけに呼ぶと PR body 全文（実測 約20k トークン）が返る。`behind` 等の値が要るときだけ MCP に落とす
+  - **checks**: `actions_list(method=list_workflow_runs, resource_id=jekyll-build-check.yml)` で head_sha ごとの conclusion がまとめて取れる（PR ごとに引かない）
+  - **分類スクリプトへの入力**: `list_pull_requests` 1回で number/title/draft/labels/body/head branch を取り、`files` / `patches` / `last_commit_at` は `git merge-base` → `git diff` で組み立てる
 - squash マージされた PR にスタックしたブランチは `git rebase --onto origin/main <スタック元の最後の commit>` で自分の commit だけ載せ替える（素直な rebase は squash 済みの内容と全面衝突する）
