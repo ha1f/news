@@ -73,8 +73,10 @@ mcp__github__actions_get(method=download_workflow_run_artifact, resource_id=<art
 - `.claude/skills/` 配下のスキルは repo 自身に置かれている。branch を切り替えても開始時に読んだ版に従う
 - スキルのスクリプトは「エージェントの Bash から起動すると stdin が非 tty」を踏まえた分岐になっているか確認する（`not sys.stdin.isatty()` で stdin モードに入る実装は必ず壊れる）
 - 毎朝9時のキュレーションで当日分の投稿が main に入る。`_posts/` の中身に関わるルールを足す PR は、rebase のたびに当日分を揃え直す必要がある
-- レビュー stage で PR を調べるときは、git で足りるものを MCP で取らない。実測で往復したのは次の3つ:
-  - **conflict の有無**: `git fetch origin` のうえ `git merge-tree --write-tree origin/<先にマージする head> origin/<次の head>`（exit 0 なら clean）。この loop の PR head は repo 内ブランチなのでローカルで完結し、候補同士のマージ順も先に当てられる（マージ後に初めて conflict を知る順序にならない）。`pull_request_read(minimal_output=true)` は **PR body を削らない**ので、`mergeable_state` を見るためだけに呼ぶと PR body 全文（実測 約20k トークン）が返る。`behind` 等の値が要るときだけ MCP に落とす
+- レビュー stage で PR を調べるときは、git で足りるものを MCP で取らない。git で完結するものは次の4つ:
+  - **conflict の有無**: `git fetch origin` のうえ `git merge-tree --write-tree origin/<先にマージする head> origin/<次の head>`（exit 0 なら clean）。**この fetch は引数なしで打つ**（セッション開始時のクローンは `origin/main` と自分の作業ブランチだけ。実測 2 refs → 素の fetch で 15 refs。ブランチを指定して fetch すると `origin/<head>` が unknown revision のまま）。この loop の PR head は repo 内ブランチなのでローカルで完結し、候補同士のマージ順も先に当てられる（マージ後に初めて conflict を知る順序にならない）。`pull_request_read(minimal_output=true)` は **PR body を削らない**ので、`mergeable_state` を見るためだけに呼ぶと PR body 全文（実測 約20k トークン）が返る。`behind` 等の値が要るときだけ MCP に落とす
   - **checks**: `actions_list(method=list_workflow_runs, resource_id=jekyll-build-check.yml)` で head_sha ごとの conclusion がまとめて取れる（PR ごとに引かない）
-  - **分類スクリプトへの入力**: `list_pull_requests` 1回で number/title/draft/labels/body/head branch を取り、`files` / `patches` / `last_commit_at` は `git merge-base` → `git diff` で組み立てる
+  - **分類スクリプトへの入力**: `list_pull_requests` 1回で number/title/draft/labels/body/head branch を取り、`files` / `patches` / `last_commit_at` は `git merge-base` → `git diff` で組み立てる。open PR が十数件あると返り値がトークン上限を超えてファイルに退避されるので（実測 11件で 57k 文字）、読まずに `python3 -c` でそのファイルから必要なキーだけ抜く
+  - **fork からの PR（`external`）**: head は repo 内に無いので `origin/<branch>` では引けない。`git fetch origin refs/pull/<N>/head` で FETCH_HEAD に取る（全件なら `git fetch origin '+refs/pull/*/head:refs/remotes/pr/*'`）
+- CI やマージ後のビルドの完了待ちに、foreground の `sleep` は使えない（ハーネスがブロックする）。`run_in_background: true` の `sleep` と `actions_get(get_workflow_run)` のポーリングを組み合わせる
 - squash マージされた PR にスタックしたブランチは `git rebase --onto origin/main <スタック元の最後の commit>` で自分の commit だけ載せ替える（素直な rebase は squash 済みの内容と全面衝突する）
