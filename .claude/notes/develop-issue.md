@@ -57,7 +57,8 @@ mcp__github__actions_get(method=download_workflow_run_artifact, resource_id=<art
 - ユニットテスト: スクリプトと同じディレクトリで `python3 -m unittest discover -p 'test_*.py'`。
   置き場が分かれているので、触ったものを個別に回す（repo ルートからの discover は 0 件になる）:
   `.claude/scripts` / `.claude/skills/select-and-develop/scripts` /
-  `.claude/skills/review-and-merge/scripts` / `.claude/skills/evaluate-and-triage/scripts`
+  `.claude/skills/review-and-merge/scripts` / `.claude/skills/evaluate-and-triage/scripts` /
+  `.claude/skills/curate-news/scripts`
 - gitignore が効いているか: `git check-ignore -v <path>`
 - 意図しないファイルの混入: `git ls-files | grep <pattern>`
 

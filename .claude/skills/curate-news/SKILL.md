@@ -58,7 +58,7 @@ python3 .claude/skills/curate-news/scripts/fetch_feeds.py --source hackernews --
 
 #### 取得失敗時のfallback
 
-スクリプトが失敗（FAIL表示）した場合は、`references/sources/{ソースID}.md` を読み、記載されている取得方法・フィールドマッピングに従って自前で取得・キャッシュ保存する。手段は自由（python3ワンライナー、subagent等）。
+スクリプトが失敗（FAIL表示）した場合は、`references/sources/{ソースID}.md` を読み、記載されている取得方法・フィールドマッピングに従って自前で取得・キャッシュ保存する。手段は自由（python3ワンライナー、subagent等）。ただしキャッシュへの書き込みは、他プロファイルの並列実行と競合しうるので `fetch_feeds.py` と同じく一時ファイル + `os.replace` で差し替える（素の `open(path, "w")` は書きかけの不正な JSON を残しうる）。
 
 #### キャッシュ形式
 
@@ -203,7 +203,7 @@ python3 .claude/scripts/check_source_hints.py _posts/{YYYY-MM-DD}-*.md
 python3 .claude/skills/curate-news/scripts/preference_hash.py [--profile <プロファイル>]
 ```
 
-`{YYYY-MM-DD}` は JST (Asia/Tokyo) 基準の日付とする。推測せず、以下のコマンドで取得する:
+`{YYYY-MM-DD}` は JST (Asia/Tokyo) 基準の日付とする。**呼び出し元から日付を渡されていればそれを使う**（日跨ぎで呼び出し元と食い違わないため）。渡されていなければ推測せず、以下のコマンドで取得する:
 
 ```bash
 TZ=Asia/Tokyo date +%F
