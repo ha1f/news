@@ -74,6 +74,12 @@
   margin-left: 0.5em;
 }
 
+.archive-item-date {
+  font-size: $base-font-size * 0.8125;
+  color: $grey-color;
+  margin-right: 0.5em;
+}
+
 .post-tags {
   font-size: $base-font-size * 0.875;
   color: $grey-color;
@@ -486,6 +492,10 @@
   }
 
   .archive-item-tags {
+    color: #8b949e;
+  }
+
+  .archive-item-date {
     color: #8b949e;
   }
 

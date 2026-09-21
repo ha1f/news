@@ -14,6 +14,7 @@ title: "アーカイブ"
 {%- endif -%}
 
 {% assign default_posts = site.posts | where_exp: "post", "post.profile == nil" %}
+{%- assign date_format = site.minima.date_format | default: "%Y年%-m月%-d日" -%}
 
 {%- assign all_tags = "" -%}
 {%- for post in default_posts -%}
@@ -57,7 +58,11 @@ title: "アーカイブ"
   {%- comment -%}data-content はキーワード絞り込みの対象。truncatewords は空白区切りの語数を
   数えるので日本語では実質 no-op で、いまは本文全文が入っている。絞り込みの当たり幅を変えて
   しまうため本 PR では挙動を変えない{%- endcomment -%}
+  {%- comment -%}#341 より前の投稿は title がそのまま日付文字列なので、バッジを足すと隣に
+  同じ日付が2回並んでしまう。title が日付そのものと一致するときだけバッジを省く{%- endcomment -%}
+  {%- assign date_only_title = post.date | date: date_format -%}
   <li data-content="{{ post.content | strip_html | strip_newlines | truncatewords: 100 | escape }}" data-tags="{{ post.tags | join: ',' | escape }}">
+    {%- unless post.title == date_only_title %}<span class="archive-item-date">{{ post.date | date: date_format }}</span>{% endunless %}
     <a href="{{ post.url | relative_url }}">{{ post.title }}</a>
     {% if post.tags.size > 0 %}<span class="archive-item-tags">{{ post.tags | join: " / " }}</span>{% endif %}
     {% if post.excerpt %}<p class="archive-excerpt">{{ post.excerpt | strip_html | truncate: 100 }}</p>{% endif %}
@@ -171,7 +176,12 @@ title: "アーカイブ"
           var content = (items[j].getAttribute('data-content') || '').toLowerCase();
           var titleEl = items[j].querySelector('a');
           var title = (titleEl ? titleEl.textContent : '').toLowerCase();
-          matchQuery = content.indexOf(query) !== -1 || title.indexOf(query) !== -1;
+          // 日付バッジも絞り込みの対象にする。新形式の title には日付が入らないので、
+          // これが無いと「9月20日」のような日付での絞り込みが効かなくなる (#341)
+          var dateEl = items[j].querySelector('.archive-item-date');
+          var dateText = (dateEl ? dateEl.textContent : '').toLowerCase();
+          matchQuery = content.indexOf(query) !== -1 || title.indexOf(query) !== -1
+            || dateText.indexOf(query) !== -1;
         }
 
         var visible = matchTag && matchQuery;
