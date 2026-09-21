@@ -165,7 +165,12 @@ layout: default
             var content = (items[j].getAttribute('data-content') || '').toLowerCase();
             var titleEl = items[j].querySelector('a');
             var title = (titleEl ? titleEl.textContent : '').toLowerCase();
-            matchQuery = content.indexOf(query) !== -1 || title.indexOf(query) !== -1;
+            // 日付バッジも絞り込みの対象にする。新形式の title には日付が入らないので、
+            // これが無いと「9月20日」のような日付での絞り込みが効かなくなる (#341)
+            var dateEl = items[j].querySelector('.archive-item-date');
+            var dateText = (dateEl ? dateEl.textContent : '').toLowerCase();
+            matchQuery = content.indexOf(query) !== -1 || title.indexOf(query) !== -1
+              || dateText.indexOf(query) !== -1;
           }
 
           var visible = matchTag && matchQuery && matchFold;
