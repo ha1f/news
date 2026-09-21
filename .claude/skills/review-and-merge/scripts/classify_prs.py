@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """daily-loop: open PR をマージ候補かどうか機械判定して JSON で出力する。
 
-使い方: python3 classify_prs.py
+使い方:
+  python3 classify_prs.py                 # gh CLI でデータ取得
+  python3 classify_prs.py --stdin < prs.json  # MCP 等で取得した JSON を渡す
 出力: {"config", "merge_candidates", "protected", "not_ready", "drafts", "hold", "external"}
   - merge_candidates: ready かつ信頼名義・quiescence 達成・保護パス非該当
   - protected: 上記のうち保護パスに触れる PR（auto-merge 禁止 → hold + 人間へ）
@@ -18,6 +20,7 @@ diff レビュー・マージの実行はエージェントが行う。
 """
 import json
 import re
+import shutil
 import subprocess
 import sys
 from datetime import datetime, timedelta, timezone
@@ -159,16 +162,29 @@ def fetch_prs_via_gh():
     return prs
 
 
+USAGE_WITHOUT_GH = """gh CLI が見つかりません。MCP ツール等でデータを取得し、--stdin で渡してください:
+
+  python3 .claude/skills/review-and-merge/scripts/classify_prs.py --stdin < prs.json
+
+prs.json は PR の JSON 配列。各要素の形は classify() の docstring を参照。"""
+
+
 def main():
     config = parse_guardrails(
         (Path(__file__).resolve().parents[3] / "GUARDRAILS.md").read_text())
-    if "--stdin" in sys.argv or not sys.stdin.isatty():
+    # エージェントの Bash ツールから起動すると stdin は常に非 tty になるため、
+    # tty 判定では JSON を渡していなくても stdin モードに入ってしまう (PR #329 と同じ罠)
+    if "--stdin" in sys.argv:
         prs = json.load(sys.stdin)
-    else:
+    elif shutil.which("gh"):
         prs = fetch_prs_via_gh()
+    else:
+        print(USAGE_WITHOUT_GH, file=sys.stderr)
+        return 1
     result = classify(prs, config, datetime.now(timezone.utc))
     json.dump({"config": config, **result}, sys.stdout, ensure_ascii=False, indent=1)
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
