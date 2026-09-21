@@ -188,7 +188,7 @@ layout: default
         label.className = 'shared-label';
         label.textContent = 'メインにも掲載';
         var br = articles[i].querySelector('br');
-        if (br) articles[i].insertBefore(label, br);
+        if (br) br.parentNode.insertBefore(label, br);
         else articles[i].appendChild(label);
       } else {
         exclusiveCount++;
