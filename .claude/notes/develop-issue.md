@@ -80,6 +80,8 @@ artifact に写るのは、その branch の `_posts/` をビルドした結果�
 - 毎朝9時のキュレーションで当日分の投稿が main に入る。`_posts/` の中身に関わるルールを足す PR は、rebase のたびに当日分を揃え直す必要がある
 - レビュー stage で PR を調べるときは、git で足りるものを MCP で取らない。実測で往復したのは次の3つ:
   - **conflict の有無**: `git fetch origin` のうえ `git merge-tree --write-tree origin/<先にマージする head> origin/<次の head>`（exit 0 なら clean）。この loop の PR head は repo 内ブランチなのでローカルで完結し、候補同士のマージ順も先に当てられる（マージ後に初めて conflict を知る順序にならない）。`pull_request_read(minimal_output=true)` は **PR body を削らない**ので、`mergeable_state` を見るためだけに呼ぶと PR body 全文（実測 約20k トークン）が返る。`behind` 等の値が要るときだけ MCP に落とす
-  - **checks**: `actions_list(method=list_workflow_runs, resource_id=jekyll-build-check.yml)` で head_sha ごとの conclusion がまとめて取れる（PR ごとに引かない）
-  - **分類スクリプトへの入力**: `list_pull_requests` 1回で number/title/draft/labels/body/head branch を取り、`files` / `patches` / `last_commit_at` は `git merge-base` → `git diff` で組み立てる
+  - **checks**: `actions/workflows/jekyll-build-check.yml/runs?per_page=30` を1回引けば head_sha ごとの conclusion がまとめて取れる（PR ごとに引かない）。MCP の `actions_list(method=list_workflow_runs)` でも同じ
+  - **分類スクリプトへの入力**: `classify_prs.py` は `gh` 前提のままなので `--stdin` に渡す。MCP を1回も使わず素の REST だけで組める（実測 2026-09-21、open PR 9件で 19 リクエスト・数秒）。`urllib` で `pulls?state=open&per_page=100` → PR ごとに `pulls/{n}/files` と `pulls/{n}/commits` を引き、`head_in_repo` は `head.repo.full_name == base.repo.full_name` で作る。`patches` は files の `patch` をそのまま使う（`git diff` で組み直すと GitHub の形式とずれる）
+- マージ後の head branch 削除は repo 設定で自動。`git push origin --delete <branch>` は `remote ref does not exist` で失敗するので叩かない（`gh pr merge --delete-branch` 相当の後始末は不要）
+- マージ後の main ビルド確認は `actions/workflows/pages.yml/runs` を `head_sha` でフィルタして待つ。run はマージから 25 秒ほどで現れ、60〜90 秒で completed になる（実測 2026-09-21、3回とも success）。直前の別 run で代用しない
 - squash マージされた PR にスタックしたブランチは `git rebase --onto origin/main <スタック元の最後の commit>` で自分の commit だけ載せ替える（素直な rebase は squash 済みの内容と全面衝突する）
