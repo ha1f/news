@@ -77,4 +77,10 @@ mcp__github__actions_get(method=download_workflow_run_artifact, resource_id=<art
   - **conflict の有無**: `git fetch origin` のうえ `git merge-tree --write-tree origin/<先にマージする head> origin/<次の head>`（exit 0 なら clean）。この loop の PR head は repo 内ブランチなのでローカルで完結し、候補同士のマージ順も先に当てられる（マージ後に初めて conflict を知る順序にならない）。`pull_request_read(minimal_output=true)` は **PR body を削らない**ので、`mergeable_state` を見るためだけに呼ぶと PR body 全文（実測 約20k トークン）が返る。`behind` 等の値が要るときだけ MCP に落とす
   - **checks**: `actions_list(method=list_workflow_runs, resource_id=jekyll-build-check.yml)` で head_sha ごとの conclusion がまとめて取れる（PR ごとに引かない）
   - **分類スクリプトへの入力**: `list_pull_requests` 1回で number/title/draft/labels/body/head branch を取り、`files` / `patches` / `last_commit_at` は `git merge-base` → `git diff` で組み立てる
+- 評価 stage でペルソナが「一覧が全件展開されて長い」「フィルタ／タブが反応しない」と報告したら、まず JS 由来を疑う（ペルソナは WebFetch で見るので JS が走らない）。実ブラウザでは次が効いているので、そのままでは起票しない（2026-09-21 に main のテンプレートを読んで確認。`grep -n 'INITIAL_MONTHS\|RECENT_DAYS\|URLSearchParams\|archive-article-extra' archive.md _layouts/profile.html` で再確認できる）:
+  - `archive.md`: 直近3ヶ月だけ出し、残りは「過去の記事を表示」ボタン（`INITIAL_MONTHS = 3`）。各日の4件目以降の見出しは `archive-article-extra` で hidden
+  - `_layouts/profile.html`: 直近3日だけ出し、残りは `#archive-show-older` ボタン（`RECENT_DAYS = 3`）
+  - 上の2つとも `?tag=` を `URLSearchParams` で読んでトピック絞り込みを適用する（トップの「トピック別」リンクの着地点）
+  - `_layouts/post.html`: プロファイル記事のうちメインにも載っている項目に「メインにも掲載」ラベルと「N件はこのプロファイルだけの記事です」の注記を JS で付ける
+  テンプレート側が変わったらこの記述も直す。JS の有無に関わらず残る指摘（静的な文言・生成物の中身）だけが起票対象。
 - squash マージされた PR にスタックしたブランチは `git rebase --onto origin/main <スタック元の最後の commit>` で自分の commit だけ載せ替える（素直な rebase は squash 済みの内容と全面衝突する）
