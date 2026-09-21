@@ -55,6 +55,8 @@ mcp__github__actions_get(method=download_workflow_run_artifact, resource_id=<art
 
 ローカルの Chromium は CI と同じ版ではない（ローカル 1.56.1 / `chromium-1194`、CI は 1.62.1 ピン）ので、最終確認は artifact のほうが CI の見え方に近い。
 
+artifact に写るのは、その branch の `_posts/` をビルドした結果だけ。「これから生成される記事」の見え方を変える変更（publish-pages のタイトル生成ルール等）は `_posts/` を1件も触らないので、**artifact は main と同じ絵のままで、変更後の姿を1件も確認できない**（実走で PR #365 がこれに当たった）。この種の変更は、当日分の front matter を新形式に差し替えたローカルビルドで補う。
+
 ## 検証コマンド
 
 - 保護パス判定: `python3 .claude/scripts/check_protected_paths.py --diff origin/main`（`ui_changes` が出たら `.claude/rules/ui-changes.md` に従う）
