@@ -3,8 +3,8 @@
 毎日の自動ループが従う上限と保護対象。各スキルのスクリプトがこの yaml ブロックを読む。ループ自身はこのファイルを変更しない（変更 PR は必ず人間がマージする）。
 
 ```yaml
-max_new_issues_per_day: 3      # PdM の新規 issue 作成上限
-open_issue_cap: 10             # open issue（status issue 除く）がこれを超えたらグルーミングのみ
+max_new_issues_per_day: 3      # PdM（evaluate）の探索的な起票の上限。review の起票は含まない
+open_issue_cap: 10             # open issue（status issue 除く）がこれを超えたらグルーミングのみ。review の起票も数える
 quiescence_minutes: 30         # マージ前に PR の最終 commit から置く時間
 auto_merge_mode: enabled       # dry-run（判定コメントのみ）| enabled（自動マージ）
 protected_paths:               # 触れる PR は auto-merge 禁止 → hold を付けて人間に委ねる
@@ -14,6 +14,8 @@ protected_paths:               # 触れる PR は auto-merge 禁止 → hold を
   - terms.md                   # 法的文書はオーナー承認必須 (#226)
   - privacy.md                 # 同上
 ```
+
+起票の上限を探索と保全で分けているのは、学びを黙って失うほうが損失が大きいため（要修正だが linked issue の無い PR を close するとき、review は学びを issue に残す）。ただし保全分も `open_issue_cap` には数えるので、review の起票が cap を埋めると翌日の PdM はグルーミングのみになる。
 
 保護パスにこのファイル自身と review-and-merge が含まれるため、安全装置を緩める変更は必ず人間のマージを通る。保護パス内でもバージョン・digest 文字列の置換だけの変更は安全装置を変えないので、スクリプトが見分けて通常のレビューに回す（上流の changelog を確認するのはレビューの仕事）。
 
