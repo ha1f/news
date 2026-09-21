@@ -17,11 +17,11 @@ description: "open issue から今日実装する対象を選定し、develop-is
 4. Skill ツールで `develop-issue` を直列に実行する。件数の上限は設けず、次の review-and-merge（トリガー時刻は README の trigger 定義表。12時 run なら15時、16時 run なら18時）までに完走できると判断できる間は backlog を消化し続ける。次の1件を残り時間で完走できるか迷ったら着手せず終える（完走できない draft PR を残すより次の run に回すほうが良い。merge と issue の close は review-and-merge が担う）
    - 1件の所要は実装だけでは終わらない。push 前レビューとその反映・CI の完走までを含めて1件と数える（レビューが重大な指摘を出す前提で見積もる。出なければ早く終わるだけ）。見積もりの基準は直前に完走した1件の実測に置き、最初の1件は保守的に見る
 5. 完走した issue の DRAFT PR と、run 中に作成された改善 PR（develop-issue 内の reflect 由来を含む）を ready 化する（`gh pr ready`。`gh` が無い環境では `update_pull_request` に `draft: false` を渡す。次の review run のマージ候補になる）。完走できなかった PR は draft のまま残す
+6. **ここで終わらず**、reflect-and-improve を実行する（対象はこのスキルの選定ロジックのみ。develop-issue 内部の学びは develop-issue 自身が反映済み）。作成した改善 PR も ready 化する。結果を確認してから、その内容で status issue に終了コメントを投稿する（次項）
 
 ## 完了条件
 
 - status issue に開始と終了の各1コメント。1行目は check_state.py が機械判定する JSON（キー名・値とも厳密一致が必要）:
   - 開始: `{"stage": "develop", "phase": "start", "summary": "候補: #26, #28。#26 を優先着手"}`
   - 終了: `{"stage": "develop", "phase": "end", "ok": true, "summary": "#26 実装 → PR #27", "reflect": "LESSONS.md 更新1件"}`
-    - `reflect` は reflect-and-improve の結果を1行で記す（例: `"改善なし"`, `"LESSONS.md 更新1件"`, `"改善 PR #30"`）。実施の有無と成果を機械・人間の両方が追跡できるようにする。reflect-and-improve を実行してから end コメントを投稿する（`"実施予定"` 等のプレースホルダーで先に投稿して end を2本にしない）
-- 最後に reflect-and-improve を実行する。振り返り対象はこのスキルの選定ロジックのみ（develop-issue 内部の学びは develop-issue 自身が反映済み）。作成した改善 PR も ready 化する
+    - `reflect` は手順6（reflect-and-improve）の結果を1行で記す（例: `"改善なし"`, `"LESSONS.md 更新1件"`, `"改善 PR #30"`）。実施の有無と成果を機械・人間の両方が追跡できるようにする。**手順6を実行し終えてから**この終了コメントを投稿する（`"実施予定"` 等のプレースホルダーで先に投稿して end を2本にしない。実走で、開発完了後すぐに終了コメントを組み立ててこの手順を飛ばしかけたことがある — 手順の番号付きステップに無いとチェックリストの通過点として見落とされる）
