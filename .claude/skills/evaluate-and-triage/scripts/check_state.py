@@ -48,8 +48,10 @@ def gh_json(path, ok_404=False, ok_missing=(), paginate=True):
     cmd = ["gh", "api"] + (["--paginate"] if paginate else []) + [path]
     proc = subprocess.run(cmd, capture_output=True, text=True)
     if proc.returncode != 0:
-        if (ok_404 and "404" in proc.stderr) or any(str(code) in proc.stderr
-                                                    for code in ok_missing):
+        # gh は HTTP ステータスを本文でなくメッセージ先頭に出す。素の部分文字列一致だと
+        # URL やメッセージ中の数字を拾うので、`HTTP <code>` の形に絞る
+        if ((ok_404 and re.search(r"HTTP 404\b", proc.stderr))
+                or any(re.search(rf"HTTP {code}\b", proc.stderr) for code in ok_missing)):
             return None
         raise RuntimeError(proc.stderr.strip())
     return json.loads(proc.stdout)
@@ -247,7 +249,7 @@ def since_param(now):
     解釈されて別の時刻になる。しかも GitHub は壊れた値を 422 で弾かずに黙って受け取る
     （実測 2026-09-20: 実効カットオフが前日 00:00 JST → 16:00 JST に16時間ずれ、
     10時の evaluate が毎日 health の missing に落ちた）。UTC の `Z` 形式なら
-    エスケープが要らず、gh 経路・MCP 経路とも表記が揃う。"""
+    エスケープが要らず、gh 経路・REST 経路の両方をまとめて直せる。"""
     return ((now - timedelta(days=1))
             .replace(hour=0, minute=0, second=0, microsecond=0)
             .astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"))

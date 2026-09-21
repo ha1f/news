@@ -274,14 +274,36 @@ class GhJsonTest(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             self.run_with("HTTP 403: Forbidden")
 
+    def test_status_digits_elsewhere_in_message_do_not_count(self):
+        # URL やメッセージ中の 403 を HTTP ステータスと取り違えない
+        with self.assertRaises(RuntimeError):
+            self.run_with("HTTP 500: could not resolve issues/403/comments",
+                          ok_missing=(403,))
+
+    def test_ok_404_matches_only_http_404(self):
+        self.assertIsNone(self.run_with("HTTP 404: Not Found", ok_404=True))
+        with self.assertRaises(RuntimeError):
+            self.run_with("HTTP 500: run 404 failed", ok_404=True)
+
 
 class ResolveRepoTest(unittest.TestCase):
     """origin の URL 表記ゆれから owner/repo を取り出す。"""
 
     def resolve(self, url):
         completed = mock.Mock(stdout=url + "\n")
-        with mock.patch.object(check_state.subprocess, "run", return_value=completed):
-            return check_state.resolve_repo()
+        with mock.patch.object(check_state.subprocess, "run",
+                               return_value=completed) as run:
+            result = check_state.resolve_repo()
+        self.last_call = run.call_args
+        return result
+
+    def test_asks_git_at_the_repo_root_not_cwd(self):
+        """cwd がどこでも同じ答えになるよう `git -C <repo root>` で引く。"""
+        self.resolve("https://github.com/ha1f/news.git")
+        argv = self.last_call.args[0]
+        root = str(Path(check_state.__file__).resolve().parents[4])
+        self.assertEqual(argv[:3], ["git", "-C", root])
+        self.assertIn("remote.origin.url", argv)
 
     def test_https_with_and_without_git_suffix(self):
         self.assertEqual(self.resolve("https://github.com/ha1f/news.git"), ("ha1f", "news"))
