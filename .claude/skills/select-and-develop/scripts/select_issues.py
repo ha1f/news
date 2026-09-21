@@ -41,8 +41,11 @@ def gh_json(path):
 
 
 def resolve_repo():
-    """git remote の origin URL から owner/repo を取り出す（gh 不在時、決定的に解決する）。"""
-    url = subprocess.run(["git", "config", "--get", "remote.origin.url"],
+    """git remote の origin URL から owner/repo を取り出す（gh 不在時、決定的に解決する）。
+
+    cwd がどこでも同じ答えになるよう、repo root を明示して git に問い合わせる。"""
+    root = Path(__file__).resolve().parents[4]
+    url = subprocess.run(["git", "-C", str(root), "config", "--get", "remote.origin.url"],
                          capture_output=True, text=True, check=True).stdout.strip()
     m = re.search(r"github\.com[:/](?P<owner>[^/]+)/(?P<repo>[^/]+?)(?:\.git)?/?$", url)
     if not m:
@@ -77,7 +80,11 @@ def api_json(path):
 
     cloud proxy が素の HTTPS にも GitHub 認証を注入するため、トークンが無くても動く
     （実測 2026-09-20、.claude/notes/develop-issue.md）。GH_TOKEN / GITHUB_TOKEN が
-    環境にあれば Authorization ヘッダに載せる。"""
+    環境にあれば Authorization ヘッダに載せる。
+
+    この取得部（resolve_repo / parse_link_header / with_page / api_json）は
+    check_state.py にも同じものがある。スキルのスクリプトを単体で動かせる状態に
+    保つための意図的な重複で、3つ目の複製が要るときに共有モジュール化を判断する。"""
     token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
     headers = {"Accept": "application/vnd.github+json", "User-Agent": "ha1f-news-daily-loop"}
     if token:

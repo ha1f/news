@@ -40,22 +40,27 @@ NO_GH_HINT = """gh CLI も REST 直叩きも使えませんでした。MCP ツ�
    "prs": [...], "issues": [...], "comments": [...]}
   EOF
 
-取得元は .claude/skills/evaluate-and-triage/SKILL.md の Step 0 を参照。"""
+取得元とハマりどころは .claude/skills/evaluate-and-triage/SKILL.md の Step 0
+「`--stdin` で渡すときの取得元」を参照。"""
 
 
 def gh_json(path, ok_404=False, ok_missing=(), paginate=True):
     cmd = ["gh", "api"] + (["--paginate"] if paginate else []) + [path]
     proc = subprocess.run(cmd, capture_output=True, text=True)
     if proc.returncode != 0:
-        if ok_404 and "404" in proc.stderr:
+        if (ok_404 and "404" in proc.stderr) or any(str(code) in proc.stderr
+                                                    for code in ok_missing):
             return None
         raise RuntimeError(proc.stderr.strip())
     return json.loads(proc.stdout)
 
 
 def resolve_repo():
-    """git remote の origin URL から owner/repo を取り出す（gh 不在時、決定的に解決する）。"""
-    url = subprocess.run(["git", "config", "--get", "remote.origin.url"],
+    """git remote の origin URL から owner/repo を取り出す（gh 不在時、決定的に解決する）。
+
+    cwd がどこでも同じ答えになるよう、repo root を明示して git に問い合わせる。"""
+    root = Path(__file__).resolve().parents[4]
+    url = subprocess.run(["git", "-C", str(root), "config", "--get", "remote.origin.url"],
                          capture_output=True, text=True, check=True).stdout.strip()
     m = re.search(r"github\.com[:/](?P<owner>[^/]+)/(?P<repo>[^/]+?)(?:\.git)?/?$", url)
     if not m:
@@ -235,6 +240,19 @@ def assemble_output(config, today, post_exists, pages, pages_build,
     }
 
 
+def since_param(now):
+    """前日 0時 (JST) を GitHub の `since` に渡せる形にする（純関数）。
+
+    `isoformat()` の `+09:00` をそのままクエリに入れると、URL の `+` がスペースとして
+    解釈されて別の時刻になる。しかも GitHub は壊れた値を 422 で弾かずに黙って受け取る
+    （実測 2026-09-20: 実効カットオフが前日 00:00 JST → 16:00 JST に16時間ずれ、
+    10時の evaluate が毎日 health の missing に落ちた）。UTC の `Z` 形式なら
+    エスケープが要らず、gh 経路・MCP 経路とも表記が揃う。"""
+    return ((now - timedelta(days=1))
+            .replace(hour=0, minute=0, second=0, microsecond=0)
+            .astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"))
+
+
 def fetch_data(fetch_json, config, today, now):
     """`repos/{owner}/{repo}/` 以下の相対パスを取る fetch_json を受け取り、
     gh CLI 経由でも REST 直叩き経由でも同じ組み立てをする。"""
@@ -251,9 +269,8 @@ def fetch_data(fetch_json, config, today, now):
     status_issue, _ = summarize_issues(issues)
     comments = []
     if status_issue:
-        since = (now - timedelta(days=1)).replace(hour=0, minute=0, second=0).isoformat()
         comments = fetch_json(
-            f"issues/{status_issue}/comments?per_page=100&since={since}") or []
+            f"issues/{status_issue}/comments?per_page=100&since={since_param(now)}") or []
     return assemble_output(config, today, post is not None, pages, pages_build,
                            prs, issues, comments)
 

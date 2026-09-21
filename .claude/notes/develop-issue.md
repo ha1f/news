@@ -58,6 +58,7 @@ mcp__github__actions_get(method=download_workflow_run_artifact, resource_id=<art
 ## 検証コマンド
 
 - 保護パス判定: `python3 .claude/scripts/check_protected_paths.py --diff origin/main`（`ui_changes` が出たら `.claude/rules/ui-changes.md` に従う）
+  - **判定前に `origin/main` を取り込む。** `--diff` は2点 diff なので、branch が main より遅れていると *main 側で進んだ* ファイルまで自分の変更として並ぶ。実測 2026-09-21: branch が #369（Renovate の playwright 更新）の分だけ遅れていて `.github/workflows/jekyll-build-check.yml` が `protected: true` で出たが、`git diff --name-only origin/main...HEAD -- .github/workflows/` は 0 件。main をマージしたら `protected: false` になった
 - 見出しリンクの着地点: `python3 .claude/scripts/check_article_anchors.py <_site>`
 - 読みどころの欠落: `python3 .claude/scripts/check_article_notes.py`
 - ソース表記の不一致: `python3 .claude/scripts/check_source_hints.py`

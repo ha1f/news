@@ -11,7 +11,17 @@ description: "デプロイ済みのニュースサイトをサービスユーザ
 
 `python3 .claude/skills/evaluate-and-triage/scripts/check_state.py` を実行する。`gh` CLI が使えない環境（CCR 等）でも引数なしで動く（GitHub REST API を直接叩く。cloud proxy が認証を注入するので token が無くても通る）。設定値・今日の投稿の有無・Pages のビルド状態・status issue 番号・open issue 数・前日の健全性集計（`health`）が JSON で返る。
 
-それでも失敗する場合（proxy 自体が使えない等）は、データを自分で取得して `--stdin` で渡す（渡す JSON の形は、`--stdin` を付けずに実行したときに `check_state.py` が stderr に出すヒントに載っている）。`pages.html_url` は proxy が `/repos/{owner}/{repo}/pages` を 403 で塞ぐため常に null になる。Pages の URL は README の GitHub Pages URL を使う。
+`pages_url` は常に null になる（proxy が `/repos/{owner}/{repo}/pages` を 403 で塞ぐため。gh 経路・REST 経路とも同じ）。Pages の URL は README の GitHub Pages URL を使う。
+
+### `--stdin` で渡すときの取得元
+
+上の実行が失敗する場合（proxy 自体が使えない等）だけ、データを自分で取得して `--stdin` で渡す。渡す JSON の形は `check_state.py` が stderr に出すヒントに載っている。取得元と、実測で踏んだハマりどころ:
+
+- `post_exists`: `{today}` は `TZ=Asia/Tokyo date +%F`（JST 基準。コンテナは UTC なので素の `date` では1日ずれる）。`git fetch origin main` 後に `git cat-file -e origin/main:_posts/{today}-news.md`（exit 0 なら true。checkout 状態に依存しないよう必ず `origin/main` を直接見る）
+- `pages_build`: `actions_list`（`method: list_workflow_runs`, `resource_id: pages.yml`, `perPage: 1`）。`method` を省くと失敗し、`resource_id` を省くと repo 全体の run が返って PR の CI run を掴む
+- `prs` / `issues` / `comments`: `urllib` で `https://api.github.com/repos/{owner}/{repo}/` の `pulls?state=open&per_page=100` / `issues?state=open&per_page=100` / `issues/{status_issue}/comments?per_page=100` を叩く（`check_state.py` の REST 経路と同じ）。100件を超えるときは `&page=N` を自分で足して取り直す。`Link` ヘッダ内の URL をそのまま辿ってはいけない（`/repositories/{id}/` 形式で、proxy がこの形を 403 で弾く）
+  - MCP の `list_issues` は使わない。`user.type` を落とすため `check_state.py` の bot 除外が効かず、bot のトラッキング issue が `open_issues` に混ざって `open_issue_cap` の判定がずれる（実測で1件差）
+  - コメントを `since` で絞るときは UTC の `Z` 形式にする。`+09:00` を生で渡すと `+` がスペース扱いになり、GitHub は 422 で弾かず黙って別の時刻として受け取る（実測でカットオフが16時間ずれた）
 
 - `post_in_main` が false → `publish_in_progress` が true なら publish がまだ走行中。status issue に記録だけして終了する。false なら 9時の失敗として緊急の ops issue を起票し、評価はスキップする
 - `pages_build.conclusion` が failure → ログを確認して build job と deploy job のどちらが失敗したか切り分ける。build job が失敗していればコードが壊れているので緊急の ops issue を起票する。deploy job のみの失敗（503 等の一過性エラー）は failed jobs の再実行を試み、再実行も失敗したら ops issue を起票する
