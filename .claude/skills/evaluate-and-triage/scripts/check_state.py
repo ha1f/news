@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """daily-loop: 評価前の配信状態・ループ健全性を機械判定して JSON で出力する。
 
-使い方: python3 check_state.py          # gh CLI からデータを取得する
-      cat state.json | python3 check_state.py --stdin  # gh が無い環境
+使い方: python3 check_state.py          # gh CLI があれば gh、無ければ REST 直叩きでデータを取得する
+      cat state.json | python3 check_state.py --stdin  # 保険。渡すデータは手動で用意する
 出力: {"config", "today", "post_in_main", "publish_in_progress", "pages_url",
        "pages_build", "status_issue", "open_issues", "health",
        "recent_status_comments"}
@@ -13,10 +13,13 @@
 起票するかどうかの判断はエージェントが行う。
 """
 import json
+import os
 import re
 import shutil
 import subprocess
 import sys
+import urllib.error
+import urllib.request
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -25,8 +28,10 @@ STAGES = ("evaluate", "develop", "review")
 JST = timezone(timedelta(hours=9))
 COMMENT_LIMIT = 10
 BODY_LIMIT = 200
+API_BASE = "https://api.github.com"
+API_TIMEOUT = 15
 
-NO_GH_HINT = """gh CLI が見つかりません。MCP ツール等でデータを取得し、--stdin で渡してください:
+NO_GH_HINT = """gh CLI も REST 直叩きも使えませんでした。MCP ツール等でデータを取得し、--stdin で渡してください:
 
   python3 check_state.py --stdin <<'EOF'
   {"post_exists": true,
@@ -35,17 +40,99 @@ NO_GH_HINT = """gh CLI が見つかりません。MCP ツール等でデータ�
    "prs": [...], "issues": [...], "comments": [...]}
   EOF
 
-取得元は .claude/skills/evaluate-and-triage/SKILL.md の Step 0 を参照。"""
+取得元とハマりどころは .claude/skills/evaluate-and-triage/SKILL.md の Step 0
+「`--stdin` で渡すときの取得元」を参照。"""
 
 
-def gh_json(path, ok_404=False, paginate=True):
+def gh_json(path, ok_404=False, ok_missing=(), paginate=True):
     cmd = ["gh", "api"] + (["--paginate"] if paginate else []) + [path]
     proc = subprocess.run(cmd, capture_output=True, text=True)
     if proc.returncode != 0:
-        if ok_404 and "404" in proc.stderr:
+        # gh は HTTP ステータスを本文でなくメッセージ先頭に出す。素の部分文字列一致だと
+        # URL やメッセージ中の数字を拾うので、`HTTP <code>` の形に絞る
+        if ((ok_404 and re.search(r"HTTP 404\b", proc.stderr))
+                or any(re.search(rf"HTTP {code}\b", proc.stderr) for code in ok_missing)):
             return None
         raise RuntimeError(proc.stderr.strip())
     return json.loads(proc.stdout)
+
+
+def resolve_repo():
+    """git remote の origin URL から owner/repo を取り出す（gh 不在時、決定的に解決する）。
+
+    cwd がどこでも同じ答えになるよう、repo root を明示して git に問い合わせる。"""
+    root = Path(__file__).resolve().parents[4]
+    url = subprocess.run(["git", "-C", str(root), "config", "--get", "remote.origin.url"],
+                         capture_output=True, text=True, check=True).stdout.strip()
+    m = re.search(r"github\.com[:/](?P<owner>[^/]+)/(?P<repo>[^/]+?)(?:\.git)?/?$", url)
+    if not m:
+        raise RuntimeError(f"origin の remote URL から owner/repo を特定できません: {url}")
+    return m.group("owner"), m.group("repo")
+
+
+def parse_link_header(header):
+    """RFC 5988 の Link ヘッダーを {rel: url} にする（純関数）。"""
+    links = {}
+    for part in (header or "").split(","):
+        m = re.match(r'\s*<([^>]+)>;\s*rel="([^"]+)"', part)
+        if m:
+            links[m.group(2)] = m.group(1)
+    return links
+
+
+def with_page(url, page):
+    """url に page=N を足す（既にあれば置き換える）純関数。
+
+    GitHub の Link ヘッダーが返す next の URL は `/repositories/{id}/...` 形式で、
+    proxy がこの形を 403 で弾く（実測 2026-09-20）。ヘッダの URL をそのまま辿らず、
+    ページ番号だけ次に進めて `/repos/{owner}/{repo}/...` 形式の URL を自前で組み立てる。"""
+    if re.search(r"[?&]page=\d+", url):
+        return re.sub(r"([?&]page=)\d+", r"\g<1>" + str(page), url)
+    sep = "&" if "?" in url else "?"
+    return f"{url}{sep}page={page}"
+
+
+def api_json(path, ok_404=False, ok_missing=(), paginate=True):
+    """gh CLI 不在の環境向けに GitHub REST API を直接叩く。
+
+    cloud proxy が素の HTTPS にも GitHub 認証を注入するため、トークンが無くても動く
+    （実測 2026-09-20、.claude/notes/develop-issue.md）。GH_TOKEN / GITHUB_TOKEN が
+    環境にあれば Authorization ヘッダに載せる。
+
+    `ok_missing` は「データが無い」以外の理由でも None 扱いにしたい HTTP ステータスの集合。
+    例: `/repos/{owner}/{repo}/pages` は proxy 自体が 403 で塞ぐエンドポイントで（実測
+    2026-09-20）、gh CLI 環境でも呼び出し側は元々 `pages_url` 欠落を許容している
+    （evaluate-and-triage/SKILL.md 参照）。"""
+    token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
+    headers = {"Accept": "application/vnd.github+json", "User-Agent": "ha1f-news-daily-loop"}
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    request_url = f"{API_BASE}/{path}"
+    items, is_list, page = [], False, 1
+    while request_url:
+        try:
+            with urllib.request.urlopen(
+                    urllib.request.Request(request_url, headers=headers),
+                    timeout=API_TIMEOUT) as resp:
+                body = resp.read()
+                link = resp.headers.get("Link")
+        except urllib.error.HTTPError as error:
+            if (ok_404 and error.code == 404) or error.code in ok_missing:
+                return None
+            raise RuntimeError(
+                f"GitHub API {error.code} {request_url}: "
+                f"{error.read().decode('utf-8', 'replace')[:300]}") from error
+        data = json.loads(body) if body else None
+        if not isinstance(data, list):
+            return data
+        items.extend(data)
+        is_list = True
+        if paginate and "next" in parse_link_header(link):
+            page += 1
+            request_url = with_page(f"{API_BASE}/{path}", page)
+        else:
+            request_url = None
+    return items if is_list else None
 
 
 def parse_guardrails(text):
@@ -155,28 +242,54 @@ def assemble_output(config, today, post_exists, pages, pages_build,
     }
 
 
-def fetch_via_gh(config, today, now):
-    """gh CLI でデータを取得し assemble_output に渡す。"""
-    post = gh_json(f"repos/{{owner}}/{{repo}}/contents/_posts/{today}-news.md", ok_404=True)
-    pages = gh_json("repos/{owner}/{repo}/pages", ok_404=True, paginate=False)
-    runs = gh_json("repos/{owner}/{repo}/actions/workflows/pages.yml/runs?per_page=1",
-                   ok_404=True, paginate=False)
+def since_param(now):
+    """前日 0時 (JST) を GitHub の `since` に渡せる形にする（純関数）。
+
+    `isoformat()` の `+09:00` をそのままクエリに入れると、URL の `+` がスペースとして
+    解釈されて別の時刻になる。しかも GitHub は壊れた値を 422 で弾かずに黙って受け取る
+    （実測 2026-09-20: 実効カットオフが前日 00:00 JST → 16:00 JST に16時間ずれ、
+    10時の evaluate が毎日 health の missing に落ちた）。UTC の `Z` 形式なら
+    エスケープが要らず、gh 経路・REST 経路の両方をまとめて直せる。"""
+    return ((now - timedelta(days=1))
+            .replace(hour=0, minute=0, second=0, microsecond=0)
+            .astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"))
+
+
+def fetch_data(fetch_json, config, today, now):
+    """`repos/{owner}/{repo}/` 以下の相対パスを取る fetch_json を受け取り、
+    gh CLI 経由でも REST 直叩き経由でも同じ組み立てをする。"""
+    post = fetch_json(f"contents/_posts/{today}-news.md", ok_404=True)
+    pages = fetch_json("pages", ok_404=True, ok_missing=(403,), paginate=False)
+    runs = fetch_json("actions/workflows/pages.yml/runs?per_page=1", ok_404=True, paginate=False)
     latest_run = (runs or {}).get("workflow_runs") or []
     pages_build = None
     if latest_run:
         pages_build = {key: latest_run[0][key]
                        for key in ("status", "conclusion", "head_sha", "updated_at")}
-    prs = gh_json("repos/{owner}/{repo}/pulls?state=open&per_page=100")
-    issues = gh_json("repos/{owner}/{repo}/issues?state=open&per_page=100")
+    prs = fetch_json("pulls?state=open&per_page=100") or []
+    issues = fetch_json("issues?state=open&per_page=100") or []
     status_issue, _ = summarize_issues(issues)
     comments = []
     if status_issue:
-        since = (now - timedelta(days=1)).replace(hour=0, minute=0, second=0).isoformat()
-        comments = gh_json(
-            f"repos/{{owner}}/{{repo}}/issues/{status_issue}/comments"
-            f"?per_page=100&since={since}")
+        comments = fetch_json(
+            f"issues/{status_issue}/comments?per_page=100&since={since_param(now)}") or []
     return assemble_output(config, today, post is not None, pages, pages_build,
                            prs, issues, comments)
+
+
+def fetch_via_gh(config, today, now):
+    """gh CLI でデータを取得する。"""
+    def fetch_json(path, **kwargs):
+        return gh_json("repos/{owner}/{repo}/" + path, **kwargs)
+    return fetch_data(fetch_json, config, today, now)
+
+
+def fetch_via_api(config, today, now):
+    """gh CLI 不在の環境向けに GitHub REST API を直接叩いて取得する。"""
+    owner, repo = resolve_repo()
+    def fetch_json(path, **kwargs):
+        return api_json(f"repos/{owner}/{repo}/{path}", **kwargs)
+    return fetch_data(fetch_json, config, today, now)
 
 
 def main():
@@ -196,10 +309,15 @@ def main():
             issues=data.get("issues", []),
             comments=data.get("comments", []),
         )
-    elif shutil.which("gh") is None:
-        sys.exit(NO_GH_HINT)
-    else:
+    elif shutil.which("gh"):
         result = fetch_via_gh(config, today, now)
+    else:
+        try:
+            result = fetch_via_api(config, today, now)
+        except (RuntimeError, OSError, subprocess.CalledProcessError) as error:
+            print(f"REST API でのデータ取得に失敗しました: {type(error).__name__} {error}\n",
+                  file=sys.stderr)
+            sys.exit(NO_GH_HINT)
 
     json.dump(result, sys.stdout, ensure_ascii=False, indent=1)
 

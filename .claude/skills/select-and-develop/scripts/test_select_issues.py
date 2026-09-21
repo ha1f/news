@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from select_issues import build_candidates, parse_guardrails
+from select_issues import build_candidates, parse_guardrails, parse_link_header, with_page
 
 
 def issue(number, title="t", assoc="OWNER", labels=(), created="2026-07-01T00:00:00Z",
@@ -177,6 +177,31 @@ class ParseGuardrailsTest(unittest.TestCase):
         self.assertEqual(config["auto_merge_mode"], "dry-run")
         self.assertEqual(config["protected_paths"],
                          [".github/workflows/**", ".claude/GUARDRAILS.md"])
+
+
+class ParseLinkHeaderTest(unittest.TestCase):
+    def test_extracts_rel_urls(self):
+        header = ('<https://api.github.com/repositories/1/issues?page=2>; rel="next", '
+                   '<https://api.github.com/repositories/1/issues?page=5>; rel="last"')
+        links = parse_link_header(header)
+        self.assertEqual(links["next"], "https://api.github.com/repositories/1/issues?page=2")
+        self.assertEqual(links["last"], "https://api.github.com/repositories/1/issues?page=5")
+
+    def test_empty_header_returns_empty_dict(self):
+        self.assertEqual(parse_link_header(""), {})
+        self.assertEqual(parse_link_header(None), {})
+
+
+class WithPageTest(unittest.TestCase):
+    def test_adds_page_param_when_absent(self):
+        url = "https://api.github.com/repos/o/r/issues?state=open&per_page=100"
+        self.assertEqual(with_page(url, 2),
+                         "https://api.github.com/repos/o/r/issues?state=open&per_page=100&page=2")
+
+    def test_replaces_existing_page_param(self):
+        url = "https://api.github.com/repos/o/r/issues?state=open&page=2&per_page=100"
+        self.assertEqual(with_page(url, 3),
+                         "https://api.github.com/repos/o/r/issues?state=open&page=3&per_page=100")
 
 
 if __name__ == "__main__":
