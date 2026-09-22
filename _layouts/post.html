@@ -183,7 +183,7 @@ layout: default
         }
       }
       if (isShared) {
-        articles[i].classList.add('shared-with-main');
+        articles[i].classList.add('shared-with-main');  // DOM 上の印のみ。見た目は .shared-label が担う
         var label = document.createElement('span');
         label.className = 'shared-label';
         label.textContent = 'メインにも掲載';
