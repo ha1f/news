@@ -131,13 +131,17 @@ PR の URL をユーザーに表示する。
 
 ### 6. マージ
 
-PR を squash マージしてブランチを削除する。
+マージ前に PR の conflict と checks を確認する（`gh pr view --json mergeable,statusCheckRollup`。`gh` が無い環境では MCP の `pull_request_read`(get) で mergeable を、(get_check_runs) で checks を確認する。(get_status) は legacy status しか返さず GitHub Actions の checks は空に見えるため使わない）。pending なら完了を待つ。conflict や red があれば直してから次に進む（マージ判定の考え方は review-and-merge スキルのマージ手順を参照）。
+
+checks が green になったら、PR を squash マージしてブランチを削除する。
 
 ```bash
 gh pr merge --squash --delete-branch
 ```
 
 `gh` が使えなければ MCP ツールで squash マージする（`merge_pull_request` に `--delete-branch` 相当のオプションは無い）。リポジトリの「Automatically delete head branches」設定が有効なら、マージ後に GitHub 側でブランチは自動削除される。手動で `git push origin --delete pages/{ブランチ名}` を試みても、既に削除済みなら `remote ref does not exist` で失敗するだけで実害はないため、成功を確認する必要はない。
+
+マージ後、対応する main のビルド run を特定して完了を待つ（`gh run list --workflow=pages.yml --commit <マージ後の main SHA>` で run を特定し、現れるまで待って `gh run watch <run id>`。`gh` が無ければ MCP の `actions_list`/`actions_get` で代用する。直前の別 run で代用しない）。conclusion が failure なら GitHub Pages に壊れた内容がデプロイされている状態なので、原因を直した修正コミットを push するか revert PR を作って自分でマージし、ユーザーに影響と対処を報告する。
 
 ### 7. 元のブランチに戻る
 
