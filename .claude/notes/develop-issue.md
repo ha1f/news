@@ -8,7 +8,7 @@
 
 - Jekyll ベースの静的サイト (`_config.yml`, `_posts/`, `index.md`)。GitHub Pages で公開
 - CI は `.github/workflows/jekyll-build-check.yml`（PR の base が `main` のときだけ走る）。ビルド + Playwright のスクリーンショット取得までを行い、artifact に残す
-  - **base が main でない PR（スタックした PR）には CI が付かない**。base の付け替えだけでは workflow は起動しない（`edited` は既定の trigger 外）ので、base ブランチのマージ後に rebase して push（`synchronize`）すると走る
+  - **base が main でない PR（スタックした PR）には CI が付かない**。base の付け替えだけでは workflow は起動しない（`edited` は既定の trigger 外）ので、base ブランチのマージ後に rebase して push（`synchronize`）すると走る。同じファイルを触る issue を同じ run で拾うと、スタックさせた側は base のマージまで検証できないので、in-flight の branch と同じファイルを触らない issue を選ぶ
 - `.gitignore` は toptal の macOS テンプレート + `.claude/` 用セクションで構成済み
 - theme は `minima` を指定しているが、GitHub Pages が実際にビルドに使うバージョンは 2.5.1 に固定 ([pages.github.com/versions](https://pages.github.com/versions/) で確認)。minima 3.x系の設定書式 (`minima.social_links` の配列、`author:` のハッシュ形式等) は 2.5.1 では無視されるかそのまま文字列化されて壊れる。`_config.yml` の `minima.*` / theme依存の設定を変更するときは [2.5.1 のテンプレ実物](https://github.com/jekyll/minima/tree/v2.5.1) と照合してから進める
 - `gh` CLI は無い。GitHub の操作は MCP ツール（`mcp__github__*`）で行う
@@ -42,6 +42,7 @@ playwright screenshot --browser chromium --full-page \
 
 - 配信は `python3 -m http.server <port> --directory <dir>` で。`baseurl: /news` を再現するため `<dir>/news/` に `_site` の中身を置く（CI の workflow と同じやり方）
 - Node の API を直接使う場合、dark mode は `browser.newContext({ colorScheme })` か `browser.newPage({ colorScheme })` で。`context.newPage({ colorScheme })` は**黙って無視される**（実測）
+- Node の API で幅を指定するキーは `viewport`。**`viewportSize` は黙って無視され 1280 幅になる**（Python 版のキー名。実測 2026-09-22: `newContext({viewportSize:{width:375,...}})` → `window.innerWidth` 1280 / `newContext({viewport:{width:375,...}})` → 375）。同じ `newContext` で `colorScheme` のほうは効くので、dark だけ合っていて幅が違う絵を撮ってしまう
 
 ### CI の screenshot artifact を取る
 
@@ -53,7 +54,7 @@ mcp__github__actions_get(method=download_workflow_run_artifact, resource_id=<art
   → 期限付きの署名 URL が返る。curl でそのまま落として unzip
 ```
 
-ローカルの Chromium は CI と同じ版ではない（ローカル 1.56.1 / `chromium-1194`、CI は 1.62.1 ピン）ので、最終確認は artifact のほうが CI の見え方に近い。
+ローカルの Chromium は CI と同じ版ではない（実測 2026-09-22: ローカル 1.56.1 / `chromium-1194`、CI は `PLAYWRIGHT_VERSION: 1.63.0` ピン。Renovate が上げるので CI 側は workflow の値を見る）ので、最終確認は artifact のほうが CI の見え方に近い。
 
 artifact に写るのは、その branch の `_posts/` をビルドした結果だけ。「これから生成される記事」の見え方を変える変更（publish-pages のタイトル生成ルール等）は `_posts/` を1件も触らないので、**artifact は main と同じ絵のままで、変更後の姿を1件も確認できない**（実走で PR #365 がこれに当たった）。この種の変更は、当日分の front matter を新形式に差し替えたローカルビルドで補う。
 
@@ -78,8 +79,11 @@ artifact に写るのは、その branch の `_posts/` をビルドした結果�
 - `.claude/skills/` 配下のスキルは repo 自身に置かれている。branch を切り替えても開始時に読んだ版に従う
 - スキルのスクリプトは「エージェントの Bash から起動すると stdin が非 tty」を踏まえた分岐になっているか確認する（`not sys.stdin.isatty()` で stdin モードに入る実装は必ず壊れる）
 - 毎朝9時のキュレーションで当日分の投稿が main に入る。`_posts/` の中身に関わるルールを足す PR は、rebase のたびに当日分を揃え直す必要がある
-- レビュー stage で PR を調べるときは、git で足りるものを MCP で取らない。実測で往復したのは次の3つ:
-  - **conflict の有無**: `git fetch origin` のうえ `git merge-tree --write-tree origin/<先にマージする head> origin/<次の head>`（exit 0 なら clean）。この loop の PR head は repo 内ブランチなのでローカルで完結し、候補同士のマージ順も先に当てられる（マージ後に初めて conflict を知る順序にならない）。`pull_request_read(minimal_output=true)` は **PR body を削らない**ので、`mergeable_state` を見るためだけに呼ぶと PR body 全文（実測 約20k トークン）が返る。`behind` 等の値が要るときだけ MCP に落とす
-  - **checks**: `actions_list(method=list_workflow_runs, resource_id=jekyll-build-check.yml)` で head_sha ごとの conclusion がまとめて取れる（PR ごとに引かない）
-  - **分類スクリプトへの入力**: `list_pull_requests` 1回で number/title/draft/labels/body/head branch を取り、`files` / `patches` / `last_commit_at` は `git merge-base` → `git diff` で組み立てる
+- レビュー stage で PR を調べるときは、取得元を **git → 素の REST → MCP** の順で選ぶ（MCP は往復が重く、返り値がトークン上限を超えるとファイルに退避される）。実測で迷ったのは次の3つ:
+  - **conflict の有無**: git で完結する。`git fetch origin` のうえ `git merge-tree --write-tree origin/<先にマージする head> origin/<次の head>`（exit 0 なら clean）。この loop の PR head は repo 内ブランチなのでローカルで完結し、候補同士のマージ順も先に当てられる（マージ後に初めて conflict を知る順序にならない）。`pull_request_read(get)` は **PR body 全文を返す**（ツールスキーマに `minimal_output` のようなパラメータは無い）ので、`mergeable_state` を見るためだけに呼ぶと body ごと返ってくる（実測 2026-09-22: open PR 7件、body は最大5,114字・7件合計23,122字）。`behind` 等の値が要るときだけ MCP に落とす
+  - **checks**: 素の REST で `actions/workflows/jekyll-build-check.yml/runs?per_page=100` を1回引けば head_sha ごとの conclusion がまとめて取れる（PR ごとに引かない）。MCP なら `actions_list(method=list_workflow_runs, resource_id=jekyll-build-check.yml)` が同じもの。1ページ100件に収まらない古い head は落ちるので、見つからない PR だけ `?head_sha=<40桁>` で個別に引く（1ページ100件ぶんしか遡れない。実測: 9/9 に push された PR #292 の run は1ページ目に入らなかった）
+  - **分類スクリプトへの入力**: 素の REST だけで組める。`.claude/skills/review-and-merge/scripts/classify_prs.py` は `gh` 不在の環境では `--stdin` のみだが、渡す JSON は `pulls?state=open&per_page=100` 1回 + PR ごとの `pulls/{n}/files` と `pulls/{n}/commits` で揃う（同スクリプトの `fetch_prs_via_gh()` がそのまま仕様。実測 2026-09-22: open PR 3件 = 7 リクエスト / 2.8 秒）。`fetch_prs_via_gh()` は `--paginate` なので、`files` / `commits` が100件を超える PR では `per_page=100` の次ページも辿る（`commits[-1]` が最終 commit でないと quiescence 判定が狂う）
+    - **`patches` を `git diff` の出力で組まない。** `version_bump_only()` は GitHub files API の patch 形式（`@@` 始まり・ファイルヘッダなし）を前提にしており、`git diff` は `---` / `+++` 行が削除・追加行として数えられて判定が壊れる。壊れると保護パスのバージョン置換が通常レビューに回らず `protected`（hold + 人間）に落ちる。実測 2026-09-22、PR #369 の `PLAYWRIGHT_VERSION` 更新で同じ1行の変更を両形式に通した: files API の patch → `True` / `git diff` の出力 → `False`
+- マージ後の branch 削除は repo 設定で自動（実測 2026-09-22 `GET /repos/{owner}/{repo}` → `delete_branch_on_merge: true`）。`gh pr merge --delete-branch` 相当の後始末は不要で、明示的に消しにいくと `remote ref does not exist` で失敗する
+- マージすると `pages.yml` の main ビルドが**数秒後に現れ、1分前後で completed** になる（実測 2026-09-22、直近のマージ済み PR 12件: run の出現がマージ後 2〜19 秒、completed まで 47〜77 秒、いずれも success）。run が現れるのを待つループで `?head_sha=` を使うなら **完全な40桁 SHA** を渡す。短縮 SHA は HTTP 200 / `total_count: 0` を返すだけなので永久に待つ（実測: 7桁・12桁とも 0件、40桁で1件）
 - squash マージされた PR にスタックしたブランチは `git rebase --onto origin/main <スタック元の最後の commit>` で自分の commit だけ載せ替える（素直な rebase は squash 済みの内容と全面衝突する）
