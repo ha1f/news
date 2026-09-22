@@ -42,6 +42,7 @@ playwright screenshot --browser chromium --full-page \
 
 - 配信は `python3 -m http.server <port> --directory <dir>` で。`baseurl: /news` を再現するため `<dir>/news/` に `_site` の中身を置く（CI の workflow と同じやり方）
 - Node の API を直接使う場合、dark mode は `browser.newContext({ colorScheme })` か `browser.newPage({ colorScheme })` で。`context.newPage({ colorScheme })` は**黙って無視される**（実測）
+- Node の API で幅を指定するキーは `viewport`。**`viewportSize` は黙って無視され 1280 幅になる**（Python 版のキー名。実測 2026-09-22: `newContext({viewportSize:{width:375,...}})` → `window.innerWidth` 1280 / `newContext({viewport:{width:375,...}})` → 375）。同じ `newContext` で `colorScheme` のほうは効くので、dark だけ合っていて幅が違う絵を撮ってしまう
 
 ### CI の screenshot artifact を取る
 
