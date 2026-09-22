@@ -323,9 +323,10 @@
   color: $grey-color;
 }
 
-.shared-with-main {
-  opacity: 0.75;
-}
+// .shared-with-main は JS が付ける DOM 上の印で、見た目は変えない。
+// 重複であることは .shared-label（「メインにも掲載」）が伝える。
+// opacity で減光するとパレット外の色が実行時に生まれ、リンクのコントラストが
+// AA を割る（light で 4.15:1 → 2.81:1）ため、減光は置かない。
 
 .shared-label {
   font-size: $base-font-size * 0.75;
