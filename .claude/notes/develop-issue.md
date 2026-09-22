@@ -69,7 +69,7 @@ artifact に写るのは、その branch の `_posts/` をビルドした結果�
   置き場が分かれているので、触ったものを個別に回す（repo ルートからの discover は 0 件になる）:
   `.claude/scripts` / `.claude/skills/select-and-develop/scripts` /
   `.claude/skills/review-and-merge/scripts` / `.claude/skills/evaluate-and-triage/scripts` /
-  `.claude/skills/curate-news/scripts`
+  `.claude/skills/curate-news/scripts` / `.claude/skills/remove-ai-tells/scripts`
 - gitignore が効いているか: `git check-ignore -v <path>`
 - 意図しないファイルの混入: `git ls-files | grep <pattern>`
 
