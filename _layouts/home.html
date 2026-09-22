@@ -16,6 +16,10 @@ layout: default
     {%- for post in recent_posts -%}
     <li data-date="{{ post.date | date: '%Y-%m-%d' }}">
       <span class="post-meta">{{ post.date | date: date_format }}</span>
+      {%- comment -%}その日のトピックを日付の隣に出す。上位3本はキュレーション順のため
+      ほぼ毎日 AI で埋まり、畳んだ状態では他分野の記事が在ることが伝わらない (#386)。
+      archive.html が同じ位置で使っている .archive-item-tags をそのまま再利用する{%- endcomment -%}
+      {%- if post.tags.size > 0 %}<span class="archive-item-tags">{{ post.tags | join: " / " }}</span>{% endif -%}
       <h3>
         <a class="post-link" href="{{ post.url | relative_url }}">{{ post.title | escape }}</a>
       </h3>
@@ -32,9 +36,10 @@ layout: default
             {%- assign link_text = before_close_a | strip_html -%}
             {%- if link_text.size > 1 -%}
               {%- assign article_count = article_count | plus: 1 -%}
-              {%- if article_count <= 3 -%}
-              <li><a href="{{ post.url | relative_url }}#article-{{ forloop.index }}">{{ link_text }}</a></li>
-              {%- endif -%}
+              {%- comment -%}4件目以降も描画しておき、既定では hidden にする。JS が「他N件」を
+              展開トグルに差し替えるので、その日の話題の幅を詳細ページに降りずに掴める (#386)。
+              JS が無い環境では hidden のまま「他N件」が詳細ページへのリンクとして残る{%- endcomment -%}
+              <li{% if article_count > 3 %} class="archive-article-extra" hidden{% endif %}><a href="{{ post.url | relative_url }}#article-{{ forloop.index }}">{{ link_text }}</a></li>
             {%- endif -%}
           {%- endif -%}
         {%- endfor -%}
@@ -57,6 +62,38 @@ layout: default
         items[i].classList.add('is-today');
         break;
       }
+    }
+
+    // 「他N件」のリンクを、その場で見出しを開くトグルに差し替える (#386)。
+    // 上位3本はキュレーション順のため AI に偏りがちで、その日の幅が
+    // 詳細ページを開くまで届かない。リンクを button に置き換えるので、
+    // JS が動かない環境では詳細ページへのリンクがそのまま残る
+    var mores = document.querySelectorAll('.post-list .archive-article-more');
+    for (var m = 0; m < mores.length; m++) {
+      (function(more, index) {
+        var list = more.parentNode;
+        var extras = list.querySelectorAll('.archive-article-extra');
+        if (extras.length === 0) return;
+        var label = '他' + extras.length + '件を表示';
+        var closeLabel = '他' + extras.length + '件を閉じる';
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'archive-article-toggle';
+        btn.setAttribute('aria-expanded', 'false');
+        // 開く対象を明示する。展開される見出しは DOM 上このボタンより手前にあるので、
+        // 読み上げでは押した後に前へ戻る操作が要る（既知の制約）
+        if (!list.id) list.id = 'article-titles-' + index;
+        btn.setAttribute('aria-controls', list.id);
+        btn.textContent = label;
+        more.textContent = '';
+        more.appendChild(btn);
+        btn.addEventListener('click', function() {
+          var open = btn.getAttribute('aria-expanded') === 'true';
+          for (var k = 0; k < extras.length; k++) extras[k].hidden = open;
+          btn.setAttribute('aria-expanded', open ? 'false' : 'true');
+          btn.textContent = open ? label : closeLabel;
+        });
+      })(mores[m], m);
     }
   })();
   </script>

@@ -72,6 +72,7 @@
   font-size: $base-font-size * 0.8125;
   color: $grey-color;
   margin-left: 0.5em;
+  word-break: keep-all;
 }
 
 .archive-item-date {
@@ -167,6 +168,32 @@
 
       &::after {
         content: " →";
+      }
+
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+
+    // JS が「他N件」のリンクをこのトグルに差し替える (#386)。
+    // 既存のリンクと同じ見た目に寄せ、行き先が「同じ面での展開」であることは
+    // 矢印でなく ▾ / ▴ で示す
+    .archive-article-toggle {
+      // 行の見た目を変えずにタップ領域だけ広げる（既定は 13px * 1.6 = 21px しかない）
+      padding: 0.3em 0.4em;
+      margin: -0.3em -0.4em;
+      border: 0;
+      background: none;
+      font: inherit;
+      color: $brand-color;
+      cursor: pointer;
+
+      &::after {
+        content: " ▾";
+      }
+
+      &[aria-expanded="true"]::after {
+        content: " ▴";
       }
 
       &:hover {
@@ -599,7 +626,8 @@
     &:hover { color: #58a6ff; }
   }
 
-  .archive-article-titles .archive-article-more a {
+  .archive-article-titles .archive-article-more a,
+  .archive-article-titles .archive-article-more .archive-article-toggle {
     color: #58a6ff;
   }
 
