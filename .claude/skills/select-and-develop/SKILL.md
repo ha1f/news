@@ -24,4 +24,5 @@ description: "open issue から今日実装する対象を選定し、develop-is
 - status issue に開始と終了の各1コメント。1行目は check_state.py が機械判定する JSON（キー名・値とも厳密一致が必要）:
   - 開始: `{"stage": "develop", "phase": "start", "summary": "候補: #26, #28。#26 を優先着手"}`
   - 終了: `{"stage": "develop", "phase": "end", "ok": true, "summary": "#26 実装 → PR #27", "reflect": "LESSONS.md 更新1件"}`
+    - この run で issue を起票したら（develop-issue 由来も含む）、起票後の open issue 数と `open_issue_cap` を `summary` に添える（例: `"… / 起票 #389 #390 → open 11 件 / cap 10"`）。status issue と bot の issue は数えず、`hold` は数える。develop の起票も PdM・review と同じ cap を埋めるので、記録が無いと翌日の PdM がグルーミングのみになる理由を追えない
     - `reflect` は手順6（reflect-and-improve）の結果を1行で記す（例: `"改善なし"`, `"LESSONS.md 更新1件"`, `"改善 PR #30"`）。実施の有無と成果を機械・人間の両方が追跡できるようにする。**手順6を実行し終えてから**この終了コメントを投稿する（`"実施予定"` 等のプレースホルダーで先に投稿して end を2本にしない。実走で、開発完了後すぐに終了コメントを組み立ててこの手順を飛ばしかけたことがある — 手順の番号付きステップに無いとチェックリストの通過点として見落とされる）
