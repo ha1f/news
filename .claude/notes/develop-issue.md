@@ -53,7 +53,7 @@ mcp__github__actions_get(method=download_workflow_run_artifact, resource_id=<art
   → 期限付きの署名 URL が返る。curl でそのまま落として unzip
 ```
 
-ローカルの Chromium は CI と同じ版ではない（ローカル 1.56.1 / `chromium-1194`、CI は 1.62.1 ピン）ので、最終確認は artifact のほうが CI の見え方に近い。
+ローカルの Chromium は CI と同じ版ではない（実測 2026-09-22: ローカル 1.56.1 / `chromium-1194`、CI は `PLAYWRIGHT_VERSION: 1.63.0` ピン。Renovate が上げるので CI 側は workflow の値を見る）ので、最終確認は artifact のほうが CI の見え方に近い。
 
 artifact に写るのは、その branch の `_posts/` をビルドした結果だけ。「これから生成される記事」の見え方を変える変更（publish-pages のタイトル生成ルール等）は `_posts/` を1件も触らないので、**artifact は main と同じ絵のままで、変更後の姿を1件も確認できない**（実走で PR #365 がこれに当たった）。この種の変更は、当日分の front matter を新形式に差し替えたローカルビルドで補う。
 
@@ -80,8 +80,8 @@ artifact に写るのは、その branch の `_posts/` をビルドした結果�
 - 毎朝9時のキュレーションで当日分の投稿が main に入る。`_posts/` の中身に関わるルールを足す PR は、rebase のたびに当日分を揃え直す必要がある
 - レビュー stage で PR を調べるときは、取得元を **git → 素の REST → MCP** の順で選ぶ（MCP は往復が重く、返り値がトークン上限を超えるとファイルに退避される）。実測で迷ったのは次の3つ:
   - **conflict の有無**: git で完結する。`git fetch origin` のうえ `git merge-tree --write-tree origin/<先にマージする head> origin/<次の head>`（exit 0 なら clean）。この loop の PR head は repo 内ブランチなのでローカルで完結し、候補同士のマージ順も先に当てられる（マージ後に初めて conflict を知る順序にならない）。`pull_request_read(minimal_output=true)` は **PR body を削らない**ので、`mergeable_state` を見るためだけに呼ぶと PR body 全文（実測 約20k トークン）が返る。`behind` 等の値が要るときだけ MCP に落とす
-  - **checks**: 素の REST で `actions/workflows/jekyll-build-check.yml/runs?per_page=100` を1回引けば head_sha ごとの conclusion がまとめて取れる（PR ごとに引かない）。MCP なら `actions_list(method=list_workflow_runs, resource_id=jekyll-build-check.yml)` が同じもの
-  - **分類スクリプトへの入力**: 素の REST だけで組める。`.claude/skills/review-and-merge/scripts/classify_prs.py` は `gh` 不在の環境では `--stdin` のみだが、渡す JSON は `pulls?state=open&per_page=100` 1回 + PR ごとの `pulls/{n}/files` と `pulls/{n}/commits` で揃う（同スクリプトの `fetch_prs_via_gh()` がそのまま仕様。実測 2026-09-22: open PR 3件 = 7 リクエスト / 2.8 秒）
+  - **checks**: 素の REST で `actions/workflows/jekyll-build-check.yml/runs?per_page=100` を1回引けば head_sha ごとの conclusion がまとめて取れる（PR ごとに引かない）。MCP なら `actions_list(method=list_workflow_runs, resource_id=jekyll-build-check.yml)` が同じもの。1ページ100件に収まらない古い head は落ちるので、見つからない PR だけ `?head_sha=<40桁>` で個別に引く（実測 2026-09-22: 1ページ目の最古の run は 9/11 で、9/9 に push された PR #292 の run は入らない）
+  - **分類スクリプトへの入力**: 素の REST だけで組める。`.claude/skills/review-and-merge/scripts/classify_prs.py` は `gh` 不在の環境では `--stdin` のみだが、渡す JSON は `pulls?state=open&per_page=100` 1回 + PR ごとの `pulls/{n}/files` と `pulls/{n}/commits` で揃う（同スクリプトの `fetch_prs_via_gh()` がそのまま仕様。実測 2026-09-22: open PR 3件 = 7 リクエスト / 2.8 秒）。`fetch_prs_via_gh()` は `--paginate` なので、`files` / `commits` が100件を超える PR では `per_page=100` の次ページも辿る（`commits[-1]` が最終 commit でないと quiescence 判定が狂う）
     - **`patches` を `git diff` の出力で組まない。** `version_bump_only()` は GitHub files API の patch 形式（`@@` 始まり・ファイルヘッダなし）を前提にしており、`git diff` は `---` / `+++` 行が削除・追加行として数えられて判定が壊れる。壊れると保護パスのバージョン置換が通常レビューに回らず `protected`（hold + 人間）に落ちる。実測 2026-09-22、PR #369 の `PLAYWRIGHT_VERSION` 更新で同じ1行の変更を両形式に通した: files API の patch → `True` / `git diff` の出力 → `False`
 - マージ後の branch 削除は repo 設定で自動（実測 2026-09-22 `GET /repos/{owner}/{repo}` → `delete_branch_on_merge: true`）。`gh pr merge --delete-branch` 相当の後始末は不要で、明示的に消しにいくと `remote ref does not exist` で失敗する
 - マージすると `pages.yml` の main ビルドが**数秒後に現れ、1分前後で completed** になる（実測 2026-09-22、直近のマージ済み PR 12件: run の出現がマージ後 2〜19 秒、completed まで 47〜77 秒、いずれも success）。run が現れるのを待つループで `?head_sha=` を使うなら **完全な40桁 SHA** を渡す。短縮 SHA は HTTP 200 / `total_count: 0` を返すだけなので永久に待つ（実測: 7桁・12桁とも 0件、40桁で1件）
