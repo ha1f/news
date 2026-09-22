@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """classify_prs.py の純関数のユニットテスト。実行: python3 test_classify_prs.py"""
+import json
 import sys
 import unittest
 from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from classify_prs import classify, protected_hits, version_bump_only
+from classify_prs import api_json, classify, protected_hits, version_bump_only
 
 NOW = datetime(2026, 7, 11, 12, 0, tzinfo=timezone.utc)
 CONFIG = {
@@ -164,6 +165,63 @@ class VersionBumpOnlyTest(unittest.TestCase):
         self.assertFalse(version_bump_only(
             "@@ -1 +1 @@\n-        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128\n"
             "+        uses: evil/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128\n"))
+
+    def test_git_diff_output_is_not_the_expected_input_format(self):
+        # patch は GitHub files API の形式（@@ から始まり、ファイルヘッダを含まない）が前提。
+        # `git diff` の生出力（--- a/... / +++ b/... のファイルヘッダ付き）を誤って渡すと、
+        # ヘッダ行も削除・追加行として数えられてペアリングが1行ずれ、
+        # 本来 bump であるはずの変更が bump と判定されなくなる（#369 の実測、#380/#389 の由来）。
+        same_change_files_api = (
+            "@@ -1 +1 @@\n-      PLAYWRIGHT_VERSION: 1.62.1\n+      PLAYWRIGHT_VERSION: 1.63.0\n")
+        same_change_git_diff = (
+            "diff --git a/.github/workflows/jekyll-build-check.yml "
+            "b/.github/workflows/jekyll-build-check.yml\n"
+            "index 1111111..2222222 100644\n"
+            "--- a/.github/workflows/jekyll-build-check.yml\n"
+            "+++ b/.github/workflows/jekyll-build-check.yml\n"
+            "@@ -1 +1 @@\n"
+            "-      PLAYWRIGHT_VERSION: 1.62.1\n"
+            "+      PLAYWRIGHT_VERSION: 1.63.0\n")
+        self.assertTrue(version_bump_only(same_change_files_api))
+        self.assertFalse(version_bump_only(same_change_git_diff))
+
+
+class ApiJsonPaginationTest(unittest.TestCase):
+    """api_json のページング組み立てを、実ネットワーク無しで確認する。http_get を差し替えて
+    ページ境界を模し、複数ページにまたがる commits の最終要素（last_commit_at の元）が
+    最後のページの最後の要素になることを守る（#389 受け入れ条件: ページ境界のユニットテスト）。"""
+
+    def test_follows_link_header_next_until_absent(self):
+        pages = {
+            "https://api.github.com/repos/o/r/pulls/1/commits?per_page=100": (
+                [{"commit": {"committer": {"date": "2026-09-01T00:00:00Z"}}}],
+                '<https://api.github.com/repos/o/r/pulls/1/commits?per_page=100&page=2>; '
+                'rel="next"',
+            ),
+            "https://api.github.com/repos/o/r/pulls/1/commits?per_page=100&page=2": (
+                [{"commit": {"committer": {"date": "2026-09-02T00:00:00Z"}}}],
+                None,
+            ),
+        }
+        calls = []
+
+        def fake_http_get(url, headers):
+            calls.append(url)
+            body, link = pages[url]
+            return json.dumps(body).encode(), link
+
+        commits = api_json("repos/o/r/pulls/1/commits?per_page=100", http_get=fake_http_get)
+        self.assertEqual(len(calls), 2)
+        self.assertEqual(len(commits), 2)
+        # 最終ページの最終要素が commits[-1] になる（fetch_prs_via_api の last_commit_at はこれ）
+        self.assertEqual(commits[-1]["commit"]["committer"]["date"], "2026-09-02T00:00:00Z")
+
+    def test_no_link_header_stops_after_one_page(self):
+        def fake_http_get(url, headers):
+            return json.dumps([{"n": 1}]).encode(), None
+
+        items = api_json("repos/o/r/pulls?state=open&per_page=100", http_get=fake_http_get)
+        self.assertEqual(items, [{"n": 1}])
 
 
 class ProtectedHitsTest(unittest.TestCase):
