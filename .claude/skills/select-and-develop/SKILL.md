@@ -25,5 +25,6 @@ description: "open issue から今日実装する対象を選定し、develop-is
 - status issue に開始と終了の各1コメント。1行目は check_state.py が機械判定する JSON（キー名・値とも厳密一致が必要）:
   - 開始: `{"stage": "develop", "phase": "start", "summary": "候補: #26, #28。#26 を優先着手"}`
   - 終了: `{"stage": "develop", "phase": "end", "ok": true, "summary": "open issue 9/10。#26 実装 → PR #27", "reflect": "LESSONS.md 更新1件"}`
-    - `summary` の**先頭**に `select_issues.py` の `open_issues` と `config.open_issue_cap` を `open issue {open_issues}/{open_issue_cap}` の形で貼る（翌日の PdM が cap 超過を run をまたいで拾えるように #394）。先頭なのは、PdM が読む `recent_status_comments` が本文を200字で切るため。`open_issues_note` が出ていたらそれも添える（`open_issues` が `null` なら数えられなかったということなので `open issue ?/{cap}`）。**何を数えて何を除くかはスクリプトが持っているので、ここには書かない**
+    - `summary` の**先頭**に `select_issues.py` の `open_issues` と `config.open_issue_cap` を `open issue {open_issues}/{open_issue_cap}` の形で貼る（翌日の PdM が cap 超過を run をまたいで拾えるように #394）。先頭なのは、PdM が読む `recent_status_comments` が本文を200字で切るため
+    - `open_issues` が `null` なら `open issue ?/{cap}（数えられず）` と書く。`open_issues_note` が出ていたら（数えられたが値が過大になりうる場合）末尾に `（参考値）` とだけ添える。**`open_issues_note` の本文（理由・ローカルの絶対パス）はそのまま貼らない**（200字予算をほぼ使い切り `summary` 本体と `reflect` が視界から落ちるうえ、公開コメントに環境パスが漏れる）。何を数えて何を除くかはスクリプトが持っているので、ここには書かない
     - `reflect` は手順6（reflect-and-improve）の結果を1行で記す（例: `"改善なし"`, `"LESSONS.md 更新1件"`, `"改善 PR #30"`）。実施の有無と成果を機械・人間の両方が追跡できるようにする。**手順6を実行し終えてから**この終了コメントを投稿する（`"実施予定"` 等のプレースホルダーで先に投稿して end を2本にしない。実走で、開発完了後すぐに終了コメントを組み立ててこの手順を飛ばしかけたことがある — 手順の番号付きステップに無いとチェックリストの通過点として見落とされる）
