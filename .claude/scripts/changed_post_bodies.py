@@ -73,7 +73,9 @@ def main(argv):
         print(__doc__, file=sys.stderr)
         return 2
     base = argv[0]
-    head = argv[1] if len(argv) > 1 else None
+    # 空文字は「省略」と同じ扱いに寄せる。そうしないと changed_posts は作業ツリー、
+    # show は index (`git show :path`) を見て、一覧と内容の取得元が食い違う
+    head = argv[1] if len(argv) > 1 and argv[1] else None
     for path in changed_posts(base, head):
         if body_changed(base, head, path):
             print(path)

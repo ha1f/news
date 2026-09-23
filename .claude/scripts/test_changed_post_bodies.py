@@ -37,6 +37,15 @@ class TestBodyOf(unittest.TestCase):
     def test_no_front_matter(self):
         self.assertEqual(m.body_of("front matter なし\n"), "front matter なし\n")
 
+    def test_unclosed_front_matter_is_all_body(self):
+        """閉じの `---` が無いファイルは全体を本文とみなす。
+
+        ここで空文字を返すと、そのファイルは「前後とも本文が空」になって列挙されず、
+        本文を書き換えても2つの検査が黙って走らなくなる（検査が効かなくなる方向）。
+        """
+        text = '---\ntitle: "閉じが無い"\n\n1. [a](https://example.com) メモ\n'
+        self.assertEqual(m.body_of(text), text)
+
 
 class TestAgainstGit(unittest.TestCase):
     """実際の git リポジトリを作って end-to-end で確かめる"""
@@ -107,6 +116,56 @@ class TestAgainstGit(unittest.TestCase):
         """head を省いたときは作業ツリーを見る"""
         self.write("2026-09-21-news.md", title="2026年9月21日", body="未コミットの書き換え")
         self.assertEqual(self.run_helper(None), ["_posts/2026-09-21-news.md"])
+
+    def test_working_tree_head_ignores_front_matter_only(self):
+        """作業ツリーを実際に読んでいるか。
+
+        読めていないと「head 側が取れない」扱いで何でも列挙されるので、
+        title だけを変えた未コミットの状態が列挙されないことで区別する。
+        """
+        self.write("2026-09-21-news.md", title="AI大手の攻防", body="本文21")
+        self.assertEqual(self.run_helper(None), [])
+
+    def test_unclosed_front_matter_body_change_is_listed(self):
+        """front matter の閉じが無い投稿でも、本文の書き換えは取りこぼさない"""
+        path = self.dir / "_posts" / "2026-09-19-news.md"
+        path.write_text('---\ntitle: "閉じが無い"\n\n本文19\n', encoding="utf-8")
+        self.git("add", "-A"); self.git("commit", "-qm", "unclosed")
+        base = self.base
+        self.base = self.git("rev-parse", "HEAD").strip()
+        path.write_text('---\ntitle: "閉じが無い"\n\n本文19を書き換え\n', encoding="utf-8")
+        self.git("add", "-A"); self.git("commit", "-qm", "unclosed body")
+        self.assertEqual(self.run_helper(self.git("rev-parse", "HEAD").strip()),
+                         ["_posts/2026-09-19-news.md"])
+        self.base = base
+
+    def test_non_post_files_are_not_listed(self):
+        """`_posts/*.md` 以外は渡さない（検査スクリプトは投稿しか読めない）"""
+        (self.dir / "README.md").write_text("書き換え\n", encoding="utf-8")
+        (self.dir / "_posts" / "notes.txt").write_text("メモ\n", encoding="utf-8")
+        self.write("2026-09-21-news.md", title="2026年9月21日", body="本文21を書き換え")
+        self.git("add", "-A"); self.git("commit", "-qm", "mixed paths")
+        self.assertEqual(self.run_helper(self.git("rev-parse", "HEAD").strip()),
+                         ["_posts/2026-09-21-news.md"])
+
+
+class TestMain(unittest.TestCase):
+    def test_wrong_argument_count(self):
+        self.assertEqual(m.main([]), 2)
+        self.assertEqual(m.main(["a", "b", "c"]), 2)
+
+    def test_empty_head_is_treated_as_omitted(self):
+        """空文字の head を素通しすると、一覧は作業ツリー (changed_posts)・内容は
+        index (`git show :path`) という食い違った比較になる。省略と同じ扱いに
+        寄せてあることを、changed_posts が受け取る head で固定する。"""
+        seen = []
+        real = m.changed_posts
+        m.changed_posts = lambda base, head: (seen.append(head), [])[1]
+        try:
+            m.main(["BASE", ""])
+        finally:
+            m.changed_posts = real
+        self.assertEqual(seen, [None])
 
 
 if __name__ == "__main__":
