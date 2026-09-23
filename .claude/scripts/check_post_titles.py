@@ -12,12 +12,13 @@
 機械で確かめる（規約の文面ではなく、出力を見る）。
 
 検査するのは次の2つだけ:
-  1. 見出しが空でない
-  2. 見出しにその投稿自身の日付が入っていない（`（表示名）` は除いて見る）
+  1. 見出しが空でない（`（表示名）` を外した本体が残る）
+  2. title にその投稿自身の日付が入っていない
 
 「見出しがその日の内容を表しているか」は機械では判定できないので検査しない。
-日付だけの title は 1 と 2 の両方でなく 2 で落ちる（`2026年9月21日（デザイナー）`
-のように表示名が付いた形も、接尾辞を外した本体が日付なので同じく落ちる）。
+
+日付は接尾辞を外す前の title 全体で見る。`AI大手の攻防（2026年9月21日）` の
+ような形を素通りさせないため（接尾辞の中身は表示名とは限らない）。
 
 使い方:
   python3 .claude/scripts/check_post_titles.py                    # 当日 (JST) の投稿
@@ -34,7 +35,7 @@ from pathlib import Path
 JST = timezone(timedelta(hours=9))
 TITLE_RE = re.compile(r'^title:\s*(?P<title>.*?)\s*$', re.M)
 FILENAME_DATE_RE = re.compile(r'^(?P<y>\d{4})-(?P<m>\d{2})-(?P<d>\d{2})-')
-# 見出し末尾の `（プロファイル表示名）`。字数・日付の検査は本体だけを見る
+# 見出し末尾の `（プロファイル表示名）`。空かどうかの検査だけがこれを外して見る
 SUFFIX_RE = re.compile(r'（[^（）]*）$')
 
 
@@ -67,14 +68,26 @@ def headline_of(title: str) -> str:
 
 
 def date_forms(day: date):
-    """その日付が title に現れうる表記。ゼロ埋めの有無を両方見る"""
+    """その日付が title に現れうる表記。ゼロ埋めの有無を両方見る。
+
+    `2026年9月21日` は `9月21日` を、`2026/09/21` は `09/21` を部分文字列として
+    含むので、年つきの「年月日」「年/月/日」はここに並べない（並べても一度も効か
+    ない表記は、消えても誰も気づけない）。ゼロ埋めの有無は片方が片方を含むとは
+    限らない（`09月05日` に `9月5日` は現れない）ので両方要る。
+
+    月日だけの区切り文字つきは `/` に限る。`5.5` `1-4` の形は製品バージョン
+    （Opus 5.5 / Bun 1.4 / TypeScript 7.0）と区別できず、その月日に当たった日の
+    見出しを軒並み誤検知する。
+    """
     return [
-        f"{day.year}年{day.month}月{day.day}日",
-        f"{day.year}年{day.month:02d}月{day.day:02d}日",
         f"{day.month}月{day.day}日",
         f"{day.month:02d}月{day.day:02d}日",
-        day.isoformat(),
-        day.strftime("%Y/%m/%d"),
+        f"{day.month}/{day.day}",
+        f"{day.month:02d}/{day.day:02d}",
+        f"{day.year}-{day.month}-{day.day}",
+        f"{day.year}-{day.month:02d}-{day.day:02d}",
+        f"{day.year}.{day.month}.{day.day}",
+        f"{day.year}.{day.month:02d}.{day.day:02d}",
     ]
 
 
@@ -90,7 +103,7 @@ def problems_of(post: Path):
     if day is None:
         return [f"ファイル名から日付が読み取れません（{post.name}）"]
     for form in date_forms(day):
-        if form in headline:
+        if form in title:
             return [f"title に投稿自身の日付が入っています（{title}）"]
     return []
 

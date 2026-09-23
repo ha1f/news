@@ -37,8 +37,17 @@ class TestTitleOf(unittest.TestCase):
         self.assertIsNone(c.title_of(p))
 
     def test_body_title_line_is_not_read(self):
-        """本文に title: で始まる行があっても front matter の外は見ない"""
-        p = self._write('---\ntitle: "見出し"\n---\n\ntitle: "本文のほう"\n')
+        """本文に title: で始まる行があっても front matter の外は見ない。
+
+        front matter 側に title を置かないことで、全文検索に退行したときだけ
+        本文の title を拾って落ちるようにしてある。
+        """
+        p = self._write('---\nlayout: post\ndate: 2026-09-21\n---\n\ntitle: "本文のほう"\n')
+        self.assertIsNone(c.title_of(p))
+
+    def test_other_front_matter_keys_are_not_matched(self):
+        """`subtitle:` のような別のキーを title と取り違えない"""
+        p = self._write('---\nsubtitle: "副題"\ntitle: "見出し"\n---\n\n本文\n')
         self.assertEqual(c.title_of(p), "見出し")
 
 
@@ -105,6 +114,56 @@ class TestProblemsOf(unittest.TestCase):
         p = self._post("2026-09-21-news.md", "2026-09-21 のニュース")
         self.assertEqual(len(c.problems_of(p)), 1)
 
+    def test_zero_padded_date_fails(self):
+        """ゼロ埋めの月日。1桁の月日で試す（21日のような2桁だと、ゼロ埋め無しの
+        形が部分文字列として当たってしまい、ゼロ埋め側を消しても気づけない）"""
+        p = self._post("2026-05-05-news.md", "2026年05月05日のまとめ")
+        self.assertEqual(len(c.problems_of(p)), 1)
+
+    def test_zero_padded_slash_month_day_fails(self):
+        p = self._post("2026-05-05-news.md", "05/05のニュースまとめ")
+        self.assertEqual(len(c.problems_of(p)), 1)
+
+    def test_iso_date_without_padding_fails(self):
+        p = self._post("2026-09-21-news.md", "2026-9-21 のニュース")
+        self.assertEqual(len(c.problems_of(p)), 1)
+
+    def test_dot_date_with_padding_fails(self):
+        p = self._post("2026-09-21-news.md", "2026.09.21 のニュース")
+        self.assertEqual(len(c.problems_of(p)), 1)
+
+    def test_slash_full_date_fails(self):
+        p = self._post("2026-09-21-news.md", "2026/09/21 のニュース")
+        self.assertEqual(len(c.problems_of(p)), 1)
+
+    def test_slash_full_date_without_padding_fails(self):
+        p = self._post("2026-09-21-news.md", "2026/9/21 のニュース")
+        self.assertEqual(len(c.problems_of(p)), 1)
+
+    def test_dot_full_date_fails(self):
+        p = self._post("2026-09-21-news.md", "2026.9.21 のニュース")
+        self.assertEqual(len(c.problems_of(p)), 1)
+
+    def test_slash_month_day_fails(self):
+        p = self._post("2026-09-21-news.md", "9/21のニュースまとめ")
+        self.assertEqual(len(c.problems_of(p)), 1)
+
+    def test_date_hidden_in_suffix_fails(self):
+        """接尾辞の中身は表示名とは限らない。日付は title 全体で見る"""
+        p = self._post("2026-09-21-news.md", "AI大手の攻防（2026年9月21日）")
+        self.assertEqual(len(c.problems_of(p)), 1)
+        p = self._post("2026-09-21-news.md", "AI大手の攻防（9月21日）")
+        self.assertEqual(len(c.problems_of(p)), 1)
+
+    def test_version_number_is_not_a_date(self):
+        """製品バージョンを日付と取り違えない（月日だけのドット・ハイフン形を
+        見ないことの裏返し。踏むとその月日の日の見出しが軒並み誤検知になる）"""
+        for name, title in [("2026-05-05-news.md", "Opus 5.5とGPT-6、値下げ競争"),
+                            ("2026-01-04-news.md", "Bun 1.4のRust移植が完了"),
+                            ("2026-07-02-news.md", "TypeScript 7.0 RCが公開")]:
+            with self.subTest(title=title):
+                self.assertEqual(c.problems_of(self._post(name, title)), [])
+
     def test_other_day_date_passes(self):
         """その投稿自身の日付でなければ、記事内容としての日付表記は通す"""
         p = self._post("2026-09-21-news.md", "改正法が10月1日に施行へ")
@@ -136,7 +195,17 @@ class TestMain(unittest.TestCase):
         self.assertEqual(c.main([str(bad)]), 1)
 
     def test_missing_file_fails(self):
-        self.assertEqual(c.main(["_posts/no-such-file.md"]), 1)
+        """検査できたファイルがあっても、欠けたファイルがあれば落ちる。
+
+        欠けたファイルだけを渡すと `checked == 0` の分岐でも 1 になり、
+        「ファイルがありません」を消しても通ってしまうので、良いファイルと
+        並べて渡す。
+        """
+        d = Path(tempfile.mkdtemp())
+        good = d / "2026-09-21-news.md"
+        good.write_text('---\ntitle: "AI大手の攻防"\n---\n\n本文\n', encoding="utf-8")
+        self.assertEqual(c.main([str(good), str(d / "no-such-file.md")]), 1)
+
 
 
 if __name__ == "__main__":
