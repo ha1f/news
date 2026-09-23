@@ -9,13 +9,17 @@
 issue の author_association が欠落していても author が collaborator なら
 信頼済みと判定する (MCP list_issues が author_association を返さない問題の回避策)。
 
-出力: {"config", "status_issue", "in_progress", "backlog"}
+出力: {"config", "status_issue", "open_issues", "in_progress", "backlog"}
+  - open_issues: open issue の総数（status issue と bot の issue を除く。`hold` は数える）。
+    `config.open_issue_cap` と突き合わせる用。数え方の正本は evaluate ステージの
+    check_state.py:summarize_issues で、ここはそれを読み込んで使う
   - in_progress: open な linked PR を持つ issue（要対応かはエージェントが判断）
     linked_open_prs の各要素は {number, draft, hold}。hold は人間の判断待ちの印
   - backlog: linked PR の無い issue。作成日の古い順
 フィルタ（collaborator 名義のみ・hold と status issue を除外）は適用済み。
 優先度・着手順の判断はエージェントが issue を読んで行う。
 """
+import importlib.util
 import json
 import os
 import re
@@ -142,6 +146,28 @@ def parse_guardrails(text):
     return config
 
 
+def load_summarize_issues():
+    """open issue の数え方の正本 `check_state.py:summarize_issues` を読み込む。
+
+    status issue と bot の issue を数から外す除外ルールは evaluate ステージが持って
+    いる。同じルールをここに書き写すと、片方を変えたときにもう片方が黙って古くなる
+    ので、関数ごと読み込んで正本を1つに保つ（GUARDRAILS「決定的な処理はスクリプトに
+    寄せる」）。
+
+    相対 import にしないのは、このスクリプトがエージェントの Bash から任意の cwd で
+    単体起動されるため（`sys.path` は起動 cwd に依存する）。GUARDRAILS.md を読むのと
+    同じく、`__file__` からの絶対パスで解決する。
+    """
+    path = (Path(__file__).resolve().parents[2]
+            / "evaluate-and-triage" / "scripts" / "check_state.py")
+    spec = importlib.util.spec_from_file_location("daily_loop_check_state", path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"open issue の数え方の正本を読めません: {path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.summarize_issues
+
+
 def _is_trusted(issue, collaborators):
     """author_association があればそれで判定、なければ collaborators リストで補完。"""
     assoc = issue.get("author_association", "")
@@ -251,9 +277,13 @@ def main():
         collaborators = None
 
     status_issue, in_progress, backlog = build_candidates(issues, prs, collaborators)
+    # 候補（hold と信頼できない名義を除いたもの）とは別に、cap と突き合わせる
+    # open issue の総数も出す。数え方は check_state.py が正本
+    _, open_issues = load_summarize_issues()(issues)
     json.dump({
         "config": config,
         "status_issue": status_issue,
+        "open_issues": open_issues,
         "in_progress": in_progress,
         "backlog": backlog,
     }, sys.stdout, ensure_ascii=False, indent=1)

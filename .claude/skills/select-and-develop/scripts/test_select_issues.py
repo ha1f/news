@@ -5,7 +5,8 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from select_issues import build_candidates, parse_guardrails, parse_link_header, with_page
+from select_issues import (build_candidates, load_summarize_issues, parse_guardrails,
+                           parse_link_header, with_page)
 
 
 def issue(number, title="t", assoc="OWNER", labels=(), created="2026-07-01T00:00:00Z",
@@ -190,6 +191,37 @@ class ParseLinkHeaderTest(unittest.TestCase):
     def test_empty_header_returns_empty_dict(self):
         self.assertEqual(parse_link_header(""), {})
         self.assertEqual(parse_link_header(None), {})
+
+
+class LoadSummarizeIssuesTest(unittest.TestCase):
+    """open issue の数え方を check_state.py から読み込んでいることを確かめる。
+
+    ここで数え方を書き写すと、このテストごと正本から外れる。数え方そのものの
+    テストは evaluate-and-triage 側にあるので、ここでは「正本の関数が取れて
+    いるか」と「この repo の除外ルールが効いているか」だけを見る。
+    """
+
+    def test_returns_the_function_from_check_state(self):
+        summarize = load_summarize_issues()
+        source = (Path(__file__).resolve().parents[2]
+                  / "evaluate-and-triage" / "scripts" / "check_state.py")
+        self.assertEqual(summarize.__name__, "summarize_issues")
+        self.assertEqual(Path(summarize.__code__.co_filename).resolve(), source)
+
+    def test_status_issue_and_bot_issues_are_not_counted(self):
+        summarize = load_summarize_issues()
+        issues = [
+            {"number": 1, "title": "📊 daily-loop status", "user": {"type": "User"}},
+            {"number": 2, "title": "実装したい", "user": {"type": "User"}},
+            {"number": 3, "title": "Dependency Dashboard", "user": {"type": "Bot"}},
+            {"number": 4, "title": "PR です", "user": {"type": "User"}, "pull_request": {}},
+            {"number": 5, "title": "hold 中", "user": {"type": "User"},
+             "labels": [{"name": "hold"}]},
+        ]
+        status_issue, open_count = summarize(issues)
+        self.assertEqual(status_issue, 1)
+        # hold は数える（人間の判断待ちでも open issue の在庫であることは変わらない）
+        self.assertEqual(open_count, 2)
 
 
 class WithPageTest(unittest.TestCase):
