@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月6日（起業家）"
+title: "Nscale調達とAI拠点28兆円の9割未着工（起業家）"
 date: 2026-09-06
 profile: entrepreneur
 tags: [AI, ビジネス, セキュリティ, 経済, 社会]

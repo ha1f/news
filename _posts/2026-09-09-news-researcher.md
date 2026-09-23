@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月9日（研究者）"
+title: "AlphaGenomeが90億のヒトDNA変異を公開（研究者）"
 date: 2026-09-09
 profile: researcher
 tags: [AI, 科学]

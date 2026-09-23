@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年8月11日（研究者）"
+title: "査読はAI時代を生き延びるか、出版も転換（研究者）"
 date: 2026-08-11
 profile: researcher
 tags: [AI, セキュリティ, ハードウェア, 社会, 科学, 開発]

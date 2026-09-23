@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月13日（デザイナー）"
+title: "Reactの設計論とFold8「折り目ゼロ」論争（デザイナー）"
 date: 2026-09-13
 profile: designer
 tags: [デザイン, 開発, ビジネス, ハードウェア, AI, 社会]

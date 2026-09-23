@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月5日（デザイナー）"
+title: "Ternus体制発足、サントリーPOPにAI疑惑（デザイナー）"
 date: 2026-09-05
 profile: designer
 tags: [AI, デザイン, 開発, ハードウェア]

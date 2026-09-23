@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年8月3日（デザイナー）"
+title: "デザイン業倒産が14年ぶり高水準、EUは表示義務化（デザイナー）"
 date: 2026-08-03
 profile: designer
 tags: [AI, デザイン, ハードウェア, 科学, 開発]

@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月4日（ソフトウェアエンジニア）"
+title: "GPT-6 Astra公開、エージェントの道具選び検証（ソフトウェアエンジニア）"
 date: 2026-09-04
 profile: engineer
 tags: [AI, 開発, セキュリティ]

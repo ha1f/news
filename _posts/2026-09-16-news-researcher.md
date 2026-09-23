@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月16日（研究者）"
+title: "AI業界のドゥーマー転向とRSI懐疑論（研究者）"
 date: 2026-09-16
 profile: researcher
 tags: [AI, 科学]

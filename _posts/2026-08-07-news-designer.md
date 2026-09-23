@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年8月7日（デザイナー）"
+title: "AI時代に残る「テイスト」と手仕事の設計（デザイナー）"
 date: 2026-08-07
 profile: designer
 tags: [AI, セキュリティ, デザイン, ハードウェア, 経済, 開発]

@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月18日（研究者）"
+title: "CRISPR起源を解明、中性原子量子ビット高速化（研究者）"
 date: 2026-09-18
 profile: researcher
 tags: [科学, AI, セキュリティ]

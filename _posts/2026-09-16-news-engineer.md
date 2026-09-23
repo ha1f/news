@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月16日（ソフトウェアエンジニア）"
+title: "BrewUI登場とM4 MacのGPUドライバー自作（ソフトウェアエンジニア）"
 date: 2026-09-16
 profile: engineer
 tags: [AI, 開発, 科学]

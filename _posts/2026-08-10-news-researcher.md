@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年8月10日（研究者）"
+title: "量子もつれをNNで分類、「身体なき知能」論争（研究者）"
 date: 2026-08-10
 profile: researcher
 tags: [AI, セキュリティ, ハードウェア, 科学, 開発]

@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月3日（起業家）"
+title: "Uber3300人削減、Wonderfulは50億ドル（起業家）"
 date: 2026-09-03
 profile: entrepreneur
 tags: [AI, ビジネス, セキュリティ, ハードウェア, 社会]

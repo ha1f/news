@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年8月7日（研究者）"
+title: "ゲノムモデルでファージ設計、次のチューリングテスト論（研究者）"
 date: 2026-08-07
 profile: researcher
 tags: [AI, セキュリティ, ハードウェア, 科学, 開発]

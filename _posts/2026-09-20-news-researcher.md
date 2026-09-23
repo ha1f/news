@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月20日（研究者）"
+title: "数学界に「実存的危機」、AI同士は独自言語（研究者）"
 date: 2026-09-20
 profile: researcher
 tags: [AI, 科学, 社会]

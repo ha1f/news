@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年8月14日（研究者）"
+title: "物理学者が「グルーボール」の強い証拠（研究者）"
 date: 2026-08-14
 profile: researcher
 tags: [AI, 科学, セキュリティ]

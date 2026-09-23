@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年8月30日（起業家）"
+title: "Anthropic提訴とLambdaの10億ドル借入（起業家）"
 date: 2026-08-30
 profile: entrepreneur
 tags: [AI, ビジネス, 経済]

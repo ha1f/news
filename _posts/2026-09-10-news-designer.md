@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月10日（デザイナー）"
+title: "折りたたみiPhone Duo、横長画面のUI設計（デザイナー）"
 date: 2026-09-10
 profile: designer
 tags: [デザイン, ハードウェア, AI, 開発]

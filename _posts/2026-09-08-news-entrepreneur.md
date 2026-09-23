@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月8日（起業家）"
+title: "中国が日本製半導体素材にダンピング認定（起業家）"
 date: 2026-09-08
 profile: entrepreneur
 tags: [ビジネス, AI, 経済, ハードウェア, 社会]

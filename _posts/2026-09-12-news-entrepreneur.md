@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月12日（起業家）"
+title: "Moonshot AIが20億ドル目標、日銀1.25%へ（起業家）"
 date: 2026-09-12
 profile: entrepreneur
 tags: [AI, ビジネス, 経済, 社会, 開発]

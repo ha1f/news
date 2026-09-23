@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年8月30日（ソフトウェアエンジニア）"
+title: "Cursor買収でAIエディタ勢力図が一変（ソフトウェアエンジニア）"
 date: 2026-08-30
 profile: engineer
 tags: [AI, 開発]

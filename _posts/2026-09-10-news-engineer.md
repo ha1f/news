@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月10日（ソフトウェアエンジニア）"
+title: "Tailwind買収とCUDAカーネルのRust対応（ソフトウェアエンジニア）"
 date: 2026-09-10
 profile: engineer
 tags: [開発, AI, ハードウェア]

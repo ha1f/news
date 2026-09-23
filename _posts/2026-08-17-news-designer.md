@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年8月17日（デザイナー）"
+title: "「小説のAI臭さ」を見抜く指摘に反響（デザイナー）"
 date: 2026-08-17
 profile: designer
 tags: [AI, デザイン, 開発, ハードウェア, 社会]

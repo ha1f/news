@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月21日（起業家）"
+title: "「ワールドモデル」勢が沈黙、加州は広告新法（起業家）"
 date: 2026-09-21
 profile: entrepreneur
 tags: [AI, ビジネス, ハードウェア, 経済, 社会]

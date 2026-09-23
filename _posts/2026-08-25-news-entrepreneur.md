@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年8月25日（起業家）"
+title: "Hugging Faceに130億ドル買収提案、規制も動く（起業家）"
 date: 2026-08-25
 profile: entrepreneur
 tags: [AI, ビジネス, 経済, 社会, ハードウェア]

@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年8月10日（デザイナー）"
+title: "「Dark Hours」開発者がUI判断を反省（デザイナー）"
 date: 2026-08-10
 profile: designer
 tags: [AI, セキュリティ, デザイン, ハードウェア, ビジネス, 開発]

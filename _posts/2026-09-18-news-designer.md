@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月18日（デザイナー）"
+title: "Pinterest、AIで部屋を丸ごと模様替え（デザイナー）"
 date: 2026-09-18
 profile: designer
 tags: [デザイン, AI, 開発, 社会]

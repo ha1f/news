@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月12日（デザイナー）"
+title: "iPhone Duoのヒンジ製造とRuneのOSS化（デザイナー）"
 date: 2026-09-12
 profile: designer
 tags: [AI, デザイン, 開発, ハードウェア, セキュリティ]

@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年8月24日（ソフトウェアエンジニア）"
+title: "LinusがAIでGPUドライバのバグ特定（ソフトウェアエンジニア）"
 date: 2026-08-24
 profile: engineer
 tags: [AI, 開発, セキュリティ, 社会]

@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年8月28日（研究者）"
+title: "RNA偽ノットをAIで設計、血液若返り薬も（研究者）"
 date: 2026-08-28
 profile: researcher
 tags: [AI, 科学]

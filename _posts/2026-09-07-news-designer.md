@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月7日（デザイナー）"
+title: "デジタル庁がデザインシステムをMarkdown配布（デザイナー）"
 date: 2026-09-07
 profile: designer
 tags: [AI, 開発, デザイン, ビジネス, ハードウェア]

@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月21日（デザイナー）"
+title: "AIは「生成」でなく「参照」に使え（デザイナー）"
 date: 2026-09-21
 profile: designer
 tags: [AI, デザイン, 開発, ビジネス, ハードウェア, 経済]

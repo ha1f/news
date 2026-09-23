@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月15日（研究者）"
+title: "脳信号でAI推論を操舵、移植肝の若返りも（研究者）"
 date: 2026-09-15
 profile: researcher
 tags: [AI, 科学, セキュリティ, 社会]

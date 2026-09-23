@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年8月8日（研究者）"
+title: "OpenAIがサイバー能力評価を公開、生物規制も議論（研究者）"
 date: 2026-08-08
 profile: researcher
 tags: [AI, セキュリティ, 社会, 科学]

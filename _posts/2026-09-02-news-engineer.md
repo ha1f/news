@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月2日（ソフトウェアエンジニア）"
+title: "Fable 5.1公開、小型モデルがARCでLLM超え（ソフトウェアエンジニア）"
 date: 2026-09-02
 profile: engineer
 tags: [AI, 開発, セキュリティ]
