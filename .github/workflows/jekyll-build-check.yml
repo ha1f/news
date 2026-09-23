@@ -80,13 +80,17 @@ jobs:
       - name: Check article quality
         run: |
           python3 .claude/scripts/check_article_anchors.py _site
-          changed=$(git diff --name-only --diff-filter=d \
-            "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}" \
-            -- '_posts/*.md')
+          # 本文が変わった投稿だけを渡す。この2つの検査が見るのは本文の記事項目
+          # だけなので、front matter を一括更新した PR に全件を渡すと、その投稿が
+          # 書かれた当時のルールで書かれた既存の本文まで今の検査にかかり、PR が
+          # 持ち込んでいない違反で red になる（#401 で実測: title 行だけを直した
+          # 368件を渡すと 2,453 件の不一致。同じ数が main 側の同じファイルでも出る）
+          changed=$(python3 .claude/scripts/changed_post_bodies.py \
+            "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}")
           if [ -n "$changed" ]; then
             echo "$changed"
             python3 .claude/scripts/check_article_notes.py $changed
             python3 .claude/scripts/check_source_hints.py $changed
           else
-            echo "この PR は _posts を変更していないためスキップ"
+            echo "この PR は _posts の本文を変更していないためスキップ"
           fi
