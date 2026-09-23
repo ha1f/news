@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年8月5日（研究者）"
+title: "LLM生成の査読に懸念、オープンモデルに安全性の差（研究者）"
 date: 2026-08-05
 profile: researcher
 tags: [AI, セキュリティ, ハードウェア, 社会, 科学, 開発]

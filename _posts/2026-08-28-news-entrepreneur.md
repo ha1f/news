@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年8月28日（起業家）"
+title: "ChatGPT広告をインドで開始、半導体関税も拡大論（起業家）"
 date: 2026-08-28
 profile: entrepreneur
 tags: [AI, ビジネス, 経済]

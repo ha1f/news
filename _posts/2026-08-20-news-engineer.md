@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年8月20日（ソフトウェアエンジニア）"
+title: "Go 1.27公開、さくらで136万件漏洩か（ソフトウェアエンジニア）"
 date: 2026-08-20
 profile: engineer
 tags: [開発, AI, セキュリティ, 社会]

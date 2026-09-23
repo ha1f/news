@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年8月16日（起業家）"
+title: "Cursor買収完了とNvidiaの$500B計画（起業家）"
 date: 2026-08-16
 profile: entrepreneur
 tags: [AI, ビジネス, 経済, 社会]

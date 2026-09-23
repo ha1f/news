@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年8月3日（研究者）"
+title: "NeurIPS査読者が討論期間に消失、NIHは助成打ち切り（研究者）"
 date: 2026-08-03
 profile: researcher
 tags: [AI, ハードウェア, 科学]

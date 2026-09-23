@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月14日（起業家）"
+title: "YCデモデイに浮体式原子炉、大型調達が最高（起業家）"
 date: 2026-09-14
 profile: entrepreneur
 tags: [AI, ビジネス, 経済, 社会]

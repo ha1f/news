@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年8月27日（デザイナー）"
+title: "新書体Nebula Sansと2nmチップM6（デザイナー）"
 date: 2026-08-27
 profile: designer
 tags: [デザイン, AI, 開発, ハードウェア, 社会]

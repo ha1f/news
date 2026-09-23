@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月21日（ソフトウェアエンジニア）"
+title: "AIエージェント運用基盤「AX」が登場（ソフトウェアエンジニア）"
 date: 2026-09-21
 profile: engineer
 tags: [AI, 開発]

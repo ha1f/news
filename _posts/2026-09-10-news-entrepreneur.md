@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月10日（起業家）"
+title: "Harvey評価額155億ドル、AI支出は急落（起業家）"
 date: 2026-09-10
 profile: entrepreneur
 tags: [ビジネス, AI, 経済, 社会]

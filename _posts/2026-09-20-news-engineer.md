@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月20日（ソフトウェアエンジニア）"
+title: "Vapor 5ベータ公開、Lambdaは8分で陥落（ソフトウェアエンジニア）"
 date: 2026-09-20
 profile: engineer
 tags: [開発, AI, セキュリティ, ビジネス]

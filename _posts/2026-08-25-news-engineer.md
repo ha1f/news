@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年8月25日（ソフトウェアエンジニア）"
+title: "NVIDIA「AVO」がARC-AGI-3で満点（ソフトウェアエンジニア）"
 date: 2026-08-25
 profile: engineer
 tags: [AI, 開発, セキュリティ]

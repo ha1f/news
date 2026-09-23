@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年8月20日（起業家）"
+title: "Stripe買収の狙いとGPU先物市場の胎動（起業家）"
 date: 2026-08-20
 profile: entrepreneur
 tags: [AI, ビジネス, 経済, ハードウェア, 社会]

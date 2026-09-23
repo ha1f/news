@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年8月30日（研究者）"
+title: "Roman望遠鏡打ち上げ、LLM評価の揺らぎ露呈（研究者）"
 date: 2026-08-30
 profile: researcher
 tags: [AI, 科学, ハードウェア]

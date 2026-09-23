@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月16日（デザイナー）"
+title: "AI生成UIの「ありがち」回避とArt Pen 2（デザイナー）"
 date: 2026-09-16
 profile: designer
 tags: [AI, デザイン, 開発]

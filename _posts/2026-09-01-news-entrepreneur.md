@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月1日（起業家）"
+title: "クック退任とChatGPT広告10億ドル（起業家）"
 date: 2026-09-01
 profile: entrepreneur
 tags: [AI, ビジネス, 経済, ハードウェア, 社会]

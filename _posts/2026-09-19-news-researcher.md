@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月19日（研究者）"
+title: "AI生物兵器リスクにバイオ業界が警戒（研究者）"
 date: 2026-09-19
 profile: researcher
 tags: [AI, 科学, 社会]

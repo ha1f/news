@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月14日（研究者）"
+title: "ML論文が1日447本、ACLは投稿制限（研究者）"
 date: 2026-09-14
 profile: researcher
 tags: [AI, 科学, 経済]

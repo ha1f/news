@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月16日（起業家）"
+title: "Anthropic IPOにNVIDIAが1.5兆円検討（起業家）"
 date: 2026-09-16
 profile: entrepreneur
 tags: [AI, ビジネス, 経済, 社会]

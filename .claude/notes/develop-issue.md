@@ -65,7 +65,8 @@ artifact に写るのは、その branch の `_posts/` をビルドした結果�
 - 見出しリンクの着地点: `python3 .claude/scripts/check_article_anchors.py <_site>`
 - 読みどころの欠落: `python3 .claude/scripts/check_article_notes.py`
 - ソース表記の不一致: `python3 .claude/scripts/check_source_hints.py`
-  （上の2つは引数なしで当日 JST 分を検査。`_posts/{YYYY-MM-DD}-*.md` を渡せば日付を固定できる）
+- title が日付のままになっていないか: `python3 .claude/scripts/check_post_titles.py`
+  （上の3つは引数なしで当日 JST 分を検査。`_posts/{YYYY-MM-DD}-*.md` を渡せば日付を固定できる。`--all` で全投稿）
 - ユニットテスト: スクリプトと同じディレクトリで `python3 -m unittest discover -p 'test_*.py'`。
   置き場が分かれているので、触ったものを個別に回す（repo ルートからの discover は 0 件になる）:
   `.claude/scripts` / `.claude/skills/select-and-develop/scripts` /

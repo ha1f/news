@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月2日（デザイナー）"
+title: "Google Pics発表、Canva領域にAI参入（デザイナー）"
 date: 2026-09-02
 profile: designer
 tags: [デザイン, AI, 開発, ハードウェア, 社会]

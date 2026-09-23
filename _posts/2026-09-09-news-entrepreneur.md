@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月9日（起業家）"
+title: "Cognition 480億ドル、Mistral大型調達（起業家）"
 date: 2026-09-09
 profile: entrepreneur
 tags: [AI, ビジネス, 経済, 社会]

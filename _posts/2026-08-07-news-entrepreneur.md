@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年8月7日（起業家）"
+title: "Hadrian1.37B調達、Terafab正式発表（起業家）"
 date: 2026-08-07
 profile: entrepreneur
 tags: [AI, デザイン, ハードウェア, ビジネス, 経済, 開発]

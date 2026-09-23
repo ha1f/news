@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月5日（研究者）"
+title: "フェルマーの最終定理、AIで形式化完了（研究者）"
 date: 2026-09-05
 profile: researcher
 tags: [AI, 科学, セキュリティ]

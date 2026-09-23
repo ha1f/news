@@ -58,11 +58,8 @@ title: "アーカイブ"
   {%- comment -%}data-content はキーワード絞り込みの対象。truncatewords は空白区切りの語数を
   数えるので日本語では実質 no-op で、いまは本文全文が入っている。絞り込みの当たり幅を変えて
   しまうため本 PR では挙動を変えない{%- endcomment -%}
-  {%- comment -%}#341 より前の投稿は title がそのまま日付文字列なので、バッジを足すと隣に
-  同じ日付が2回並んでしまう。title が日付そのものと一致するときだけバッジを省く{%- endcomment -%}
-  {%- assign date_only_title = post.date | date: date_format -%}
   <li data-content="{{ post.content | strip_html | strip_newlines | truncatewords: 100 | escape }}" data-tags="{{ post.tags | join: ',' | escape }}">
-    {%- unless post.title == date_only_title %}<span class="archive-item-date">{{ post.date | date: date_format }}</span>{% endunless %}
+    <span class="archive-item-date">{{ post.date | date: date_format }}</span>
     <a href="{{ post.url | relative_url }}">{{ post.title }}</a>
     {% if post.tags.size > 0 %}<span class="archive-item-tags">{{ post.tags | join: " / " }}</span>{% endif %}
     {% if post.excerpt %}<p class="archive-excerpt">{{ post.excerpt | strip_html | truncate: 100 }}</p>{% endif %}

@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月21日（研究者）"
+title: "腹部CT読影AI「RADAR」が専門医に迫る（研究者）"
 date: 2026-09-21
 profile: researcher
 tags: [AI, 科学, セキュリティ, 開発, 社会]

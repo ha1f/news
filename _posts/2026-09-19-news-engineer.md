@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月19日（ソフトウェアエンジニア）"
+title: "Jev旋風、DoorDashは6万フラグ整理（ソフトウェアエンジニア）"
 date: 2026-09-19
 profile: engineer
 tags: [AI, 開発, セキュリティ, デザイン, 科学]

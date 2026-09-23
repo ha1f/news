@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月2日（研究者）"
+title: "推論モデルの暗黙バイアスと脳信号による操舵（研究者）"
 date: 2026-09-02
 profile: researcher
 tags: [AI, 科学]

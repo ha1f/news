@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月14日（デザイナー）"
+title: "Tailwind買収と:has()がJSを置き換える（デザイナー）"
 date: 2026-09-14
 profile: designer
 tags: [AI, 開発, デザイン, ビジネス, ハードウェア, 科学]

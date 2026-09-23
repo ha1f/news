@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月13日（研究者）"
+title: "TaoのAI数学利用批判と免疫学の新機序（研究者）"
 date: 2026-09-13
 profile: researcher
 tags: [AI, 科学, 開発]

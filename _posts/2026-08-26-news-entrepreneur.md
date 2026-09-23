@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年8月26日（起業家）"
+title: "Anthropic2兆ドルIPO、SpaceXは第2宇宙港（起業家）"
 date: 2026-08-26
 profile: entrepreneur
 tags: [AI, ビジネス, セキュリティ, 社会]

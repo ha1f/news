@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月13日（ソフトウェアエンジニア）"
+title: "ANE解析全記録、Spotifyはトークン9割減（ソフトウェアエンジニア）"
 date: 2026-09-13
 profile: engineer
 tags: [開発, AI, セキュリティ, ハードウェア]

@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月13日（起業家）"
+title: "Nvidiaは「AIの中央銀行」、年内IPOは否定（起業家）"
 date: 2026-09-13
 profile: entrepreneur
 tags: [AI, ビジネス, 経済, セキュリティ, 社会]

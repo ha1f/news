@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月9日（ソフトウェアエンジニア）"
+title: "ナビエ–ストークス論争とHTMX 4.0リリース（ソフトウェアエンジニア）"
 date: 2026-09-09
 profile: engineer
 tags: [AI, 開発, 科学, セキュリティ]

@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月6日（デザイナー）"
+title: "AI生成メニューの同質化、Webの3分の1に痕跡（デザイナー）"
 date: 2026-09-06
 profile: designer
 tags: [AI, デザイン, 開発, 社会]

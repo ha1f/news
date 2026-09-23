@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年8月26日（研究者）"
+title: "AIが自律で生物医学研究、再現性に懸念（研究者）"
 date: 2026-08-26
 profile: researcher
 tags: [AI, 科学, 社会]

@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年8月15日（デザイナー）"
+title: "夏祭りAIポスター論争とThunderbird刷新（デザイナー）"
 date: 2026-08-15
 profile: designer
 tags: [AI, デザイン, 開発]

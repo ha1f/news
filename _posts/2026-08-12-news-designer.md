@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年8月12日（デザイナー）"
+title: "Amazon注文メールの商品名削除とトグル有害論（デザイナー）"
 date: 2026-08-12
 profile: designer
 tags: [デザイン, AI, 開発, ハードウェア, ビジネス]

@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月7日（ソフトウェアエンジニア）"
+title: "Asahi LinuxがM3対応、短い出力は逆にコスト増（ソフトウェアエンジニア）"
 date: 2026-09-07
 profile: engineer
 tags: [AI, 開発, セキュリティ, ハードウェア, 社会]

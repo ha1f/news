@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年8月11日（デザイナー）"
+title: "Blueskyのリポスト制御とBoseのAI転換（デザイナー）"
 date: 2026-08-11
 profile: designer
 tags: [AI, セキュリティ, デザイン, ハードウェア, ビジネス, 開発]

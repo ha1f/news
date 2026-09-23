@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月3日（研究者）"
+title: "XENONnTが未知シグナル、新物理学の兆しか（研究者）"
 date: 2026-09-03
 profile: researcher
 tags: [AI, 科学, セキュリティ, 社会]
