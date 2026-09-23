@@ -8,6 +8,7 @@
 
 - Jekyll ベースの静的サイト (`_config.yml`, `_posts/`, `index.md`)。GitHub Pages で公開
 - CI は `.github/workflows/jekyll-build-check.yml`（PR の base が `main` のときだけ走る）。ビルド + Playwright のスクリーンショット取得までを行い、artifact に残す
+  - 「Check article quality」が `check_article_notes.py` / `check_source_hints.py` に渡すのは、PR で変更された `_posts/*.md` のうち**本文が変わったもの**だけ（選別は `.claude/scripts/changed_post_bodies.py`。`check_article_anchors.py` は毎回 `_site` 全件）。ルール制定前に書かれた過去の投稿は今の検査を通らない（実測 2026-09-23: 過去368件で不一致 2,453 件・読みどころなし 76 件。同じ数が main 側の同じファイルでも出るので PR が持ち込んだものではない）ため、**過去の投稿の本文にまとめて触ると、その PR と無関係な違反で red になる**。`_posts` を大量に触る前に `python3 .claude/scripts/changed_post_bodies.py origin/main HEAD` で何件渡るかを確かめる
   - **base が main でない PR（スタックした PR）には CI が付かない**。base の付け替えだけでは workflow は起動しない（`edited` は既定の trigger 外）ので、base ブランチのマージ後に rebase して push（`synchronize`）すると走る。同じファイルを触る issue を同じ run で拾うと、スタックさせた側は base のマージまで検証できないので、in-flight の branch と同じファイルを触らない issue を選ぶ
 - `.gitignore` は toptal の macOS テンプレート + `.claude/` 用セクションで構成済み
 - theme は `minima` を指定しているが、GitHub Pages が実際にビルドに使うバージョンは 2.5.1 に固定 ([pages.github.com/versions](https://pages.github.com/versions/) で確認)。minima 3.x系の設定書式 (`minima.social_links` の配列、`author:` のハッシュ形式等) は 2.5.1 では無視されるかそのまま文字列化されて壊れる。`_config.yml` の `minima.*` / theme依存の設定を変更するときは [2.5.1 のテンプレ実物](https://github.com/jekyll/minima/tree/v2.5.1) と照合してから進める
