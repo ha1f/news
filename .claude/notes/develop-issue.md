@@ -41,6 +41,7 @@ playwright screenshot --browser chromium --full-page \
 
 `npx playwright@<CI のバージョン>` は使えない。CI がピンしている版は `/opt/pw-browsers` にあるものと違う build 番号を要求し、`Executable doesn't exist at /opt/pw-browsers/chromium_headless_shell-<別番号>/...` で落ちる。
 
+- **画像の変換ツールが無い**（実測 2026-09-23: `convert` / `magick` / `rsvg-convert` / `inkscape` いずれも不在、Python の `cairosvg`・`Pillow` も未インストール）。`assets/favicon-32x32.png` / `apple-touch-icon.png` のようなラスタ画像を作り直す作業（#390 等）は、変換手段の調達から始まる。`playwright screenshot` で SVG を開いて撮る手は、`file://` の SVG に `--omit-background` を付けた1回目では出力ファイルができなかった（原因未調査）。見積もりに入れる
 - 配信は `python3 -m http.server <port> --directory <dir>` で。`baseurl: /news` を再現するため `<dir>/news/` に `_site` の中身を置く（CI の workflow と同じやり方）
 - Node の API を直接使う場合、dark mode は `browser.newContext({ colorScheme })` か `browser.newPage({ colorScheme })` で。`context.newPage({ colorScheme })` は**黙って無視される**（実測）
 - Node の API で幅を指定するキーは `viewport`。**`viewportSize` は黙って無視され 1280 幅になる**（Python 版のキー名。実測 2026-09-22: `newContext({viewportSize:{width:375,...}})` → `window.innerWidth` 1280 / `newContext({viewport:{width:375,...}})` → 375）。同じ `newContext` で `colorScheme` のほうは効くので、dark だけ合っていて幅が違う絵を撮ってしまう
