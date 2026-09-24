@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年8月13日（ソフトウェアエンジニア）"
+title: "Tailscale、16年前のSQLiteバグ特定（ソフトウェアエンジニア）"
 date: 2026-08-13
 profile: engineer
 tags: [AI, 開発, セキュリティ]

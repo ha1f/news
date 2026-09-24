@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年8月12日（起業家）"
+title: "River AI、創業2カ月で11億ドル調達（起業家）"
 date: 2026-08-12
 profile: entrepreneur
 tags: [AI, ビジネス, 経済, 科学, 社会]

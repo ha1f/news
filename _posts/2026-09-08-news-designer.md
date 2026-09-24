@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月8日（デザイナー）"
+title: "デザイン業の倒産166%増、AstraはBlender操作（デザイナー）"
 date: 2026-09-08
 profile: designer
 tags: [デザイン, AI, ハードウェア, 科学]

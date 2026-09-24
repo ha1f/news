@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年8月2日（起業家）"
+title: "Index Venturesが$2B調達、インドで課金最高（起業家）"
 date: 2026-08-02
 profile: entrepreneur
 tags: [AI, セキュリティ, デザイン, ビジネス, 社会, 科学, 経済, 開発]

@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年8月15日（研究者）"
+title: "LLM知識編集と汎用聴覚知能、人型ロボット再考（研究者）"
 date: 2026-08-15
 profile: researcher
 tags: [AI, 科学, セキュリティ, 社会]

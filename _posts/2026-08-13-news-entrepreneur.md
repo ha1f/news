@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年8月13日（起業家）"
+title: "LovableとCognition、評価額が急騰（起業家）"
 date: 2026-08-13
 profile: entrepreneur
 tags: [AI, ビジネス, 社会]

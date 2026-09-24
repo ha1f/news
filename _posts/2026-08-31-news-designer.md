@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年8月31日（デザイナー）"
+title: "参議院HPが17年ぶり刷新、AI制作疑惑（デザイナー）"
 date: 2026-08-31
 profile: designer
 tags: [AI, 開発, デザイン, セキュリティ, ハードウェア]

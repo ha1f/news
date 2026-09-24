@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年8月31日（研究者）"
+title: "NeurIPS採択論文がGitHubに流出（研究者）"
 date: 2026-08-31
 profile: researcher
 tags: [AI, 科学, セキュリティ]

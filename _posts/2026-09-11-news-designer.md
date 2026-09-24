@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月11日（デザイナー）"
+title: "Shopifyがネイティブ回帰、Miro買収額は10分の1（デザイナー）"
 date: 2026-09-11
 profile: designer
 tags: [開発, デザイン, ビジネス]

@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月19日（起業家）"
+title: "加州がAIキルスイッチ検討、Manusは4000億円調達（起業家）"
 date: 2026-09-19
 profile: entrepreneur
 tags: [AI, ビジネス, 経済, 社会, 科学]

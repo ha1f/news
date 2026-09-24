@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月20日（起業家）"
+title: "Angle Healthが評価額27億ドルで黒字化（起業家）"
 date: 2026-09-20
 profile: entrepreneur
 tags: [ビジネス, AI, 社会, 経済, ハードウェア]

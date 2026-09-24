@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年8月21日（研究者）"
+title: "Scienceに自律研究AI、蛍光タンパク質も設計（研究者）"
 date: 2026-08-21
 profile: researcher
 tags: [AI, 科学, セキュリティ, 社会]

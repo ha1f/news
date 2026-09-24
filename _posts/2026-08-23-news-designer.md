@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年8月23日（デザイナー）"
+title: "CyberAgentが「AIXデザイナー」を定義（デザイナー）"
 date: 2026-08-23
 profile: designer
 tags: [AI, デザイン, ハードウェア, 科学]

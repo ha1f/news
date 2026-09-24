@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月17日（ソフトウェアエンジニア）"
+title: "MistralとMozillaがブラウザ内AIで提携（ソフトウェアエンジニア）"
 date: 2026-09-17
 profile: engineer
 tags: [AI, 開発, セキュリティ]

@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月7日（起業家）"
+title: "Crusoeが30億ドル調達、Anthropic和解金で対立（起業家）"
 date: 2026-09-07
 profile: entrepreneur
 tags: [AI, ビジネス, 経済, 社会, 科学]

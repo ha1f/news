@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年8月24日（研究者）"
+title: "宇宙ミラー計画が夜空を脅かす、太陽光は鳥類減（研究者）"
 date: 2026-08-24
 profile: researcher
 tags: [AI, セキュリティ, 科学]

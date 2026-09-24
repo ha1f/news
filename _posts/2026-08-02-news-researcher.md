@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年8月2日（研究者）"
+title: "AI大手の論文公開率が急落、Genesis助成金が始動（研究者）"
 date: 2026-08-02
 profile: researcher
 tags: [AI, セキュリティ, ハードウェア, ビジネス, 社会, 科学, 開発]

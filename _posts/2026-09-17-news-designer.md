@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月17日（デザイナー）"
+title: "「妖怪ウォッチ」のAI疑惑にレベルファイブ回答（デザイナー）"
 date: 2026-09-17
 profile: designer
 tags: [AI, デザイン, 開発, 社会, 科学]

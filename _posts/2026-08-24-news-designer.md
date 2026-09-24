@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年8月24日（デザイナー）"
+title: "Claude Codeでデザイン実装、残す建築を問う（デザイナー）"
 date: 2026-08-24
 profile: designer
 tags: [AI, デザイン, 開発, ハードウェア, 社会]

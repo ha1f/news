@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年8月4日（研究者）"
+title: "強化学習で結晶設計、脳活動でLLM推論を改善（研究者）"
 date: 2026-08-04
 profile: researcher
 tags: [AI, セキュリティ, ハードウェア, 社会, 科学]

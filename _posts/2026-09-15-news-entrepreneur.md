@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月15日（起業家）"
+title: "AI減速論で半導体株急落、NVIDIA4%安（起業家）"
 date: 2026-09-15
 profile: entrepreneur
 tags: [AI, ビジネス, 経済, セキュリティ, 社会, 科学]

@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年8月23日（起業家）"
+title: "米司法省がa16zを調査、VC業界に緊張（起業家）"
 date: 2026-08-23
 profile: entrepreneur
 tags: [AI, ビジネス, 経済, 社会]

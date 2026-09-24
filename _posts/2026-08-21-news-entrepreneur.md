@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年8月21日（起業家）"
+title: "NVIDIAが顧客に8兆円融資、ダウ703ドル安（起業家）"
 date: 2026-08-21
 profile: entrepreneur
 tags: [AI, ビジネス, 経済, 社会]

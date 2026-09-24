@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月10日（研究者）"
+title: "NeurIPSがAI生成疑い論文178本を却下（研究者）"
 date: 2026-09-10
 profile: researcher
 tags: [AI, 科学, 社会]

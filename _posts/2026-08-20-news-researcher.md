@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年8月20日（研究者）"
+title: "査読システムはAI時代を生き延びるか（研究者）"
 date: 2026-08-20
 profile: researcher
 tags: [AI, 科学, 社会]

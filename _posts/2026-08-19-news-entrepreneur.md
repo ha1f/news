@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年8月19日（起業家）"
+title: "AIチップEtched、評価額$21Bに倍増（起業家）"
 date: 2026-08-19
 profile: entrepreneur
 tags: [AI, ビジネス, 経済, 社会]

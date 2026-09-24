@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年8月29日（起業家）"
+title: "a16zが11億ドルファンド、NvidiaはHF買収へ（起業家）"
 date: 2026-08-29
 profile: entrepreneur
 tags: [ビジネス, AI, 経済, 社会, セキュリティ]

@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月1日（ソフトウェアエンジニア）"
+title: "uBlock Origin消滅、MV2拡張が削除（ソフトウェアエンジニア）"
 date: 2026-09-01
 profile: engineer
 tags: [AI, 開発, セキュリティ, 社会]

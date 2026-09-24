@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年8月16日（ソフトウェアエンジニア）"
+title: "Codex自動研究でカーネル232倍高速化（ソフトウェアエンジニア）"
 date: 2026-08-16
 profile: engineer
 tags: [AI, 開発]

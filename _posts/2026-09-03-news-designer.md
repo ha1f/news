@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月3日（デザイナー）"
+title: "ヨルシカのチケット画像に無断AIの痕跡（デザイナー）"
 date: 2026-09-03
 profile: designer
 tags: [AI, デザイン, 開発, ハードウェア, ビジネス]

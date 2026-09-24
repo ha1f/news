@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月9日（デザイナー）"
+title: "画風プロンプト38種とDuolingoアイコン刷新（デザイナー）"
 date: 2026-09-09
 profile: designer
 tags: [デザイン, AI, 開発]
