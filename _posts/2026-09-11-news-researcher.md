@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月11日（研究者）"
+title: "ナビエ–ストークスにLean 4形式証明が同梱（研究者）"
 date: 2026-09-11
 profile: researcher
 tags: [AI, セキュリティ, 科学]

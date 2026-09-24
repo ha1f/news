@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年8月9日（起業家）"
+title: "コンサル大手4社が市場縮小論、DeepSeekは値上げ（起業家）"
 date: 2026-08-09
 profile: entrepreneur
 tags: [AI, デザイン, ハードウェア, ビジネス, 社会, 経済, 開発]

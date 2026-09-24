@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年8月27日（起業家）"
+title: "NVIDIA売上2倍、Anthropicは450億ドル契約（起業家）"
 date: 2026-08-27
 profile: entrepreneur
 tags: [AI, ビジネス, 経済, 社会]

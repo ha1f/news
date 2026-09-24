@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月8日（研究者）"
+title: "大腸がん主因は腸内細菌、LLMの自己検閲も解明（研究者）"
 date: 2026-09-08
 profile: researcher
 tags: [AI, 科学, 社会]

@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年8月17日（ソフトウェアエンジニア）"
+title: "Anthropicがシステムプロンプト全文公開（ソフトウェアエンジニア）"
 date: 2026-08-17
 profile: engineer
 tags: [AI, 開発, セキュリティ]

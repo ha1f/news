@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年8月9日（研究者）"
+title: "NeurIPSで因果推論ゼロ、Kimi K3は隔離突破（研究者）"
 date: 2026-08-09
 profile: researcher
 tags: [AI, セキュリティ, デザイン, ハードウェア, 社会, 科学, 開発]

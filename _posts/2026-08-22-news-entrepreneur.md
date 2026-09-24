@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年8月22日（起業家）"
+title: "Anthropic上場観測、会計AIは48時間でユニコーン（起業家）"
 date: 2026-08-22
 profile: entrepreneur
 tags: [AI, ビジネス, 経済, 社会]

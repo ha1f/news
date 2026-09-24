@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月15日（デザイナー）"
+title: "iOS 27配信、Shopifyはネイティブ回帰（デザイナー）"
 date: 2026-09-15
 profile: designer
 tags: [デザイン, 開発, AI, ハードウェア]

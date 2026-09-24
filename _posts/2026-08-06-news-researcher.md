@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年8月6日（研究者）"
+title: "Goodhartの法則と国勢調査の差分プライバシー禁止（研究者）"
 date: 2026-08-06
 profile: researcher
 tags: [AI, セキュリティ, ハードウェア, ビジネス, 社会, 科学, 開発]

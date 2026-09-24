@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年8月22日（研究者）"
+title: "AIが設計した薬の功績と自律研究ラボの現在地（研究者）"
 date: 2026-08-22
 profile: researcher
 tags: [AI, 科学, セキュリティ, 社会]

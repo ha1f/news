@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月14日（ソフトウェアエンジニア）"
+title: "AppleがCore AIモデル群をOSS公開（ソフトウェアエンジニア）"
 date: 2026-09-14
 profile: engineer
 tags: [AI, 開発, 科学]

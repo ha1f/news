@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月11日（起業家）"
+title: "Miro買収とNvidia 70%成長、金利5%接近（起業家）"
 date: 2026-09-11
 profile: entrepreneur
 tags: [AI, ビジネス, 経済, ハードウェア]

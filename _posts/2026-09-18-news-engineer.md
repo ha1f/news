@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月18日（ソフトウェアエンジニア）"
+title: "GPT-6 Astraが脆弱性発見、証明言語Bendも（ソフトウェアエンジニア）"
 date: 2026-09-18
 profile: engineer
 tags: [AI, 開発, セキュリティ, ハードウェア]

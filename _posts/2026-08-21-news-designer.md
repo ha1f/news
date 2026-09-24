@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年8月21日（デザイナー）"
+title: "標準HTMLの底力、はてなパークス公開（デザイナー）"
 date: 2026-08-21
 profile: designer
 tags: [AI, 開発, デザイン, ビジネス, 社会]

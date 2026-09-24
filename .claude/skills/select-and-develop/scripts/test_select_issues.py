@@ -1,15 +1,35 @@
 #!/usr/bin/env python3
 """select_issues.py の純関数のユニットテスト。実行: python3 test_select_issues.py"""
+import io
+import json
 import sys
 import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from select_issues import build_candidates, parse_guardrails, parse_link_header, with_page
+import select_issues
+from select_issues import (bot_exclusion_reliable, build_candidates, count_open_issues,
+                           load_summarize_issues, parse_guardrails, parse_link_header,
+                           with_page)
+
+
+def run_main(payload):
+    """--stdin モードで main() を通し、標準出力の JSON を返す"""
+    stdin, stdout, argv = sys.stdin, sys.stdout, sys.argv
+    sys.stdin = io.StringIO(json.dumps(payload))
+    sys.stdout = io.StringIO()
+    sys.argv = ["select_issues.py", "--stdin"]
+    try:
+        code = select_issues.main()
+        out = sys.stdout.getvalue()
+    finally:
+        sys.stdin, sys.stdout, sys.argv = stdin, stdout, argv
+    assert code == 0, f"main() が {code} を返しました"
+    return json.loads(out)
 
 
 def issue(number, title="t", assoc="OWNER", labels=(), created="2026-07-01T00:00:00Z",
-          pr=False, login=None):
+          pr=False, login=None, user_type=None):
     data = {
         "number": number,
         "title": title,
@@ -18,8 +38,12 @@ def issue(number, title="t", assoc="OWNER", labels=(), created="2026-07-01T00:00
     }
     if assoc is not None:
         data["author_association"] = assoc
-    if login is not None:
-        data["user"] = {"login": login}
+    if login is not None or user_type is not None:
+        data["user"] = {}
+        if login is not None:
+            data["user"]["login"] = login
+        if user_type is not None:
+            data["user"]["type"] = user_type
     if pr:
         data["pull_request"] = {}
     return data
@@ -190,6 +214,50 @@ class ParseLinkHeaderTest(unittest.TestCase):
     def test_empty_header_returns_empty_dict(self):
         self.assertEqual(parse_link_header(""), {})
         self.assertEqual(parse_link_header(None), {})
+
+
+class OpenIssuesTest(unittest.TestCase):
+    """open issue 数の出どころと、出力に載ることを確かめる。
+
+    数え方そのもの（何を除くか）のテストは evaluate-and-triage 側にある。
+    ここで期待値を書き写すと、正本を変えたときにこのテストごと古くなるので、
+    「正本の関数を使っているか」と「値が出力に載るか」だけを見る。
+    """
+
+    def test_uses_the_function_from_check_state(self):
+        summarize = load_summarize_issues()
+        source = (Path(__file__).resolve().parents[2]
+                  / "evaluate-and-triage" / "scripts" / "check_state.py")
+        self.assertEqual(summarize.__name__, "summarize_issues")
+        self.assertEqual(Path(summarize.__code__.co_filename).resolve(), source)
+
+    def test_output_carries_open_issues(self):
+        """SKILL.md が「そのまま貼れ」と指示している唯一のフィールドが出力に在るか"""
+        out = run_main({"issues": [issue(1, login="ha1f", user_type="User"),
+                                   issue(2, login="ha1f", user_type="User")], "prs": []})
+        self.assertEqual(out["open_issues"], 2)
+        self.assertNotIn("open_issues_note", out)
+
+    def test_count_failure_does_not_drop_candidates(self):
+        """正本が読めなくても候補の出力は止めない（develop ステージを止めない）"""
+        original = select_issues.load_summarize_issues
+        select_issues.load_summarize_issues = lambda: (_ for _ in ()).throw(
+            FileNotFoundError("check_state.py"))
+        try:
+            out = run_main({"issues": [issue(7, login="ha1f", user_type="User")], "prs": []})
+        finally:
+            select_issues.load_summarize_issues = original
+        self.assertIsNone(out["open_issues"])
+        self.assertIn("check_state.py", out["open_issues_note"])
+        self.assertEqual([e["number"] for e in out["backlog"]], [7])
+
+    def test_note_when_bot_exclusion_cannot_work(self):
+        """user.type の無いデータ (MCP の list_issues) では参考値だと分かるようにする"""
+        self.assertTrue(bot_exclusion_reliable([{"user": {"type": "User"}}]))
+        self.assertFalse(bot_exclusion_reliable([{"user": {"type": "User"}}, {"number": 2}]))
+        count, note = count_open_issues([{"number": 1, "title": "t"}])
+        self.assertEqual(count, 1)
+        self.assertIn("参考値", note)
 
 
 class WithPageTest(unittest.TestCase):

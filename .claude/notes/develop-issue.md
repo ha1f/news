@@ -8,6 +8,7 @@
 
 - Jekyll ベースの静的サイト (`_config.yml`, `_posts/`, `index.md`)。GitHub Pages で公開
 - CI は `.github/workflows/jekyll-build-check.yml`（PR の base が `main` のときだけ走る）。ビルド + Playwright のスクリーンショット取得までを行い、artifact に残す
+  - 「Check article quality」が `check_article_notes.py` / `check_source_hints.py` に渡すのは、PR で変更された `_posts/*.md` のうち**本文が変わったもの**だけ（選別は `.claude/scripts/changed_post_bodies.py`。`check_article_anchors.py` は毎回 `_site` 全件）。ルール制定前に書かれた過去の投稿は今の検査を通らない（実測 2026-09-23: 過去368件で不一致 2,453 件・読みどころなし 76 件。同じ数が main 側の同じファイルでも出るので PR が持ち込んだものではない）ため、**過去の投稿の本文にまとめて触ると、その PR と無関係な違反で red になる**。`_posts` を大量に触る前に `python3 .claude/scripts/changed_post_bodies.py origin/main HEAD` で何件渡るかを確かめる
   - **base が main でない PR（スタックした PR）には CI が付かない**。base の付け替えだけでは workflow は起動しない（`edited` は既定の trigger 外）ので、base ブランチのマージ後に rebase して push（`synchronize`）すると走る。同じファイルを触る issue を同じ run で拾うと、スタックさせた側は base のマージまで検証できないので、in-flight の branch と同じファイルを触らない issue を選ぶ
 - `.gitignore` は toptal の macOS テンプレート + `.claude/` 用セクションで構成済み
 - theme は `minima` を指定しているが、GitHub Pages が実際にビルドに使うバージョンは 2.5.1 に固定 ([pages.github.com/versions](https://pages.github.com/versions/) で確認)。minima 3.x系の設定書式 (`minima.social_links` の配列、`author:` のハッシュ形式等) は 2.5.1 では無視されるかそのまま文字列化されて壊れる。`_config.yml` の `minima.*` / theme依存の設定を変更するときは [2.5.1 のテンプレ実物](https://github.com/jekyll/minima/tree/v2.5.1) と照合してから進める
@@ -40,6 +41,7 @@ playwright screenshot --browser chromium --full-page \
 
 `npx playwright@<CI のバージョン>` は使えない。CI がピンしている版は `/opt/pw-browsers` にあるものと違う build 番号を要求し、`Executable doesn't exist at /opt/pw-browsers/chromium_headless_shell-<別番号>/...` で落ちる。
 
+- **画像の変換ツールが無い**（実測 2026-09-23: `convert` / `magick` / `rsvg-convert` / `inkscape` いずれも不在、Python の `cairosvg`・`Pillow` も未インストール）。`assets/favicon-32x32.png` / `apple-touch-icon.png` のようなラスタ画像を作り直す作業（#390 等）は、変換手段の調達から始まる。`playwright screenshot` で SVG を開いて撮る手は、`file://` の SVG に `--omit-background` を付けた1回目では出力ファイルができなかった（原因未調査）。見積もりに入れる
 - 配信は `python3 -m http.server <port> --directory <dir>` で。`baseurl: /news` を再現するため `<dir>/news/` に `_site` の中身を置く（CI の workflow と同じやり方）
 - Node の API を直接使う場合、dark mode は `browser.newContext({ colorScheme })` か `browser.newPage({ colorScheme })` で。`context.newPage({ colorScheme })` は**黙って無視される**（実測）
 - Node の API で幅を指定するキーは `viewport`。**`viewportSize` は黙って無視され 1280 幅になる**（Python 版のキー名。実測 2026-09-22: `newContext({viewportSize:{width:375,...}})` → `window.innerWidth` 1280 / `newContext({viewport:{width:375,...}})` → 375）。同じ `newContext` で `colorScheme` のほうは効くので、dark だけ合っていて幅が違う絵を撮ってしまう
@@ -65,7 +67,8 @@ artifact に写るのは、その branch の `_posts/` をビルドした結果�
 - 見出しリンクの着地点: `python3 .claude/scripts/check_article_anchors.py <_site>`
 - 読みどころの欠落: `python3 .claude/scripts/check_article_notes.py`
 - ソース表記の不一致: `python3 .claude/scripts/check_source_hints.py`
-  （上の2つは引数なしで当日 JST 分を検査。`_posts/{YYYY-MM-DD}-*.md` を渡せば日付を固定できる）
+- title が日付のままになっていないか: `python3 .claude/scripts/check_post_titles.py`
+  （上の3つは引数なしで当日 JST 分を検査。`_posts/{YYYY-MM-DD}-*.md` を渡せば日付を固定できる。`--all` で全投稿）
 - ユニットテスト: スクリプトと同じディレクトリで `python3 -m unittest discover -p 'test_*.py'`。
   置き場が分かれているので、触ったものを個別に回す（repo ルートからの discover は 0 件になる）:
   `.claude/scripts` / `.claude/skills/select-and-develop/scripts` /

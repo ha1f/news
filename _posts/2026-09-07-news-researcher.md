@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月7日（研究者）"
+title: "ML再現可能性の危機と豚腎臓9カ月生存（研究者）"
 date: 2026-09-07
 profile: researcher
 tags: [AI, 科学, セキュリティ, ハードウェア]

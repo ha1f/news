@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月19日（デザイナー）"
+title: "macOS 27でSiri刷新、言葉から3Dモデル生成（デザイナー）"
 date: 2026-09-19
 profile: designer
 tags: [デザイン, AI, 開発, 科学]

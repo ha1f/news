@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月2日（起業家）"
+title: "AfterQueryがYC最速ユニコーン、評価32億ドル（起業家）"
 date: 2026-09-02
 profile: entrepreneur
 tags: [AI, ビジネス, 経済, セキュリティ, 社会, ハードウェア]

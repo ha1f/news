@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月12日（研究者）"
+title: "数学者25人がAI企業に公開書簡、四色定理に新証明（研究者）"
 date: 2026-09-12
 profile: researcher
 tags: [AI, 科学, 社会]

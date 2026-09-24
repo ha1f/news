@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月3日（ソフトウェアエンジニア）"
+title: "Gemini 3.8 Flash発表、moldはRustへ（ソフトウェアエンジニア）"
 date: 2026-09-03
 profile: engineer
 tags: [AI, 開発]

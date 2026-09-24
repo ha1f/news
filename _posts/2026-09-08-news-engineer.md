@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月8日（ソフトウェアエンジニア）"
+title: "AIコード94%削減ツール、EVEのPython 3移行（ソフトウェアエンジニア）"
 date: 2026-09-08
 profile: engineer
 tags: [AI, 開発, セキュリティ, 科学]

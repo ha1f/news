@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年8月11日（ソフトウェアエンジニア）"
+title: "Agent Plugins 1.0.0が正式リリース（ソフトウェアエンジニア）"
 date: 2026-08-11
 profile: engineer
 tags: [AI, セキュリティ, デザイン, ハードウェア, 科学, 開発]

@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月18日（起業家）"
+title: "Crusoeが39億ドル調達、電力網に新団体AEMA（起業家）"
 date: 2026-09-18
 profile: entrepreneur
 tags: [AI, ビジネス, 経済, ハードウェア, 社会]

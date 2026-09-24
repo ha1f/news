@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月1日（デザイナー）"
+title: "デジタル庁がトップへ戻るボタンを非推奨（デザイナー）"
 date: 2026-09-01
 profile: designer
 tags: [AI, デザイン, 開発, ビジネス, 社会]

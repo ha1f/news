@@ -18,10 +18,13 @@ description: "open issue から今日実装する対象を選定し、develop-is
    - 1件の所要は実装だけでは終わらない。push 前レビューとその反映・CI の完走までを含めて1件と数える（レビューが重大な指摘を出す前提で見積もる。出なければ早く終わるだけ）。見積もりの基準は直前に完走した1件の実測に置き、最初の1件は保守的に見る
 5. 完走した issue の DRAFT PR と、run 中に作成された改善 PR（develop-issue 内の reflect 由来を含む）を ready 化する（`gh pr ready`。`gh` が無い環境では `update_pull_request` に `draft: false` を渡す。次の review run のマージ候補になる）。完走できなかった PR は draft のまま残す
 6. **ここで終わらず**、reflect-and-improve を実行する（対象はこのスキルの選定ロジックのみ。develop-issue 内部の学びは develop-issue 自身が反映済み）。作成した改善 PR も ready 化する。結果を確認してから、その内容で status issue に終了コメントを投稿する（次項）
+   - run の途中で issue を起票したなら、終了コメントを組み立てる前に `select_issues.py` を実行し直す。手順1の `open_issues` は起票前の値なので、そのまま貼ると起票後の在庫にならない
 
 ## 完了条件
 
 - status issue に開始と終了の各1コメント。1行目は check_state.py が機械判定する JSON（キー名・値とも厳密一致が必要）:
   - 開始: `{"stage": "develop", "phase": "start", "summary": "候補: #26, #28。#26 を優先着手"}`
-  - 終了: `{"stage": "develop", "phase": "end", "ok": true, "summary": "#26 実装 → PR #27", "reflect": "LESSONS.md 更新1件"}`
+  - 終了: `{"stage": "develop", "phase": "end", "ok": true, "summary": "open issue 9/10。#26 実装 → PR #27", "reflect": "LESSONS.md 更新1件"}`
+    - `summary` の**先頭**に `select_issues.py` の `open_issues` と `config.open_issue_cap` を `open issue {open_issues}/{open_issue_cap}` の形で貼る（翌日の PdM が cap 超過を run をまたいで拾えるように #394）。先頭なのは、PdM が読む `recent_status_comments` が本文を200字で切るため
+    - `open_issues` が `null` かどうかを先に見る（`open_issues_note` の有無より優先）。`null` なら `open_issues_note` があっても無視し `open issue ?/{cap}（数えられず）` とだけ書く。`null` でなく `open_issues_note` が出ていたら（数えられたが値が過大になりうる場合）末尾に `（参考値）` とだけ添える。**`open_issues_note` の本文（理由・ローカルの絶対パス）はそのまま貼らない**（200字予算をほぼ使い切り `summary` 本体と `reflect` が視界から落ちるうえ、公開コメントに環境パスが漏れる）。何を数えて何を除くかはスクリプトが持っているので、ここには書かない
     - `reflect` は手順6（reflect-and-improve）の結果を1行で記す（例: `"改善なし"`, `"LESSONS.md 更新1件"`, `"改善 PR #30"`）。実施の有無と成果を機械・人間の両方が追跡できるようにする。**手順6を実行し終えてから**この終了コメントを投稿する（`"実施予定"` 等のプレースホルダーで先に投稿して end を2本にしない。実走で、開発完了後すぐに終了コメントを組み立ててこの手順を飛ばしかけたことがある — 手順の番号付きステップに無いとチェックリストの通過点として見落とされる）

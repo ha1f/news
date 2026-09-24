@@ -9,13 +9,19 @@
 issue の author_association が欠落していても author が collaborator なら
 信頼済みと判定する (MCP list_issues が author_association を返さない問題の回避策)。
 
-出力: {"config", "status_issue", "in_progress", "backlog"}
+出力: {"config", "status_issue", "open_issues", "in_progress", "backlog"}
+  - open_issues: open issue の総数（status issue と bot の issue を除く。`hold` は数える）。
+    `config.open_issue_cap` と突き合わせる用。数え方の正本は evaluate ステージの
+    check_state.py:summarize_issues で、ここはそれを読み込んで使う
+  - open_issues_note: open_issues をそのまま信じてよくないときだけ出る1行。
+    数えられなかったときは open_issues が null になる（候補の出力は止めない）
   - in_progress: open な linked PR を持つ issue（要対応かはエージェントが判断）
     linked_open_prs の各要素は {number, draft, hold}。hold は人間の判断待ちの印
   - backlog: linked PR の無い issue。作成日の古い順
 フィルタ（collaborator 名義のみ・hold と status issue を除外）は適用済み。
 優先度・着手順の判断はエージェントが issue を読んで行う。
 """
+import importlib.util
 import json
 import os
 import re
@@ -142,6 +148,56 @@ def parse_guardrails(text):
     return config
 
 
+def load_summarize_issues():
+    """open issue の数え方の正本 `check_state.py:summarize_issues` を読み込む。
+
+    status issue と bot の issue を数から外す除外ルールは evaluate ステージが持って
+    いる。同じルールをここに書き写すと、片方を変えたときにもう片方が黙って古くなる
+    ので、関数ごと読み込んで正本を1つに保つ（GUARDRAILS「決定的な処理はスクリプトに
+    寄せる」）。
+
+    相対 import にしないのは、このスクリプトがエージェントの Bash から任意の cwd で
+    単体起動されるため（`sys.path` は起動 cwd に依存する）。GUARDRAILS.md を読むのと
+    同じく、`__file__` からの絶対パスで解決する。
+    """
+    path = (Path(__file__).resolve().parents[2]
+            / "evaluate-and-triage" / "scripts" / "check_state.py")
+    # spec_from_file_location は拡張子が .py なら、ファイルが無くても spec を返す。
+    # 欠落は exec_module の FileNotFoundError として出るので、ここでは弾かない
+    spec = importlib.util.spec_from_file_location("daily_loop_check_state", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.summarize_issues
+
+
+def bot_exclusion_reliable(issues):
+    """渡されたデータで bot の issue を除外できるか（純関数）。
+
+    MCP の list_issues は `user` を落とすことがあり、その場合 bot の issue
+    （Renovate の Dependency Dashboard 等）を除外できず open_issues が過大になる
+    （evaluate-and-triage/SKILL.md に同じ実測がある）。数え方はここに持たず、
+    「数えるのに必要な情報が揃っているか」だけを見る。
+    """
+    return all((issue.get("user") or {}).get("type") for issue in issues)
+
+
+def count_open_issues(issues):
+    """(open issue 数, 注記) を返す。数えられなければ (None, 理由)。
+
+    cap と突き合わせるための付随値なので、ここが失敗しても候補の出力は止めない
+    （他ステージのスクリプトの健全性で develop が止まると、直せる run が来なくなる）。
+    """
+    try:
+        _, open_issues = load_summarize_issues()(issues)
+    except Exception as error:  # 正本が読めない・壊れている
+        return None, (f"open issue の数え方の正本 (check_state.py) を読めませんでした: "
+                      f"{type(error).__name__} {error}")
+    if not bot_exclusion_reliable(issues):
+        return open_issues, ("渡されたデータに user.type が無く bot の issue を除外できないため、"
+                             "この値は過大になりえます（参考値）")
+    return open_issues, None
+
+
 def _is_trusted(issue, collaborators):
     """author_association があればそれで判定、なければ collaborators リストで補完。"""
     assoc = issue.get("author_association", "")
@@ -251,12 +307,19 @@ def main():
         collaborators = None
 
     status_issue, in_progress, backlog = build_candidates(issues, prs, collaborators)
-    json.dump({
+    # 候補（hold と信頼できない名義を除いたもの）とは別に、cap と突き合わせる
+    # open issue の総数も出す。数え方は check_state.py が正本
+    open_issues, open_issues_note = count_open_issues(issues)
+    result = {
         "config": config,
         "status_issue": status_issue,
+        "open_issues": open_issues,
         "in_progress": in_progress,
         "backlog": backlog,
-    }, sys.stdout, ensure_ascii=False, indent=1)
+    }
+    if open_issues_note:
+        result["open_issues_note"] = open_issues_note
+    json.dump(result, sys.stdout, ensure_ascii=False, indent=1)
     return 0
 
 

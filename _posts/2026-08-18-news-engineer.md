@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年8月18日（ソフトウェアエンジニア）"
+title: "DuckDB v2.0プレビューとMojo 1.0到達（ソフトウェアエンジニア）"
 date: 2026-08-18
 profile: engineer
 tags: [AI, 開発, セキュリティ]

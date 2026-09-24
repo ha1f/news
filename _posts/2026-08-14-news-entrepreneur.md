@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年8月14日（起業家）"
+title: "Databricks、1900億ドル評価で50億ドル調達（起業家）"
 date: 2026-08-14
 profile: entrepreneur
 tags: [AI, ビジネス, 社会]

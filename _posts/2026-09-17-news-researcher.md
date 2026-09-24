@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月17日（研究者）"
+title: "ヒト細胞の大脳皮質マウス誕生、3値LLMも限界突破（研究者）"
 date: 2026-09-17
 profile: researcher
 tags: [AI, 科学, セキュリティ]

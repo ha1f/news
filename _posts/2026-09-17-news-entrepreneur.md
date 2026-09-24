@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月17日（起業家）"
+title: "FRB利上げ、セールスフォース株7割高（起業家）"
 date: 2026-09-17
 profile: entrepreneur
 tags: [AI, ビジネス, 経済, セキュリティ, 社会]

@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月11日（ソフトウェアエンジニア）"
+title: "MicrosoftがRustをTier-1言語に格上げ（ソフトウェアエンジニア）"
 date: 2026-09-11
 profile: engineer
 tags: [AI, 開発, セキュリティ]

@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年8月29日（研究者）"
+title: "LLMで分子設計、自己改善AIの一端も公開（研究者）"
 date: 2026-08-29
 profile: researcher
 tags: [AI, 科学, 社会]

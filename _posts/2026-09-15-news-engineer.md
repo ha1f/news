@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月15日（ソフトウェアエンジニア）"
+title: "MCP共同作者が来日、Agent Router始動（ソフトウェアエンジニア）"
 date: 2026-09-15
 profile: engineer
 tags: [AI, 開発, セキュリティ, ハードウェア]

@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月12日（ソフトウェアエンジニア）"
+title: "OpenRouterの落とし穴とUnity公式プラグイン（ソフトウェアエンジニア）"
 date: 2026-09-12
 profile: engineer
 tags: [AI, 開発, 科学, ハードウェア]

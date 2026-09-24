@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2026年9月20日（デザイナー）"
+title: "量産型AIポスターからの脱出実験（デザイナー）"
 date: 2026-09-20
 profile: designer
 tags: [AI, デザイン, ハードウェア, 開発, 科学]
