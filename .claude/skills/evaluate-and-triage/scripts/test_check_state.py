@@ -10,8 +10,9 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import check_state
-from check_state import (api_json, gh_json, parse_link_header, parse_status_records,
-                         since_param, summarize_health, summarize_issues, with_page)
+from check_state import (api_json, assemble_output, gh_json, parse_link_header,
+                         parse_status_records, since_param, summarize_health,
+                         summarize_issues, with_page)
 
 
 def issue(number, title="t", labels=(), pr=False, bot=False):
@@ -39,9 +40,22 @@ class SummarizeIssuesTest(unittest.TestCase):
             issue(29, pr=True),  # PR → 数えない
             issue(30, title="Dependency Dashboard", bot=True),  # bot → 数えない
         ]
-        status_issue, count = summarize_issues(issues)
+        status_issue, count, comment_count = summarize_issues(issues)
         self.assertEqual(status_issue, 25)
         self.assertEqual(count, 2)
+        self.assertEqual(comment_count, 0)
+
+    def test_returns_status_issue_comment_count(self):
+        issues = [issue(25, title="📊 daily-loop status")]
+        issues[0]["comments"] = 612
+        _, _, comment_count = summarize_issues(issues)
+        self.assertEqual(comment_count, 612)
+
+    def test_comment_count_is_zero_without_status_issue(self):
+        issues = [issue(26)]
+        status_issue, _, comment_count = summarize_issues(issues)
+        self.assertIsNone(status_issue)
+        self.assertEqual(comment_count, 0)
 
 
 class HealthTest(unittest.TestCase):
@@ -55,7 +69,7 @@ class HealthTest(unittest.TestCase):
             status_comment("review", "start", "2026-07-10T06:00:00Z"),
             status_comment("review", "end", "2026-07-10T06:40:00Z", ok=True),
         ]
-        health = summarize_health(parse_status_records(comments), "2026-07-11")
+        health = summarize_health(parse_status_records(comments), "2026-07-11", True)
         self.assertEqual(health["incomplete"], [])
         self.assertEqual(health["failed"], [])
         self.assertEqual(health["missing"], [])
@@ -66,7 +80,7 @@ class HealthTest(unittest.TestCase):
             status_comment("evaluate", "start", "2026-07-10T01:00:00Z"),
             # end が無い = セッション死亡
         ]
-        health = summarize_health(parse_status_records(comments), "2026-07-11")
+        health = summarize_health(parse_status_records(comments), "2026-07-11", True)
         self.assertEqual(health["incomplete"], ["evaluate"])
         # start があるので missing ではない。develop/review は無記録なので missing
         self.assertEqual(health["missing"], ["develop", "review"])
@@ -79,7 +93,7 @@ class HealthTest(unittest.TestCase):
             status_comment("review", "start", "2026-07-10T06:00:00Z"),
             status_comment("review", "end", "2026-07-10T06:30:00Z", ok=True),
         ]
-        health = summarize_health(parse_status_records(comments), "2026-07-11")
+        health = summarize_health(parse_status_records(comments), "2026-07-11", True)
         self.assertEqual(health["missing"], ["evaluate"])
         self.assertEqual(health["incomplete"], [])
         self.assertFalse(health["no_records"])
@@ -89,9 +103,10 @@ class HealthTest(unittest.TestCase):
             status_comment("review", "start", "2026-07-10T06:00:00Z"),
             status_comment("review", "end", "2026-07-10T06:40:00Z", ok=False),
         ]
-        health = summarize_health(parse_status_records(comments), "2026-07-11")
+        health = summarize_health(parse_status_records(comments), "2026-07-11", True)
         self.assertEqual(health["failed"], ["review"])
-        empty = summarize_health([], "2026-07-11")
+        # 前日ぶんが0件かつ、それ以前にも記録が無い（真の導入直後）→ no_records
+        empty = summarize_health([], "2026-07-11", False)
         self.assertTrue(empty["no_records"])
         # 導入直後（全ステージ無記録）は missing を立てない
         self.assertEqual(empty["missing"], [])
@@ -101,14 +116,62 @@ class HealthTest(unittest.TestCase):
             status_comment("evaluate", "start", "2026-07-09T01:00:00Z"),  # 前々日
             {"created_at": "2026-07-10T01:00:00Z", "body": "ただのメモ"},
         ]
-        health = summarize_health(parse_status_records(comments), "2026-07-11")
+        health = summarize_health(parse_status_records(comments), "2026-07-11", False)
         self.assertTrue(health["no_records"])
 
     def test_jst_date_boundary(self):
         # UTC 07-09T23:00 = JST 07-10 08:00 → 前日扱いになる
         comments = [status_comment("evaluate", "start", "2026-07-09T23:00:00Z")]
-        health = summarize_health(parse_status_records(comments), "2026-07-11")
+        health = summarize_health(parse_status_records(comments), "2026-07-11", False)
         self.assertFalse(health["no_records"])
+
+    def test_full_day_outage_detected_when_earlier_records_exist(self):
+        # #422: 前日ぶんが0件でも、それ以前に stage レコードがあれば異常として報告する
+        # （丸一日ループが止まった実例。#421 の週次利用上限の枯渇で観測）
+        health = summarize_health([], "2026-07-11", True)
+        self.assertFalse(health["no_records"])
+        self.assertEqual(health["missing"], ["evaluate", "develop", "review"])
+
+    def test_true_bootstrap_still_not_flagged(self):
+        # 本当の導入直後（status issue に stage レコードが一度も無い）は異常にしない
+        health = summarize_health([], "2026-07-11", False)
+        self.assertTrue(health["no_records"])
+        self.assertEqual(health["missing"], [])
+
+
+class AssembleOutputHealthTest(unittest.TestCase):
+    """`has_earlier_records` の由来（status issue の総コメント数と `since` 絞り込み後の
+    件数の差分）を assemble_output 経由（summarize_issues → summarize_health）で確かめる。
+    summarize_health の単体テストは has_earlier_records を直接渡すので、その値の
+    出どころ自体はここでしか踏まない。"""
+
+    def run_assemble(self, status_issue_comments_total, fetched_comments, today="2026-07-11"):
+        issues = [issue(25, title="📊 daily-loop status")]
+        issues[0]["comments"] = status_issue_comments_total
+        return assemble_output({}, today, True, None, None, [], issues, fetched_comments)
+
+    def test_outage_detected_when_lifetime_total_exceeds_fetched_window(self):
+        # 前日ぶんの取得が0件でも、status issue の総コメント数がそれより多ければ
+        # （= since より前にも記録がある）異常として missing に出る
+        out = self.run_assemble(status_issue_comments_total=620, fetched_comments=[])
+        self.assertFalse(out["health"]["no_records"])
+        self.assertEqual(out["health"]["missing"], ["evaluate", "develop", "review"])
+
+    def test_true_bootstrap_when_totals_match(self):
+        # 本当の導入直後は総コメント数と取得件数が一致する（前日以前の記録が無い）
+        out = self.run_assemble(status_issue_comments_total=0, fetched_comments=[])
+        self.assertTrue(out["health"]["no_records"])
+        self.assertEqual(out["health"]["missing"], [])
+
+    def test_healthy_day_with_only_yesterdays_records(self):
+        # 総コメント数と取得件数が一致していても、前日ぶんの記録があれば正常判定になる
+        comments = [
+            status_comment("evaluate", "start", "2026-07-10T01:00:00Z"),
+            status_comment("evaluate", "end", "2026-07-10T01:20:00Z", ok=True),
+        ]
+        out = self.run_assemble(status_issue_comments_total=2, fetched_comments=comments)
+        self.assertFalse(out["health"]["no_records"])
+        self.assertEqual(out["health"]["incomplete"], [])
 
 
 class ParseLinkHeaderTest(unittest.TestCase):

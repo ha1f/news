@@ -8,7 +8,9 @@
        "recent_status_comments"}
   - health: 前日の各ステージ (evaluate/develop/review) の start/end/ok 集計。
     status issue コメントの1行目 JSON（GUARDRAILS.md 参照）から機械判定する。
-    missing = start も end も無いステージ（trigger 停止やセッション起動失敗の疑い）
+    missing = start も end も無いステージ（trigger 停止やセッション起動失敗の疑い）。
+    no_records は前日ぶんが0件かつ、それ以前にも stage レコードが一度も無いときだけ
+    true（真の導入直後）。前日0件でも過去に記録があれば異常として missing に出る（#422）
   - pages_build: 最新の pages.yml run（main のビルドが壊れていないかの判定材料）
 起票するかどうかの判断はエージェントが行う。
 """
@@ -159,22 +161,31 @@ def parse_guardrails(text):
 
 
 def summarize_issues(issues):
-    """open issue から status issue 番号と issue 数（status・bot 除く）を出す（純関数）
+    """open issue から status issue 番号・issue 数（status・bot 除く）・status issue の
+    総コメント数を出す（純関数）
 
     bot の issue（Renovate の Dependency Dashboard 等）は実装依頼でなくトラッキング用の
     issue なので、open_issue_cap の数に入れない（bot だから信頼しないという意味ではない。
-    GUARDRAILS「状態の持ち方」参照）。"""
-    status_issue, open_count = None, 0
+    GUARDRAILS「状態の持ち方」参照）。
+
+    status issue の総コメント数（GitHub の issue オブジェクトが返す `comments` フィールド。
+    追加リクエスト不要）は、`since` で絞って取得した直近コメント数との差分から「絞り込み
+    範囲より前にも記録があったか」を判定するのに使う（summarize_health 参照）。この
+    issue は stage レコード専用（GUARDRAILS.md「状態の持ち方」）なので、総数と stage
+    レコード数はほぼ一致する前提を置く。人間が直接コメントを残すような使い方に変えたら
+    この前提が崩れる。"""
+    status_issue, open_count, status_issue_comment_count = None, 0, 0
     for issue in issues:
         if "pull_request" in issue:
             continue
         if STATUS_TITLE in issue["title"]:
             status_issue = issue["number"]
+            status_issue_comment_count = issue.get("comments", 0)
             continue
         if (issue.get("user") or {}).get("type") == "Bot":
             continue
         open_count += 1
-    return status_issue, open_count
+    return status_issue, open_count, status_issue_comment_count
 
 
 def parse_status_records(comments):
@@ -191,8 +202,14 @@ def parse_status_records(comments):
     return records
 
 
-def summarize_health(records, today):
-    """前日 (JST) の各ステージの start/end/ok を集計する（純関数）"""
+def summarize_health(records, today, has_earlier_records):
+    """前日 (JST) の各ステージの start/end/ok を集計する（純関数）
+
+    has_earlier_records: `records` の収集範囲（`since` の絞り込み）より前にも status
+    issue に stage レコードが存在したか。True なら前日ぶんが0件でも「導入直後」ではなく
+    異常（`missing`）として報告する。呼び出し側は status issue の総コメント数と、
+    `since` で絞り込んで取得した件数の差分から立てる（#422: 前日レコード0件を無条件に
+    導入直後扱いすると、丸一日のループ停止が検知されない）。"""
     yesterday = (datetime.strptime(today, "%Y-%m-%d") - timedelta(days=1)).strftime("%Y-%m-%d")
     stages = {stage: {"start": False, "end": False, "ok": None} for stage in STAGES}
     for record in records:
@@ -205,7 +222,8 @@ def summarize_health(records, today):
         elif record.get("phase") == "end":
             entry["end"] = True
             entry["ok"] = record.get("ok")
-    no_records = not any(v["start"] or v["end"] for v in stages.values())
+    yesterday_has_any = any(v["start"] or v["end"] for v in stages.values())
+    no_records = not yesterday_has_any and not has_earlier_records
     return {
         "yesterday": yesterday,
         "stages": stages,
@@ -223,8 +241,9 @@ def assemble_output(config, today, post_exists, pages, pages_build,
     publish_in_progress = (
         any(pr.get("head", {}).get("ref", "").startswith("pages/") for pr in prs)
         or (pages_build is not None and pages_build.get("status") != "completed"))
-    status_issue, open_count = summarize_issues(issues)
+    status_issue, open_count, status_issue_comment_count = summarize_issues(issues)
     records = parse_status_records(comments)
+    has_earlier_records = status_issue_comment_count > len(comments)
     return {
         "config": config,
         "today": today,
@@ -234,7 +253,7 @@ def assemble_output(config, today, post_exists, pages, pages_build,
         "pages_build": pages_build,
         "status_issue": status_issue,
         "open_issues": open_count,
-        "health": summarize_health(records, today),
+        "health": summarize_health(records, today, has_earlier_records),
         "recent_status_comments": [
             {"created_at": c["created_at"], "body": c["body"][:BODY_LIMIT]}
             for c in comments[-COMMENT_LIMIT:]
@@ -268,7 +287,7 @@ def fetch_data(fetch_json, config, today, now):
                        for key in ("status", "conclusion", "head_sha", "updated_at")}
     prs = fetch_json("pulls?state=open&per_page=100") or []
     issues = fetch_json("issues?state=open&per_page=100") or []
-    status_issue, _ = summarize_issues(issues)
+    status_issue, _, _ = summarize_issues(issues)
     comments = []
     if status_issue:
         comments = fetch_json(
