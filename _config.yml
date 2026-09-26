@@ -15,5 +15,9 @@ header_pages: [about.md, profiles/index.md, archive.md]
 exclude: [CLAUDE.md, README.md, DESIGN.md, VISION.md]
 rss: "RSS"
 
+# アクセス解析（GoatCounter — Cookie 不使用・GDPR 準拠）
+# goatcounter.com で取得したコードを設定すると全ページに解析スクリプトが挿入される
+# goatcounter: "your-code"
+
 minima:
   date_format: "%Y年%-m月%-d日"
