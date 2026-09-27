@@ -4,13 +4,14 @@ import io
 import json
 import sys
 import unittest
+from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import select_issues
-from select_issues import (bot_exclusion_reliable, build_candidates, count_open_issues,
-                           load_summarize_issues, parse_guardrails, parse_link_header,
-                           with_page)
+from select_issues import (bot_exclusion_reliable, build_candidates, collect_recent_records,
+                           count_open_issues, load_summarize_issues, parse_guardrails,
+                           parse_link_header, resolve_status_comments, since_param, with_page)
 
 
 def run_main(payload):
@@ -258,6 +259,148 @@ class OpenIssuesTest(unittest.TestCase):
         count, note = count_open_issues([{"number": 1, "title": "t"}])
         self.assertEqual(count, 1)
         self.assertIn("参考値", note)
+
+
+def status_comment(created_at, summary, stage="evaluate", phase="end"):
+    record = {"stage": stage, "phase": phase, "ok": True, "summary": summary}
+    return {"created_at": created_at, "body": json.dumps(record, ensure_ascii=False) + "\n\n## 本文"}
+
+
+class RecentStatusRecordsTest(unittest.TestCase):
+    """#430: 前段 run の結論を、後段ステージが追加のスクリプト実行なしで読めるようにする。
+
+    レコードの読み方そのもの（1行目 JSON をどう解釈するか）のテストは
+    evaluate-and-triage 側にある。ここでは「正本の関数を使っているか」と
+    「結論が出力に載るか」「古い結論が『直近』として混ざらないか」を見る。
+    """
+
+    NOW = datetime(2026, 9, 27, 3, 0, 0, tzinfo=timezone.utc)  # cutoff = 2026-09-25T03:00:00Z
+    GROOMING = status_comment(
+        "2026-09-26T01:12:24Z",
+        "open issue 15/10（cap 超過でグルーミングのみ）。グルーミング4件: "
+        "#407 #409（作業完了済みで draft のまま滞留・作り直し不要）/ #408（PR #416 と同一ファイルの順序）")
+
+    def test_output_carries_the_previous_stage_conclusion(self):
+        out = run_main({"issues": [issue(1, login="ha1f", user_type="User")], "prs": [],
+                        "comments": [self.GROOMING]})
+        records = out["recent_status_records"]
+        self.assertEqual(records[0]["created_at"], "2026-09-26T01:12:24Z")
+        self.assertIn("#407 #409", records[0]["summary"])
+        self.assertIn("作り直し不要", records[0]["summary"])
+        self.assertNotIn("recent_status_records_note", out)
+
+    def test_uses_the_parser_from_check_state(self):
+        parse = select_issues.load_check_state().parse_status_records
+        source = (Path(__file__).resolve().parents[2]
+                  / "evaluate-and-triage" / "scripts" / "check_state.py")
+        self.assertEqual(parse.__name__, "parse_status_records")
+        self.assertEqual(Path(parse.__code__.co_filename).resolve(), source)
+
+    def test_sorts_ascending_and_keeps_the_latest(self):
+        """入力の順序に依存しないこと（GitHub は古い順だが、--stdin 経由は保証が無い）"""
+        stamps = ["2026-09-26T09:00:00Z", "2026-09-25T04:00:00Z", "2026-09-27T01:00:00Z",
+                  "2026-09-26T01:00:00Z"]
+        records, note = collect_recent_records(
+            [status_comment(at, at) for at in stamps], now=self.NOW)
+        self.assertIsNone(note)
+        self.assertEqual([r["created_at"] for r in records], sorted(stamps))
+
+    def test_keeps_only_RECORDS_LIMIT_records(self):
+        comments = [status_comment(f"2026-09-26T{h:02d}:00:00Z", f"s{h}") for h in range(24)]
+        records, note = collect_recent_records(comments, now=self.NOW)
+        self.assertIsNone(note)
+        self.assertEqual(len(records), select_issues.RECORDS_LIMIT)
+        self.assertEqual(records[-1]["summary"], "s23")
+
+    def test_stale_records_are_dropped_with_a_note(self):
+        """`since` を付けずに1ページ目を取ると最古の100件が来る（status issue は570件超）。
+        2ヶ月前の結論を「直近」として後段に渡すのは、空で渡すより悪い"""
+        records, note = collect_recent_records(
+            [status_comment("2026-08-01T01:19:48Z", "2ヶ月前の結論"),
+             status_comment("2026-08-02T01:11:15Z", "同じく")], now=self.NOW)
+        self.assertEqual(records, [])
+        self.assertIn("since", note)
+
+    def test_records_failure_does_not_drop_candidates(self):
+        original = select_issues.load_check_state
+        select_issues.load_check_state = lambda: (_ for _ in ()).throw(
+            FileNotFoundError("check_state.py"))
+        try:
+            out = run_main({"issues": [issue(7, login="ha1f", user_type="User")], "prs": [],
+                            "comments": [self.GROOMING]})
+        finally:
+            select_issues.load_check_state = original
+        self.assertEqual(out["recent_status_records"], [])
+        self.assertIn("check_state.py", out["recent_status_records_note"])
+        self.assertEqual([e["number"] for e in out["backlog"]], [7])
+
+    def test_malformed_comments_are_not_blamed_on_check_state(self):
+        """コメント側のデータ不備を「正本が読めない」と報告すると原因を取り違える"""
+        records, note = collect_recent_records([{"body": '{"stage": "develop"}'}])
+        self.assertEqual(records, [])
+        self.assertIn("取り出せませんでした", note)
+        self.assertNotIn("正本", note)
+
+    def test_stdin_comments_are_used_as_given(self):
+        comments, note = resolve_status_comments([self.GROOMING], None, 25)
+        self.assertEqual(comments, [self.GROOMING])
+        self.assertIsNone(note)
+
+    def test_stdin_without_comments_says_so(self):
+        """空リストを渡された（0件）と、渡されていないを区別する"""
+        self.assertEqual(resolve_status_comments([], None, 25), ([], None))
+        comments, note = resolve_status_comments(None, None, 25)
+        self.assertEqual(comments, [])
+        self.assertIn("--stdin", note)
+
+    def test_note_when_status_issue_is_unknown(self):
+        comments, note = resolve_status_comments(None, lambda *a: 1 / 0, None)
+        self.assertEqual(comments, [])
+        self.assertIn("取得していません", note)  # fetch 失敗の note と区別できる語で照合する
+
+    def test_note_when_the_fetch_fails(self):
+        def boom(status_issue, since):
+            raise RuntimeError("GitHub API 502")
+        comments, note = resolve_status_comments(None, boom, 25)
+        self.assertEqual(comments, [])
+        self.assertIn("502", note)
+
+    def test_fetch_is_called_with_since(self):
+        """`since` を渡さないと最古の100件が返る。呼び出し引数まで固定する"""
+        calls = []
+        resolve_status_comments(None, lambda issue_number, since: calls.append((issue_number, since)) or [],
+                                25)
+        self.assertEqual(calls[0][0], 25)
+        self.assertRegex(calls[0][1], r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
+
+    def test_api_path_carries_since_and_per_page(self):
+        paths = []
+        original_api, original_resolve = select_issues.api_json, select_issues.resolve_repo
+        select_issues.api_json = lambda path: paths.append(path) or []
+        select_issues.resolve_repo = lambda: ("o", "r")
+        try:
+            select_issues.fetch_status_comments_via_api(25, "2026-09-25T03:00:00Z")
+        finally:
+            select_issues.api_json, select_issues.resolve_repo = original_api, original_resolve
+        self.assertEqual(paths, ["repos/o/r/issues/25/comments"
+                                 "?per_page=100&since=2026-09-25T03:00:00Z"])
+
+    def test_gh_path_carries_since_and_per_page(self):
+        paths = []
+        original = select_issues.gh_json
+        select_issues.gh_json = lambda path: paths.append(path) or []
+        try:
+            select_issues.fetch_status_comments_via_gh(25, "2026-09-25T03:00:00Z")
+        finally:
+            select_issues.gh_json = original
+        self.assertEqual(paths, ["repos/{owner}/{repo}/issues/25/comments"
+                                 "?per_page=100&since=2026-09-25T03:00:00Z"])
+
+    def test_since_is_utc_z_format_without_escapable_chars(self):
+        since = since_param(datetime(2026, 9, 27, 3, 11, 9, 123456, tzinfo=timezone.utc))
+        self.assertEqual(since, "2026-09-25T03:11:09Z")
+        self.assertNotIn("+", since)
+        self.assertNotIn(".", since)
 
 
 class WithPageTest(unittest.TestCase):
