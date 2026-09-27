@@ -62,5 +62,5 @@ open / 直近 closed の issue・PR（collaborator 名義のみ読む）と突�
 
 - 配信状態と前日健全性を確認済みで、痛点または機会が issue またはコメントに反映されている（cap 超過日はグルーミング結果がこれに代わる）
 - 緊急 issue を起票した場合は、Slack ツールが使えればオーナーに DM で1通知する（使えなければ status issue の記録に留める）
-- status issue に開始と終了の各1コメント（1行目 JSON、stage は `evaluate`）。end コメントの JSON に `reflect` キーを含める（例: `{"stage": "evaluate", "phase": "end", "ok": true, "summary": "issue 2件起票", "reflect": "改善なし"}`）
+- status issue に開始と終了の各1コメント（1行目 JSON、stage は `evaluate`）。end コメントの JSON に `reflect` キーを含める（例: `{"stage": "evaluate", "phase": "end", "ok": true, "summary": "issue 2件起票", "reflect": "改善なし"}`）。**end は次項の reflect-and-improve を実行し終えてから投稿する**（先に end を出して後から編集したり、reflect の結果を別コメントで足したりしない。実走 2026-09-27: 改善 PR の作成前に end が「PR #434 ready 化済み」と書き、1行目が JSON でない3本目のコメントも出た）
 - 評価をスキップした日も含め、最後に reflect-and-improve を実行し、作成した改善 PR を ready 化する（`gh pr ready`。15時のレビュー対象にする）
