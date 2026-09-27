@@ -12,6 +12,9 @@
     no_records は前日ぶんが0件かつ、それ以前にも stage レコードが一度も無いときだけ
     true（真の導入直後）。前日0件でも過去に記録があれば異常として missing に出る（#422）
   - pages_build: 最新の pages.yml run（main のビルドが壊れていないかの判定材料）
+  - recent_status_comments: 直近コメントの {created_at, record, body}。record は1行目の
+    stage レコードを切らずに載せる（後段ステージが前段 run の結論を再利用する経路。#430）。
+    body は record 以降の本文を BODY_LIMIT で切ったもの
 起票するかどうかの判断はエージェントが行う。
 """
 import json
@@ -27,6 +30,9 @@ from pathlib import Path
 
 STATUS_TITLE = "daily-loop status"
 STAGES = ("evaluate", "develop", "review")
+# 結論の受け渡しに載せるステージ。audit は週次のため health 集計（STAGES）の対象外だが、
+# GUARDRAILS.md が認める stage なので後段が読み返せるようにする
+RECORD_STAGES = STAGES + ("audit",)
 JST = timezone(timedelta(hours=9))
 COMMENT_LIMIT = 10
 BODY_LIMIT = 200
@@ -188,18 +194,50 @@ def summarize_issues(issues):
     return status_issue, open_count, status_issue_comment_count
 
 
+def parse_status_record(body):
+    """コメント本文の1行目を stage レコードとして読む（純関数）。レコードでなければ None"""
+    lines = (body or "").splitlines()
+    if not lines:
+        return None
+    try:
+        data = json.loads(lines[0])
+    except json.JSONDecodeError:
+        return None
+    if isinstance(data, dict) and data.get("stage") in RECORD_STAGES:
+        return data
+    return None
+
+
 def parse_status_records(comments):
     """コメント1行目の JSON を記録として取り出す（純関数）"""
     records = []
     for comment in comments:
-        body = comment.get("body") or ""
-        try:
-            data = json.loads(body.splitlines()[0]) if body else None
-        except json.JSONDecodeError:
-            continue
-        if isinstance(data, dict) and data.get("stage") in STAGES:
+        data = parse_status_record(comment.get("body") or "")
+        if data is not None:
             records.append({**data, "created_at": comment["created_at"]})
     return records
+
+
+def recent_comment_digests(comments):
+    """直近コメントを {created_at, record, body} にする（純関数）。
+
+    1行目の stage レコードは切らずに載せる。ステージ間で結論を受け渡す経路はこの1行
+    だけなので（GUARDRAILS.md「状態の持ち方」）、本文と一緒に BODY_LIMIT で切ると
+    summary の末尾が落ちて後段の run が結論を再利用できない（実測 #430: evaluate の
+    グルーミング結論が `...欠落 / #42` で切れ、2件目の issue 番号が読めなかった）。
+    record を載せたぶん body は2行目以降だけにして、同じ文字列を二重に返さない。
+    """
+    digests = []
+    for comment in comments[-COMMENT_LIMIT:]:
+        body = comment.get("body") or ""
+        record = parse_status_record(body)
+        rest = "\n".join(body.splitlines()[1:]).strip() if record is not None else body
+        digest = {"created_at": comment["created_at"]}
+        if record is not None:
+            digest["record"] = record
+        digest["body"] = rest[:BODY_LIMIT]
+        digests.append(digest)
+    return digests
 
 
 def summarize_health(records, today, has_earlier_records):
@@ -213,6 +251,8 @@ def summarize_health(records, today, has_earlier_records):
     yesterday = (datetime.strptime(today, "%Y-%m-%d") - timedelta(days=1)).strftime("%Y-%m-%d")
     stages = {stage: {"start": False, "end": False, "ok": None} for stage in STAGES}
     for record in records:
+        if record["stage"] not in stages:  # audit は週次なので健全性集計の対象外
+            continue
         created = datetime.fromisoformat(record["created_at"].replace("Z", "+00:00"))
         if created.astimezone(JST).strftime("%Y-%m-%d") != yesterday:
             continue
@@ -254,10 +294,7 @@ def assemble_output(config, today, post_exists, pages, pages_build,
         "status_issue": status_issue,
         "open_issues": open_count,
         "health": summarize_health(records, today, has_earlier_records),
-        "recent_status_comments": [
-            {"created_at": c["created_at"], "body": c["body"][:BODY_LIMIT]}
-            for c in comments[-COMMENT_LIMIT:]
-        ],
+        "recent_status_comments": recent_comment_digests(comments),
     }
 
 

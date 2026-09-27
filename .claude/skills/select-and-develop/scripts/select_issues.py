@@ -18,6 +18,10 @@ issue の author_association が欠落していても author が collaborator �
   - in_progress: open な linked PR を持つ issue（要対応かはエージェントが判断）
     linked_open_prs の各要素は {number, draft, hold}。hold は人間の判断待ちの印
   - backlog: linked PR の無い issue。作成日の古い順
+  - recent_status_records: status issue コメント1行目の stage レコードを直近 RECORDS_LIMIT 件
+    （古い順）。前段 run の結論（evaluate のグルーミング判断等）をこの run が読み返す経路。
+    読み方の正本は check_state.py:parse_status_records で、ここはそれを読み込んで使う
+  - recent_status_records_note: レコードを取れなかったときだけ出る1行（候補の出力は止めない）
 フィルタ（collaborator 名義のみ・hold と status issue を除外）は適用済み。
 優先度・着手順の判断はエージェントが issue を読んで行う。
 """
@@ -30,6 +34,7 @@ import subprocess
 import sys
 import urllib.error
 import urllib.request
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 TRUSTED = {"OWNER", "MEMBER", "COLLABORATOR"}
@@ -38,6 +43,10 @@ LINK_RE = re.compile(r"(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?|refs?)\s+#(\d+)"
 BRANCH_ISSUE_RE = re.compile(r"(?:^|/)(\d+)[-_]")
 API_BASE = "https://api.github.com"
 API_TIMEOUT = 15
+# 1日あたりのレコードは最大10件（evaluate 1 run + develop / review 各2 run の start/end）。
+# 12 なら当日ぶんは常に全部入り、前日の終わりも数件残る
+RECORDS_LIMIT = 12
+RECORDS_SINCE_DAYS = 2  # status issue コメントを何日ぶん取るか
 
 
 def gh_json(path):
@@ -125,6 +134,12 @@ def fetch_via_api():
     return issues, prs
 
 
+def fetch_status_comments_via_api(status_issue, since):
+    owner, repo = resolve_repo()
+    return api_json(f"repos/{owner}/{repo}/issues/{status_issue}/comments"
+                    f"?per_page=100&since={since}")
+
+
 def parse_guardrails(text):
     """GUARDRAILS.md の ```yaml ブロックを設定 dict にする（依存なしの簡易パーサ）"""
     m = re.search(r"```yaml\n(.*?)```", text, re.S)
@@ -148,13 +163,13 @@ def parse_guardrails(text):
     return config
 
 
-def load_summarize_issues():
-    """open issue の数え方の正本 `check_state.py:summarize_issues` を読み込む。
+def load_check_state():
+    """evaluate ステージの `check_state.py` を読み込む（借りる関数はここから取る）。
 
-    status issue と bot の issue を数から外す除外ルールは evaluate ステージが持って
-    いる。同じルールをここに書き写すと、片方を変えたときにもう片方が黙って古くなる
-    ので、関数ごと読み込んで正本を1つに保つ（GUARDRAILS「決定的な処理はスクリプトに
-    寄せる」）。
+    open issue の数え方（status issue と bot の issue の除外）と status issue コメントの
+    読み方は evaluate ステージが正本を持っている。同じルールをここに書き写すと、片方を
+    変えたときにもう片方が黙って古くなるので、関数ごと読み込んで正本を1つに保つ
+    （GUARDRAILS「決定的な処理はスクリプトに寄せる」）。
 
     相対 import にしないのは、このスクリプトがエージェントの Bash から任意の cwd で
     単体起動されるため（`sys.path` は起動 cwd に依存する）。GUARDRAILS.md を読むのと
@@ -167,7 +182,12 @@ def load_summarize_issues():
     spec = importlib.util.spec_from_file_location("daily_loop_check_state", path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    return module.summarize_issues
+    return module
+
+
+def load_summarize_issues():
+    """open issue の数え方の正本 `check_state.py:summarize_issues` を読み込む。"""
+    return load_check_state().summarize_issues
 
 
 def bot_exclusion_reliable(issues):
@@ -196,6 +216,65 @@ def count_open_issues(issues):
         return open_issues, ("渡されたデータに user.type が無く bot の issue を除外できないため、"
                              "この値は過大になりえます（参考値）")
     return open_issues, None
+
+
+def collect_recent_records(comments, now=None):
+    """(直近の stage レコード, 注記) を返す。読めなければ ([], 理由)。
+
+    前段 run の結論を後段が読み返すための付随値なので、ここが失敗しても候補の出力は
+    止めない（count_open_issues と同じ方針）。
+
+    RECORDS_SINCE_DAYS より古いレコードは落とす。コメントは古い順に返るので、`since`
+    を付けずに1ページ目を渡すと最古の100件（この repo では2ヶ月前）が入り、後段が
+    それを「直近の結論」として読む。空になるより悪いので、ここで年齢を見て弾く。
+    """
+    try:
+        parse = load_check_state().parse_status_records
+    except Exception as error:  # 正本が読めない・壊れている
+        return [], (f"status issue コメントの読み方の正本 (check_state.py) を読めませんでした: "
+                    f"{type(error).__name__} {error}")
+    try:
+        records = parse(comments)
+    except Exception as error:  # 渡されたコメントの形が想定と違う
+        return [], (f"渡された status issue コメントから stage レコードを取り出せませんでした: "
+                    f"{type(error).__name__} {error}")
+    cutoff = since_param(now)
+    fresh = sorted((record for record in records if record["created_at"] >= cutoff),
+                   key=lambda record: record["created_at"])
+    if records and not fresh:
+        return [], (f"渡された status issue コメントの stage レコードは全て {cutoff} より"
+                    f"古いため落としました（`since` を付けずに1ページ目を取っていませんか。"
+                    f"コメントは古い順に返ります）")
+    return fresh[-RECORDS_LIMIT:], None
+
+
+def resolve_status_comments(comments, fetch_comments, status_issue):
+    """(status issue のコメント, 注記) を返す。取れなければ ([], 理由)。
+
+    --stdin で渡された場合は取得しない（comments に値が入っている）。候補の抽出には
+    要らない付随値なので、取得の失敗で候補の出力を止めない。
+    """
+    if comments is not None:
+        return comments, None
+    if fetch_comments is None:  # --stdin で comments を渡していない
+        return [], ("--stdin に comments が無いため直近の stage レコードは空です"
+                    "（前段 run の結論を読むには status issue のコメントも渡す）")
+    if status_issue is None:
+        return [], "status issue が見つからないため直近の stage レコードを取得していません"
+    try:
+        return fetch_comments(status_issue, since_param()), None
+    except Exception as error:  # ネットワーク・権限・API 変更
+        return [], (f"status issue のコメントを取得できませんでした: "
+                    f"{type(error).__name__} {error}")
+
+
+def since_param(now=None):
+    """RECORDS_SINCE_DAYS 日前を GitHub の `since` に渡せる形にする（純関数）。
+
+    `+00:00` や小数秒が入ると URL に載せたときエスケープが要るので Z 形式で出す。
+    """
+    now = now or datetime.now(timezone.utc)
+    return (now - timedelta(days=RECORDS_SINCE_DAYS)).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def _is_trusted(issue, collaborators):
@@ -259,6 +338,11 @@ def fetch_via_gh():
     return issues, prs
 
 
+def fetch_status_comments_via_gh(status_issue, since):
+    return gh_json(f"repos/{{owner}}/{{repo}}/issues/{status_issue}/comments"
+                   f"?per_page=100&since={since}")
+
+
 USAGE_WITHOUT_GH = """gh CLI も REST 直叩きも使えませんでした。MCP ツール等でデータを取得し、--stdin で渡してください:
 
   python3 .claude/skills/select-and-develop/scripts/select_issues.py --stdin < data.json
@@ -266,7 +350,10 @@ USAGE_WITHOUT_GH = """gh CLI も REST 直叩きも使えませんでした。MCP
 data.json の形:
   {"issues": [...],          # list_issues (state=OPEN) の結果
    "prs": [...],             # list_pull_requests (state=open) の結果
-   "collaborators": ["..."]}  # list_repository_collaborators の login のリスト (任意)
+   "collaborators": ["..."],  # list_repository_collaborators の login のリスト (任意)
+   "comments": [...]}         # status issue のコメント (任意。無いと recent_status_records が空)
+                             #   `issues/{status_issue}/comments?per_page=100&since={2日前, UTC の Z 形式}`
+                             #   since を省いて1ページ目を渡すと最古の100件が入る (古いレコードは落とす)
 """
 
 
@@ -287,6 +374,7 @@ def main():
             print(USAGE_WITHOUT_GH, file=sys.stderr)
             return 1
         collaborators = data.get("collaborators")
+        comments, fetch_comments = data.get("comments"), None
     elif shutil.which("gh"):
         try:
             issues, prs = fetch_via_gh()
@@ -296,6 +384,7 @@ def main():
             print(USAGE_WITHOUT_GH, file=sys.stderr)
             return 1
         collaborators = None
+        comments, fetch_comments = None, fetch_status_comments_via_gh
     else:
         try:
             issues, prs = fetch_via_api()
@@ -305,20 +394,28 @@ def main():
             print(USAGE_WITHOUT_GH, file=sys.stderr)
             return 1
         collaborators = None
+        comments, fetch_comments = None, fetch_status_comments_via_api
 
     status_issue, in_progress, backlog = build_candidates(issues, prs, collaborators)
     # 候補（hold と信頼できない名義を除いたもの）とは別に、cap と突き合わせる
     # open issue の総数も出す。数え方は check_state.py が正本
     open_issues, open_issues_note = count_open_issues(issues)
+    # 前段 run の結論（evaluate のグルーミング判断等）は status issue コメントの1行目に
+    # ある。ここで載せることで、develop ステージは check_state.py を別に走らせずに読める
+    comments, records_note = resolve_status_comments(comments, fetch_comments, status_issue)
+    records, load_note = collect_recent_records(comments)
     result = {
         "config": config,
         "status_issue": status_issue,
         "open_issues": open_issues,
         "in_progress": in_progress,
         "backlog": backlog,
+        "recent_status_records": records,
     }
     if open_issues_note:
         result["open_issues_note"] = open_issues_note
+    if records_note or load_note:
+        result["recent_status_records_note"] = records_note or load_note
     json.dump(result, sys.stdout, ensure_ascii=False, indent=1)
     return 0
 

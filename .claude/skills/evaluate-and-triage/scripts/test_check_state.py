@@ -11,7 +11,8 @@ from unittest import mock
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import check_state
 from check_state import (api_json, assemble_output, gh_json, parse_link_header,
-                         parse_status_records, since_param, summarize_health,
+                         parse_status_record, parse_status_records,
+                         recent_comment_digests, since_param, summarize_health,
                          summarize_issues, with_page)
 
 
@@ -172,6 +173,82 @@ class AssembleOutputHealthTest(unittest.TestCase):
         out = self.run_assemble(status_issue_comments_total=2, fetched_comments=comments)
         self.assertFalse(out["health"]["no_records"])
         self.assertEqual(out["health"]["incomplete"], [])
+
+
+class RecentCommentDigestsTest(unittest.TestCase):
+    """#430: 1行目の stage レコードは切らない（後段の run が前段の結論を再利用できるように）。
+
+    入力は 2026-09-26T01:12:24Z の evaluate end コメント（1行目 479字・全長 2,108字）の実物。
+    本文と一緒に BODY_LIMIT=200 で切ると `...配信が丸ごと欠落 / #42` で終わり、
+    グルーミング結論（`#407 #409` が作り直し不要）に届かなかった。
+    """
+
+    FIRST_LINE = (
+        '{"stage": "evaluate", "phase": "end", "ok": true, "summary": "open issue 15/10（cap 超過でグルーミングのみ、ペルソナ subagent は起動せず）。Step 0 の異常対応として ops issue 2件起票: #421 週次利用上限の枯渇で約42時間ループ停止・2026-09-25 の配信が丸ごと欠落 / #422 health が全ステージ無記録を導入直後と同一視して正常報告する欠陥。グルーミング4件: #407 #409（作業完了済みで draft のまま滞留・作り直し不要）/ #408（PR #416 と同一ファイルの順序）/ #291（hold 17日・理由コメント無し・M4 が停止）。オーナーへ Slack DM 1通", "reflect": "PR #423（ノートに proxy が塞ぐ /search/* と、ループ停止の原因を辿る list_triggers → get_session の経路を追記。CI green・ready 化済み）"}'
+    )
+    COMMENT = {"created_at": "2026-09-26T01:12:24Z",
+               "body": FIRST_LINE + "\n\n## やったこと\n\n" + "詳細" * 500}
+
+    def test_record_is_not_truncated(self):
+        digest = recent_comment_digests([self.COMMENT])[0]
+        self.assertEqual(digest["record"]["stage"], "evaluate")
+        self.assertIn("#407 #409", digest["record"]["summary"])
+        self.assertIn("作り直し不要", digest["record"]["summary"])
+        self.assertIn("PR #423", digest["record"]["reflect"])
+
+    def test_body_holds_the_rest_and_is_still_truncated(self):
+        digest = recent_comment_digests([self.COMMENT])[0]
+        self.assertNotIn('"stage"', digest["body"])
+        self.assertTrue(digest["body"].startswith("## やったこと"))
+        self.assertEqual(len(digest["body"]), check_state.BODY_LIMIT)
+
+    def test_non_record_comment_keeps_the_old_shape(self):
+        digest = recent_comment_digests([{"created_at": "2026-09-26T02:00:00Z",
+                                          "body": "人間のコメント" * 100}])[0]
+        self.assertNotIn("record", digest)
+        self.assertEqual(len(digest["body"]), check_state.BODY_LIMIT)
+
+    def test_keeps_only_the_latest_comments(self):
+        comments = [status_comment("develop", "start", f"2026-09-26T{i:02d}:00:00Z")
+                    for i in range(13)]
+        digests = recent_comment_digests(comments)
+        self.assertEqual(len(digests), check_state.COMMENT_LIMIT)
+        self.assertEqual(digests[-1]["created_at"], "2026-09-26T12:00:00Z")
+
+    def test_audit_record_is_carried_too(self):
+        """audit は週次で health 集計の対象外だが、結論の受け渡しには載せる
+        （GUARDRAILS.md が認める stage であり、後段が読み返せないと受け渡しの穴になる）"""
+        comment = {"created_at": "2026-09-20T02:30:00Z",
+                   "body": json.dumps({"stage": "audit", "phase": "end",
+                                       "summary": "監査3件"}, ensure_ascii=False) + "\n本文"}
+        digest = recent_comment_digests([comment])[0]
+        self.assertEqual(digest["record"]["stage"], "audit")
+
+    def test_audit_record_does_not_break_health(self):
+        comments = [{"created_at": "2026-07-10T02:30:00Z",
+                     "body": json.dumps({"stage": "audit", "phase": "end", "ok": True})},
+                    status_comment("evaluate", "start", "2026-07-10T01:00:00Z")]
+        health = summarize_health(parse_status_records(comments), "2026-07-11", False)
+        self.assertEqual(sorted(health["stages"]), ["develop", "evaluate", "review"])
+        self.assertTrue(health["stages"]["evaluate"]["start"])
+
+    def test_output_carries_the_grooming_conclusion(self):
+        issues = [issue(25, title="📊 daily-loop status")]
+        issues[0]["comments"] = 1
+        out = assemble_output({}, "2026-09-27", True, None, None, [], issues, [self.COMMENT])
+        self.assertIn("#407 #409", json.dumps(out, ensure_ascii=False))
+
+
+class ParseStatusRecordTest(unittest.TestCase):
+    def test_reads_stage_record(self):
+        self.assertEqual(parse_status_record('{"stage": "develop", "phase": "start"}\n本文'),
+                         {"stage": "develop", "phase": "start"})
+
+    def test_rejects_non_json_and_unknown_stage(self):
+        self.assertIsNone(parse_status_record("ただのコメント"))
+        self.assertIsNone(parse_status_record('{"stage": "publish"}'))
+        self.assertIsNone(parse_status_record('["develop"]'))
+        self.assertIsNone(parse_status_record(""))
 
 
 class ParseLinkHeaderTest(unittest.TestCase):
