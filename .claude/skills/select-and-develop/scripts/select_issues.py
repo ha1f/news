@@ -188,7 +188,7 @@ def count_open_issues(issues):
     （他ステージのスクリプトの健全性で develop が止まると、直せる run が来なくなる）。
     """
     try:
-        _, open_issues = load_summarize_issues()(issues)
+        _, open_issues, _ = load_summarize_issues()(issues)
     except Exception as error:  # 正本が読めない・壊れている
         return None, (f"open issue の数え方の正本 (check_state.py) を読めませんでした: "
                       f"{type(error).__name__} {error}")
