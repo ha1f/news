@@ -13,7 +13,7 @@ description: "デプロイ済みのニュースサイトをサービスユーザ
 
 `pages_url` は常に null になる（REST 経路では proxy が `/repos/{owner}/{repo}/pages` を 403 で塞ぐ。実測 2026-09-21）。Pages の URL は README の GitHub Pages URL を使う。
 
-続けて `python3 .claude/scripts/check_missing_publish_days.py` を実行する（直近14日で `_posts/` に1件も投稿の無い日を検出。`post_in_main` は当日しか見ないため、`health` の記録が揃っていても過去の欠落は別途この検査でしか見つからない。#421: 週次利用上限の枯渇でループが約42時間停止し、2026-09-25 の配信が丸ごと欠落したが誰にも気づかれなかった）。
+続けて `git fetch origin main -q && python3 .claude/scripts/check_missing_publish_days.py` を実行する（直近14日で `_posts/` に1件も投稿の無い日を検出。`fetch` を省くと古い ref を見て誤検知しうる。`post_in_main` は当日しか見ないため、`health` の記録が揃っていても過去の欠落は別途この検査でしか見つからない。#421: 週次利用上限の枯渇でループが約42時間停止し、2026-09-25 の配信が丸ごと欠落したが誰にも気づかれなかった）。
 
 ### `--stdin` で渡すときの取得元
 
@@ -29,7 +29,7 @@ description: "デプロイ済みのニュースサイトをサービスユーザ
 - `post_in_main` が false → `publish_in_progress` が true なら publish がまだ走行中。status issue に記録だけして終了する。false なら 9時の失敗として緊急の ops issue を起票し、評価はスキップする
 - `pages_build.conclusion` が failure → ログを確認して build job と deploy job のどちらが失敗したか切り分ける。build job が失敗していればコードが壊れているので緊急の ops issue を起票する。deploy job のみの失敗（503 等の一過性エラー）は failed jobs の再実行を試み、再実行も失敗したら ops issue を起票する
 - `health.incomplete` / `health.failed` / `health.missing` が非空 → セッション死亡・失敗・無記録（trigger 停止の疑い）。`git log --since=24hours origin/main -- .claude/` で直近24時間に `.claude/` を変更したマージが有るか確認し、有れば「その変更を revert する」緊急 issue、無ければ「失敗原因を調査する」issue を起票する（一過性の失敗で良い変更を revert しない）。`health.no_records` が true（導入直後）なら起票せず記録だけして進む
-- `check_missing_publish_days.py` が日付を出力した → 同一の欠落について既に開いている ops issue が無いか確認したうえで、`.claude/notes/develop-issue.md`「ループが止まった原因は Claude Code Remote の MCP で辿れる」の手順（`list_triggers` → 失敗した run の `session_id` → `get_session` の `rate_limit_info`）で欠落日周辺の原因を診断する。`rateLimitType: seven_day` の枯渇が確認できたら、欠落日・原因・停止窓を緊急 ops issue に記録し、GUARDRAILS.md「人間の対応が必要になったとき」に従いオーナーに Slack DM で1通知する（枯渇は誰にも通知されず翌日の evaluate も気づかなかった実測が #421。既存の同一 issue があれば追記のみでよい）。原因がコードの退行等の別要因なら通常のバグとして issue 化する。診断できなければ「原因不明の配信欠落」として起票し、調査を引き継ぐ
+- `check_missing_publish_days.py` が日付を出力した → 同一の欠落について既に開いている ops issue が無いか確認したうえで、`.claude/notes/develop-issue.md`「ループが止まった原因は Claude Code Remote の MCP で辿れる」の手順（`list_triggers` → 失敗した run の `session_id` → `get_session` の `rate_limit_info`）で欠落日周辺の原因を診断する。`list_triggers` の `last_run` は trigger ごとに直近1件しか残らないため、欠落から日が経ち trigger がその後成功していると失敗当時の `session_id` が追えないことがある（診断できなければ「原因不明の配信欠落」として起票し、調査を引き継ぐ）。`rateLimitType: seven_day` の枯渇が確認できたら、欠落日・原因・停止窓を緊急 ops issue に記録し、GUARDRAILS.md「人間の対応が必要になったとき」に従いオーナーに Slack DM で1通知する（枯渇は誰にも通知されず翌日の evaluate も気づかなかった実測が #421。既存の同一 issue があれば追記のみでよい）。原因がコードの退行等の別要因なら通常のバグとして issue 化する
 - main に有るがサイト未反映（ビルドは success）は伝搬遅延。issue 化せず、反映済みの最新記事を評価する
 
 ## Step 1: サービスユーザとして評価

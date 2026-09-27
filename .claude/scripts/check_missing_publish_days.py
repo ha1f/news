@@ -9,10 +9,11 @@
 の Step 0 に委ねる。
 
 working tree の checkout 状態に依存しないよう、ファイル一覧は `git ls-tree` で
-指定 ref（既定 `origin/main`）から取る（develop-issue / evaluate のどちらも
-origin を fetch 済みの git checkout を持つ前提。.claude/notes/develop-issue.md
-参照）。当日は配信がまだ実行されていない可能性があるため検査対象から外す
-（当日分の有無は `check_state.py` の `post_in_main` が別途見ている）。
+指定 ref（既定 `origin/main`）から取る。呼び出し側が事前に `git fetch origin
+main` していることが前提（`check_protected_paths.py` と同じ規約。fetch 無しで
+古い ref を見ると、その後 main に入った投稿を「欠落」と誤検知する）。当日は
+配信がまだ実行されていない可能性があるため検査対象から外す（当日分の有無は
+`check_state.py` の `post_in_main` が別途見ている）。
 
 使い方:
   python3 .claude/scripts/check_missing_publish_days.py                 # 直近14日
@@ -92,10 +93,12 @@ def parse_args(argv):
 
 
 def find_missing_days(ref, lookback, today=None):
-    """git から取得した実データに対して、検査範囲を決めて `missing_days` を呼ぶ。"""
+    """git から取得した実データに対して、検査範囲を決めて `missing_days` を呼ぶ。
+
+    検査範囲は当日を除く直近 `lookback` 日（[today - lookback, today - 1]）。"""
     filenames = list_post_filenames(ref)
     today = today or datetime.now(JST).date()
-    start = today - timedelta(days=lookback - 1)
+    start = today - timedelta(days=lookback)
     earliest = earliest_date(filenames)
     if earliest and earliest > start:
         start = earliest

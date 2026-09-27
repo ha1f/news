@@ -91,7 +91,8 @@ class TestFindMissingDays(unittest.TestCase):
 
     def test_no_posts_at_all_reports_the_whole_lookback_window(self):
         """投稿が1件も無ければ「配信開始前」との区別がつかないので、
-        lookback 全体を欠落として報告する（安全側。誤って握りつぶさない）。"""
+        lookback 全体（当日を除く直近 lookback 日ぶん、ちょうど lookback 件）を
+        欠落として報告する（安全側。誤って握りつぶさない）。"""
         orig = c.list_post_filenames
         c.list_post_filenames = lambda ref: []
         try:
@@ -99,7 +100,8 @@ class TestFindMissingDays(unittest.TestCase):
                                         today=date(2026, 9, 27))
         finally:
             c.list_post_filenames = orig
-        self.assertEqual(days, ["2026-09-25", "2026-09-26"])
+        # [today - lookback, today - 1] = 09-24, 09-25, 09-26 のちょうど3日
+        self.assertEqual(days, ["2026-09-24", "2026-09-25", "2026-09-26"])
 
 
 if __name__ == "__main__":
