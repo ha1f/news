@@ -273,6 +273,7 @@
   border: 1px solid $grey-color-light;
   border-radius: 3px;
   text-decoration: none;
+  word-break: keep-all;
   transition: color 0.15s, border-color 0.15s;
 
   &:hover,
