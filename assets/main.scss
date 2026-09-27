@@ -84,6 +84,7 @@
 .post-tags {
   font-size: $base-font-size * 0.875;
   color: $grey-color;
+  word-break: keep-all;
 
   a {
     color: $grey-color;
