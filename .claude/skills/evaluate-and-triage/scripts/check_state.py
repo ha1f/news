@@ -11,7 +11,8 @@
     止まり、マージされないまま残っている）。**当日の投稿が main に無いとき、
     "running" なら待てばよく、"stalled" なら配信の回復が要る**（#447）
   - publish_prs: pages/ の open PR ごとの判定材料。{number, head_ref, head_sha,
-    idle_minutes, checks_status, checks_conclusion, stalled}
+    idle_minutes, checks_status, checks_conclusion, hold, draft, stalled}。
+    `hold` と draft の PR は経過時間によらず stalled にしない（人間の預かり）
   - health: 前日の各ステージ (evaluate/develop/review) の start/end/ok 集計。
     status issue コメントの1行目 JSON（GUARDRAILS.md 参照）から機械判定する。
     missing = start も end も無いステージ（trigger 停止やセッション起動失敗の疑い）。
@@ -306,11 +307,16 @@ def classify_publish_prs(prs, pr_checks, now, quiescence_minutes):
 
     - CI が走っている間は、publish が完了を待っているだけなので走行中とみなす
       （publish-pages の手順が「pending なら完了を待つ」と決めている）
-    - CI が終わっているのに PR も CI も quiescence_minutes を超えて動かないなら、
+    - CI が終わっているのに PR も CI も quiescence_minutes 以上動かないなら、
       あとはマージするだけなのに誰も進めていない = 止まっている
 
     実測 2026-09-28: 9時の publish が PR 作成の19秒後にセッションを終え、CI は
     09:16 に success になったが、10時の evaluate まで誰もマージしなかった（#447）。
+
+    `hold` と draft は GUARDRAILS が定める「自動処理を止めて人間が見る」信号なので、
+    経過時間がいくら開いても stalled にしない（review-and-merge の classify_prs が
+    信頼判定より前にこの2つで離脱するのと同じ扱い。ここだけ迂回すると、オーナーが
+    止めた配信をループが勝手に進める経路ができる）。
     """
     out = []
     for pr in prs:
@@ -328,7 +334,10 @@ def classify_publish_prs(prs, pr_checks, now, quiescence_minutes):
         # CI の run が見つからない PR は「CI 待ちで止まっている」と区別できないが、
         # 黙って走行中のままにすると永久に検知されないので、経過時間だけで判定する
         checks_done = checks.get("status") in (None, "completed")
-        stalled = bool(checks_done and idle_minutes is not None
+        held = any(label.get("name") == "hold" for label in pr.get("labels") or ())
+        draft = bool(pr.get("draft"))
+        stalled = bool(checks_done and not held and not draft
+                       and idle_minutes is not None
                        and idle_minutes >= quiescence_minutes)
         out.append({
             "number": pr.get("number"),
@@ -337,6 +346,8 @@ def classify_publish_prs(prs, pr_checks, now, quiescence_minutes):
             "idle_minutes": idle_minutes,
             "checks_status": checks.get("status"),
             "checks_conclusion": checks.get("conclusion"),
+            "hold": held,
+            "draft": draft,
             "stalled": stalled,
         })
     return out
@@ -354,6 +365,7 @@ def publish_state_of(publish_prs, pages_build):
 def assemble_output(config, today, post_exists, pages, pages_build,
                     prs, issues, comments, pr_checks=None, now=None):
     """取得済みデータから出力 JSON を組み立てる（純関数）。"""
+    # now は JST でも UTC でもよい（aware な datetime 同士の差は tz によらない）
     now = now or datetime.now(timezone.utc)
     publish_prs = classify_publish_prs(
         prs, pr_checks or {}, now, config.get("quiescence_minutes", 30))
@@ -408,8 +420,7 @@ def fetch_data(fetch_json, config, today, now):
         comments = fetch_json(
             f"issues/{status_issue}/comments?per_page=100&since={since_param(now)}") or []
     return assemble_output(config, today, post is not None, pages, pages_build,
-                           prs, issues, comments, pr_checks=pr_checks,
-                           now=now.astimezone(timezone.utc))
+                           prs, issues, comments, pr_checks=pr_checks, now=now)
 
 
 def fetch_pr_checks(fetch_json, prs):
@@ -464,7 +475,7 @@ def main():
             issues=data.get("issues", []),
             comments=data.get("comments", []),
             pr_checks=data.get("pr_checks", {}),
-            now=now.astimezone(timezone.utc),
+            now=now,
         )
     elif shutil.which("gh"):
         result = fetch_via_gh(config, today, now)

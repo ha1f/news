@@ -150,7 +150,15 @@ gh pr merge --squash --delete-branch
 python3 .claude/skills/evaluate-and-triage/scripts/check_state.py
 ```
 
-出力が「完了条件」を満たしていれば、PR の URL と公開された記事の URL をユーザーに報告する。`publish_state` が `stalled` で返るなら、マージし損ねた `pages/` の PR が残っている（`publish_prs` にその番号が出る）ので、ステップ6の頭に戻る。
+`publish_state` が `idle` でなければ、マージし損ねた `pages/` の PR が残っているので（`publish_prs` に番号が出る）ステップ6の頭に戻る。`pages_build.conclusion` が `success` でなければ、上の段落のとおり直すか revert する。
+
+`post_in_main` は `_posts/{YYYY-MM-DD}-news.md`（デフォルトプロファイル）だけを見るので、`--profile {name}` 単体で走ったときは false のままになる。そのときは自分が作ったファイルが main に入ったかを直接見る:
+
+```bash
+git fetch origin main -q && git cat-file -e origin/main:_posts/{YYYY-MM-DD}-news-{name}.md
+```
+
+「完了条件」を満たしたら、PR の URL と公開された記事の URL をユーザーに報告する。
 
 ### 7. 元のブランチに戻る
 
@@ -164,7 +172,7 @@ Skill ツールで `reflect-and-improve` を実行する。作成された改善
 
 無人で走る前提のステージなので、途中で止まっても誰も気づかない。次の3つが揃うまで終わらせない（ステップ6の `check_state.py` がそのまま判定になる）:
 
-- `post_in_main` が true（その日の記事が main に入っている）
+- **この run が作った投稿が main に入っている** — 引数なし / `--all-profiles` なら `check_state.py` の `post_in_main` が true。`--profile {name}` 単体なら `_posts/{YYYY-MM-DD}-news-{name}.md` が `origin/main` に在ること（`post_in_main` はデフォルトプロファイルのファイルしか見ないので false のままになる）
 - `publish_state` が `idle`（マージされずに残った `pages/` の PR が無い）
 - `pages_build.conclusion` が `success`（サイトに反映済み）
 
