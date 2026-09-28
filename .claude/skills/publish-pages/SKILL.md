@@ -128,9 +128,9 @@ PR を作成する。`gh` CLI が使えない環境（CCR 等）では GitHub MC
 gh pr create --base main --title "{タイトル}" --body "/curate-news の結果を GitHub Pages にデプロイします。"
 ```
 
-PR の URL をユーザーに表示する。
+**ここは完了地点ではない。** PR を作った時点では記事はまだ1文字もサイトに出ていない。URL の報告はステップ6を終えてからまとめて行う（実測 2026-09-28: PR 作成の19秒後にセッションが終わり、10時の evaluate が引き取るまで55分間その日の記事がサイトに無かった。#447）。続けてステップ6に入る。
 
-### 6. マージ
+### 6. マージと配信の確認
 
 マージ前に PR の conflict と checks を確認する（`gh pr view --json mergeable,statusCheckRollup`。`gh` が無い環境では MCP の `pull_request_read`(get) で mergeable を、(get_check_runs) で checks を確認する。(get_status) は legacy status しか返さず GitHub Actions の checks は空に見えるため使わない）。pending なら完了を待つ。conflict や red があれば直してから次に進む（マージ判定の考え方は review-and-merge スキルのマージ手順を参照）。
 
@@ -142,7 +142,15 @@ gh pr merge --squash --delete-branch
 
 `gh` が使えなければ MCP ツールで squash マージする（`merge_pull_request` に `--delete-branch` 相当のオプションは無い）。リポジトリの「Automatically delete head branches」設定が有効なら、マージ後に GitHub 側でブランチは自動削除される。手動で `git push origin --delete pages/{ブランチ名}` を試みても、既に削除済みなら `remote ref does not exist` で失敗するだけで実害はないため、成功を確認する必要はない。
 
-マージ後、対応する main のビルド run を特定して完了を待つ（`gh run list --workflow=pages.yml --commit <マージ後の main SHA>` で run を特定し、現れるまで待って `gh run watch <run id>`。`gh` が無ければ MCP の `actions_list`/`actions_get` で代用する。直前の別 run で代用しない）。conclusion が failure なら GitHub Pages に壊れた内容がデプロイされている状態なので、原因を直した修正コミットを push するか revert PR を作って自分でマージし、ユーザーに影響と対処を報告する。
+マージ後、対応する main のビルド run を特定して完了を待つ（`gh run list --workflow=pages.yml --commit <マージ後の main SHA>` で run を特定し、現れるまで待って `gh run watch <run id>`。`gh` が無ければ MCP の `actions_list`/`actions_get` で代用する。直前の別 run で代用しない）。**SHA は必ず完全な40桁で渡す**（短縮 SHA はエラーにならず `total_count: 0` を返すので、run 待ちのループが永久に回る）。conclusion が failure なら GitHub Pages に壊れた内容がデプロイされている状態なので、原因を直した修正コミットを push するか revert PR を作って自分でマージし、ユーザーに影響と対処を報告する。
+
+最後に、配信できたことを機械で確かめる:
+
+```bash
+python3 .claude/skills/evaluate-and-triage/scripts/check_state.py
+```
+
+`post_in_main` が true・`publish_state` が `idle`・`pages_build.conclusion` が `success` の3つが揃って初めてこのステージは終わる。`publish_state` が `stalled` で返るなら、マージし損ねた `pages/` の PR が残っている（`publish_prs` にその番号が出る）。揃ったら PR の URL と公開された記事の URL をユーザーに報告する。
 
 ### 7. 元のブランチに戻る
 
@@ -151,3 +159,13 @@ gh pr merge --squash --delete-branch
 ### 8. 振り返りと改善
 
 Skill ツールで `reflect-and-improve` を実行する。作成された改善 PR は ready 化する（`gh pr ready` または MCP ツール。次の review-and-merge のレビュー対象になる）。
+
+## 完了条件
+
+無人で走る前提のステージなので、途中で止まっても誰も気づかない。次の3つが揃うまで終わらせない（ステップ6の `check_state.py` がそのまま判定になる）:
+
+- `post_in_main` が true（その日の記事が main に入っている）
+- `publish_state` が `idle`（マージされずに残った `pages/` の PR が無い）
+- `pages_build.conclusion` が `success`（サイトに反映済み）
+
+どれかが揃わないまま続けられなくなったときは、何がどこまで進んだかを status issue に記録してから終える（黙って終わると、次のステージが「走行中」と読んで待ってしまう）。

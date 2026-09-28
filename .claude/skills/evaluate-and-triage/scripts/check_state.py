@@ -3,9 +3,15 @@
 
 使い方: python3 check_state.py          # gh CLI があれば gh、無ければ REST 直叩きでデータを取得する
       cat state.json | python3 check_state.py --stdin  # 保険。渡すデータは手動で用意する
-出力: {"config", "today", "post_in_main", "publish_in_progress", "pages_url",
+出力: {"config", "today", "post_in_main", "publish_state", "publish_prs", "pages_url",
        "pages_build", "status_issue", "open_issues", "health",
        "recent_status_comments"}
+  - publish_state: publish ステージの進み具合。"idle"（pages/ の open PR も走行中の
+    main ビルドも無い）/ "running"（まだ動いている）/ "stalled"（PR を作ったところで
+    止まり、マージされないまま残っている）。**当日の投稿が main に無いとき、
+    "running" なら待てばよく、"stalled" なら配信の回復が要る**（#447）
+  - publish_prs: pages/ の open PR ごとの判定材料。{number, head_ref, head_sha,
+    idle_minutes, checks_status, checks_conclusion, stalled}
   - health: 前日の各ステージ (evaluate/develop/review) の start/end/ok 集計。
     status issue コメントの1行目 JSON（GUARDRAILS.md 参照）から機械判定する。
     missing = start も end も無いステージ（trigger 停止やセッション起動失敗の疑い）。
@@ -45,7 +51,9 @@ NO_GH_HINT = """gh CLI も REST 直叩きも使えませんでした。MCP ツ�
   {"post_exists": true,
    "pages": {"html_url": "..."},
    "pages_build": {"status": "completed", "conclusion": "success", ...},
-   "prs": [...], "issues": [...], "comments": [...]}
+   "prs": [...], "issues": [...], "comments": [...],
+   "pr_checks": {"<pages/ PR の head_sha>": {"status": "completed", "conclusion": "success",
+                                             "updated_at": "..."}}}
   EOF
 
 取得元とハマりどころは .claude/skills/evaluate-and-triage/SKILL.md の Step 0
@@ -275,12 +283,80 @@ def summarize_health(records, today, has_earlier_records):
     }
 
 
+def parse_api_time(value):
+    """GitHub の `2026-09-28T00:14:23Z` 形式を aware な datetime にする（純関数）。
+
+    値が無い・壊れているときは None を返し、呼び出し側で「時刻が読めない」として
+    扱えるようにする（例外で全体を止めない）。"""
+    if not value:
+        return None
+    try:
+        return datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+    except (TypeError, ValueError):
+        return None
+
+
+def classify_publish_prs(prs, pr_checks, now, quiescence_minutes):
+    """pages/ の open PR を「まだ走っている」と「止まっている」に分ける（純関数）。
+
+    publish ステージは PR の作成から squash マージまでを1続きで行う。したがって
+    PR が open で残っている状態は、それ自体では「走行中」とも「止まった」とも
+    決まらない。両者を分けるのは **最後に何かが動いてからの経過時間** と
+    **その head の CI が終わっているか** の2つ:
+
+    - CI が走っている間は、publish が完了を待っているだけなので走行中とみなす
+      （publish-pages の手順が「pending なら完了を待つ」と決めている）
+    - CI が終わっているのに PR も CI も quiescence_minutes を超えて動かないなら、
+      あとはマージするだけなのに誰も進めていない = 止まっている
+
+    実測 2026-09-28: 9時の publish が PR 作成の19秒後にセッションを終え、CI は
+    09:16 に success になったが、10時の evaluate まで誰もマージしなかった（#447）。
+    """
+    out = []
+    for pr in prs:
+        head = pr.get("head", {})
+        if not head.get("ref", "").startswith("pages/"):
+            continue
+        head_sha = head.get("sha")
+        checks = pr_checks.get(head_sha) or {}
+        stamps = [parse_api_time(pr.get("updated_at")),
+                  parse_api_time(checks.get("updated_at"))]
+        stamps = [t for t in stamps if t is not None]
+        last_activity = max(stamps) if stamps else None
+        idle_minutes = (None if last_activity is None
+                        else int((now - last_activity).total_seconds() // 60))
+        # CI の run が見つからない PR は「CI 待ちで止まっている」と区別できないが、
+        # 黙って走行中のままにすると永久に検知されないので、経過時間だけで判定する
+        checks_done = checks.get("status") in (None, "completed")
+        stalled = bool(checks_done and idle_minutes is not None
+                       and idle_minutes >= quiescence_minutes)
+        out.append({
+            "number": pr.get("number"),
+            "head_ref": head.get("ref"),
+            "head_sha": head_sha,
+            "idle_minutes": idle_minutes,
+            "checks_status": checks.get("status"),
+            "checks_conclusion": checks.get("conclusion"),
+            "stalled": stalled,
+        })
+    return out
+
+
+def publish_state_of(publish_prs, pages_build):
+    """publish ステージの進み具合を1語で表す（純関数）。"""
+    if any(pr["stalled"] for pr in publish_prs):
+        return "stalled"
+    if publish_prs or (pages_build is not None and pages_build.get("status") != "completed"):
+        return "running"
+    return "idle"
+
+
 def assemble_output(config, today, post_exists, pages, pages_build,
-                    prs, issues, comments):
+                    prs, issues, comments, pr_checks=None, now=None):
     """取得済みデータから出力 JSON を組み立てる（純関数）。"""
-    publish_in_progress = (
-        any(pr.get("head", {}).get("ref", "").startswith("pages/") for pr in prs)
-        or (pages_build is not None and pages_build.get("status") != "completed"))
+    now = now or datetime.now(timezone.utc)
+    publish_prs = classify_publish_prs(
+        prs, pr_checks or {}, now, config.get("quiescence_minutes", 30))
     status_issue, open_count, status_issue_comment_count = summarize_issues(issues)
     records = parse_status_records(comments)
     has_earlier_records = status_issue_comment_count > len(comments)
@@ -288,7 +364,8 @@ def assemble_output(config, today, post_exists, pages, pages_build,
         "config": config,
         "today": today,
         "post_in_main": post_exists,
-        "publish_in_progress": publish_in_progress,
+        "publish_state": publish_state_of(publish_prs, pages_build),
+        "publish_prs": publish_prs,
         "pages_url": (pages or {}).get("html_url"),
         "pages_build": pages_build,
         "status_issue": status_issue,
@@ -323,6 +400,7 @@ def fetch_data(fetch_json, config, today, now):
         pages_build = {key: latest_run[0][key]
                        for key in ("status", "conclusion", "head_sha", "updated_at")}
     prs = fetch_json("pulls?state=open&per_page=100") or []
+    pr_checks = fetch_pr_checks(fetch_json, prs)
     issues = fetch_json("issues?state=open&per_page=100") or []
     status_issue, _, _ = summarize_issues(issues)
     comments = []
@@ -330,7 +408,28 @@ def fetch_data(fetch_json, config, today, now):
         comments = fetch_json(
             f"issues/{status_issue}/comments?per_page=100&since={since_param(now)}") or []
     return assemble_output(config, today, post is not None, pages, pages_build,
-                           prs, issues, comments)
+                           prs, issues, comments, pr_checks=pr_checks,
+                           now=now.astimezone(timezone.utc))
+
+
+def fetch_pr_checks(fetch_json, prs):
+    """pages/ の open PR の head_sha ごとに、PR の CI run の状態を引く。
+
+    PR ごとに `commits/{sha}/check-runs` を叩くのでなく、workflow の run 一覧を
+    1回引いて head_sha で引き当てる（`.claude/notes/develop-issue.md` の実測に沿う）。
+    一覧は新しい順なので、同じ sha の最初の1件がその head の最新 run。"""
+    if not any(pr.get("head", {}).get("ref", "").startswith("pages/") for pr in prs):
+        return {}
+    runs = fetch_json("actions/workflows/jekyll-build-check.yml/runs?per_page=100",
+                      ok_404=True, paginate=False) or {}
+    checks = {}
+    for run in runs.get("workflow_runs", []):
+        checks.setdefault(run.get("head_sha"), {
+            "status": run.get("status"),
+            "conclusion": run.get("conclusion"),
+            "updated_at": run.get("updated_at"),
+        })
+    return checks
 
 
 def fetch_via_gh(config, today, now):
@@ -364,6 +463,8 @@ def main():
             prs=data.get("prs", []),
             issues=data.get("issues", []),
             comments=data.get("comments", []),
+            pr_checks=data.get("pr_checks", {}),
+            now=now.astimezone(timezone.utc),
         )
     elif shutil.which("gh"):
         result = fetch_via_gh(config, today, now)

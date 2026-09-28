@@ -10,8 +10,9 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import check_state
-from check_state import (api_json, assemble_output, gh_json, parse_link_header,
-                         parse_status_record, parse_status_records,
+from check_state import (api_json, assemble_output, classify_publish_prs, gh_json,
+                         parse_api_time, parse_link_header, parse_status_record,
+                         parse_status_records, publish_state_of,
                          recent_comment_digests, since_param, summarize_health,
                          summarize_issues, with_page)
 
@@ -138,6 +139,148 @@ class HealthTest(unittest.TestCase):
         health = summarize_health([], "2026-07-11", False)
         self.assertTrue(health["no_records"])
         self.assertEqual(health["missing"], [])
+
+
+NOW = datetime(2026, 9, 28, 1, 1, 0, tzinfo=timezone.utc)  # 10:01 JST
+
+
+def pages_pr(number=446, ref="pages/2026-09-28-multi", sha="a" * 40,
+             updated_at="2026-09-28T00:14:42Z"):
+    return {"number": number, "updated_at": updated_at,
+            "head": {"ref": ref, "sha": sha}}
+
+
+def check_run(status="completed", conclusion="success", updated_at="2026-09-28T00:16:09Z"):
+    return {"status": status, "conclusion": conclusion, "updated_at": updated_at}
+
+
+class ClassifyPublishPrsTest(unittest.TestCase):
+    """2026-09-28 の実測（#447）を再現する。9時の publish が PR #446 を作った19秒後に
+    セッションを終え、CI は 09:16 に success になったが、10時の evaluate まで
+    マージされなかった。`pages/` の open PR が1件ある点だけでは「走行中」と
+    区別がつかない。"""
+
+    def classify(self, prs, checks, now=NOW, quiescence=30):
+        return classify_publish_prs(prs, checks, now, quiescence)
+
+    def test_stopped_after_creating_the_pr_is_stalled(self):
+        out = self.classify([pages_pr()], {"a" * 40: check_run()})
+        self.assertEqual(len(out), 1)
+        self.assertTrue(out[0]["stalled"])
+        self.assertEqual(out[0]["number"], 446)
+        self.assertEqual(out[0]["idle_minutes"], 44)  # 00:16:09Z → 01:01Z
+        self.assertEqual(out[0]["checks_conclusion"], "success")
+
+    def test_ci_still_running_is_not_stalled(self):
+        # publish-pages は「pending なら完了を待つ」と決めているので、CI が走って
+        # いる間は止まっていない
+        out = self.classify([pages_pr()], {"a" * 40: check_run(status="in_progress",
+                                                               conclusion=None)})
+        self.assertFalse(out[0]["stalled"])
+
+    def test_recent_activity_is_not_stalled(self):
+        out = self.classify([pages_pr(updated_at="2026-09-28T00:50:00Z")],
+                            {"a" * 40: check_run(updated_at="2026-09-28T00:52:00Z")})
+        self.assertFalse(out[0]["stalled"])
+        self.assertEqual(out[0]["idle_minutes"], 9)
+
+    def test_idle_measured_from_the_later_of_pr_and_ci(self):
+        # PR の updated_at は古いが CI が直前に完了したケース。CI 側を採らないと
+        # 「マージ直前の PR」を止まったと誤判定する
+        out = self.classify([pages_pr(updated_at="2026-09-28T00:14:42Z")],
+                            {"a" * 40: check_run(updated_at="2026-09-28T00:59:00Z")})
+        self.assertFalse(out[0]["stalled"])
+        self.assertEqual(out[0]["idle_minutes"], 2)
+
+    def test_red_ci_left_untouched_is_stalled_and_carries_the_conclusion(self):
+        # 赤いまま放置された PR も「誰も進めていない」。マージでなく修正が要ると
+        # 分かるよう conclusion を出す
+        out = self.classify([pages_pr()], {"a" * 40: check_run(conclusion="failure")})
+        self.assertTrue(out[0]["stalled"])
+        self.assertEqual(out[0]["checks_conclusion"], "failure")
+
+    def test_missing_ci_run_falls_back_to_elapsed_time(self):
+        # CI の run を引き当てられなくても、経過時間だけで止まりを検知する
+        # （走行中扱いのままにすると永久に気づけない）
+        out = self.classify([pages_pr()], {})
+        self.assertTrue(out[0]["stalled"])
+        self.assertIsNone(out[0]["checks_status"])
+
+    def test_unparsable_timestamps_are_not_called_stalled(self):
+        # 時刻が読めないときに止まった扱いにすると、走行中の publish の PR を
+        # 別ステージがマージしにいく
+        out = self.classify([pages_pr(updated_at="")], {})
+        self.assertFalse(out[0]["stalled"])
+        self.assertIsNone(out[0]["idle_minutes"])
+
+    def test_non_pages_prs_are_ignored(self):
+        out = self.classify([{"number": 441, "updated_at": "2026-09-01T00:00:00Z",
+                              "head": {"ref": "feat/414-x", "sha": "b" * 40}}], {})
+        self.assertEqual(out, [])
+
+    def test_quiescence_boundary_is_inclusive(self):
+        at_30 = self.classify([pages_pr(updated_at="2026-09-28T00:31:00Z")], {})
+        self.assertTrue(at_30[0]["stalled"])
+        self.assertEqual(at_30[0]["idle_minutes"], 30)
+        at_29 = self.classify([pages_pr(updated_at="2026-09-28T00:32:00Z")], {})
+        self.assertFalse(at_29[0]["stalled"])
+
+
+class PublishStateTest(unittest.TestCase):
+    def test_stalled_wins_over_running(self):
+        prs = [{"stalled": False}, {"stalled": True}]
+        self.assertEqual(publish_state_of(prs, None), "stalled")
+
+    def test_open_pages_pr_that_is_not_stalled_is_running(self):
+        self.assertEqual(publish_state_of([{"stalled": False}], None), "running")
+
+    def test_main_build_in_flight_is_running(self):
+        self.assertEqual(publish_state_of([], {"status": "in_progress"}), "running")
+
+    def test_nothing_in_flight_is_idle(self):
+        self.assertEqual(publish_state_of([], {"status": "completed"}), "idle")
+        self.assertEqual(publish_state_of([], None), "idle")
+
+
+class ParseApiTimeTest(unittest.TestCase):
+    def test_parses_github_z_format_as_utc(self):
+        self.assertEqual(parse_api_time("2026-09-28T00:14:42Z"),
+                         datetime(2026, 9, 28, 0, 14, 42, tzinfo=timezone.utc))
+
+    def test_missing_or_broken_values_are_none(self):
+        for value in (None, "", "2026-09-28", "not a time", 12345):
+            self.assertIsNone(parse_api_time(value), value)
+
+
+class AssembleOutputPublishTest(unittest.TestCase):
+    """出力そのもの（公開する JSON のキー）を固定する。"""
+
+    def run_assemble(self, prs, pr_checks, pages_build=None):
+        return assemble_output({"quiescence_minutes": 30}, "2026-09-28", False, None,
+                               pages_build, prs, [], [], pr_checks=pr_checks, now=NOW)
+
+    def test_stalled_publish_is_visible_in_the_output(self):
+        out = self.run_assemble([pages_pr()], {"a" * 40: check_run()})
+        self.assertEqual(out["publish_state"], "stalled")
+        self.assertEqual([pr["number"] for pr in out["publish_prs"] if pr["stalled"]], [446])
+
+    def test_running_publish_is_visible_in_the_output(self):
+        out = self.run_assemble([pages_pr()], {"a" * 40: check_run(status="queued",
+                                                                  conclusion=None)})
+        self.assertEqual(out["publish_state"], "running")
+        self.assertEqual(out["publish_prs"][0]["stalled"], False)
+
+    def test_quiescence_minutes_comes_from_guardrails(self):
+        # 44分アイドルの PR は cap 60 なら「まだ走行中」
+        out = assemble_output({"quiescence_minutes": 60}, "2026-09-28", False, None, None,
+                              [pages_pr()], [], [], pr_checks={"a" * 40: check_run()},
+                              now=NOW)
+        self.assertEqual(out["publish_state"], "running")
+
+    def test_default_quiescence_when_guardrails_lacks_the_key(self):
+        out = assemble_output({}, "2026-09-28", False, None, None, [pages_pr()], [], [],
+                              pr_checks={"a" * 40: check_run()}, now=NOW)
+        self.assertEqual(out["publish_state"], "stalled")
 
 
 class AssembleOutputHealthTest(unittest.TestCase):
