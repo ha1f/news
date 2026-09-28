@@ -150,7 +150,7 @@ gh pr merge --squash --delete-branch
 python3 .claude/skills/evaluate-and-triage/scripts/check_state.py
 ```
 
-`post_in_main` が true・`publish_state` が `idle`・`pages_build.conclusion` が `success` の3つが揃って初めてこのステージは終わる。`publish_state` が `stalled` で返るなら、マージし損ねた `pages/` の PR が残っている（`publish_prs` にその番号が出る）。揃ったら PR の URL と公開された記事の URL をユーザーに報告する。
+出力が「完了条件」を満たしていれば、PR の URL と公開された記事の URL をユーザーに報告する。`publish_state` が `stalled` で返るなら、マージし損ねた `pages/` の PR が残っている（`publish_prs` にその番号が出る）ので、ステップ6の頭に戻る。
 
 ### 7. 元のブランチに戻る
 
@@ -168,4 +168,4 @@ Skill ツールで `reflect-and-improve` を実行する。作成された改善
 - `publish_state` が `idle`（マージされずに残った `pages/` の PR が無い）
 - `pages_build.conclusion` が `success`（サイトに反映済み）
 
-どれかが揃わないまま続けられなくなったときは、何がどこまで進んだかを status issue に記録してから終える（黙って終わると、次のステージが「走行中」と読んで待ってしまう）。
+どれかが揃わないまま続けられなくなったときは、何がどこまで進んだかを `pages/` の PR にコメントで残して終える（止まったこと自体は次のステージが `publish_state` で機械検知するので、残すのは人が読む経緯でよい）。

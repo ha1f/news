@@ -25,7 +25,7 @@ description: "デプロイ済みのニュースサイトをサービスユーザ
   - **`since` を省くなら最終ページを取る。** コメントは古い順に返り、status issue は既に6ページ超（実測 2026-09-21: `rel="last"` が page=6、1ページ目の末尾は 2026-08-02）。1ページ目を渡すと前日のレコードが1件も入らず、`health.no_records` が true になって trigger 停止を黙って見逃す。`Link` ヘッダの `rel="last"` から**ページ番号だけ**取り、`&page=N` を自分で足して引く
 - MCP の `list_issues` は使わない。`user.type` を落とすため `check_state.py` の bot 除外が効かず、bot のトラッキング issue が `open_issues` に混ざって `open_issue_cap` の判定がずれる（実測で1件差）。MCP しか手が無いときは bot の issue を自分で除いて数え、`open_issues` を参考値として扱う
 
-- `post_in_main` が false → `publish_state` で分岐する。`publish_in_progress`（boolean）は「PR が open」と「publish が動いている」を区別できず、止まったまま残った PR を毎日「走行中」と読んで黙って抜けていた（#447）ので置き換わった
+- `post_in_main` が false → `publish_state` で分岐する（旧 `publish_in_progress` は「PR が open」と「publish が動いている」を区別できず、止まった PR を毎日「走行中」と読んで黙って抜けていた。#447）
   - `"running"` → publish がまだ動いている。status issue に記録だけして終了する
   - `"stalled"` → **publish は止まっており、配信が止まったままになっている。評価より先に配信を回復させる。** `publish_prs` の `stalled: true` の PR について、`checks_conclusion` が `success` なら squash マージし、publish-pages のステップ6と同じ手順で main の `pages.yml` run が success になるまで見届ける。`failure` なら原因を直してから同じところまで運ぶ。回復させたうえで評価に進み、遅延した時間と回復手順を status issue の終了レコードに残す（止まった原因の調査は別途 ops issue にする。ループの停止全般の診断手順は `.claude/notes/develop-issue.md`）
   - `"idle"` → 9時の publish 自体が走っていない。緊急の ops issue を起票し、評価はスキップする
