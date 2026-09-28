@@ -4,7 +4,7 @@ import io
 import json
 import sys
 import unittest
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -275,16 +275,20 @@ class RecentStatusRecordsTest(unittest.TestCase):
     """
 
     NOW = datetime(2026, 9, 27, 3, 0, 0, tzinfo=timezone.utc)  # cutoff = 2026-09-25T03:00:00Z
-    GROOMING = status_comment(
-        "2026-09-26T01:12:24Z",
+    GROOMING_SUMMARY = (
         "open issue 15/10（cap 超過でグルーミングのみ）。グルーミング4件: "
         "#407 #409（作業完了済みで draft のまま滞留・作り直し不要）/ #408（PR #416 と同一ファイルの順序）")
+    GROOMING = status_comment("2026-09-26T01:12:24Z", GROOMING_SUMMARY)
 
     def test_output_carries_the_previous_stage_conclusion(self):
+        # main() 経由なので now を注入できず実時刻の窓で切られる。窓の外に落ちると
+        # 何も壊れていないのに時間の経過だけで red になるため、この1件だけは
+        # created_at を「今」から起こす（窓そのもののテストは NOW を渡す別の3件が担う）
+        recent = (datetime.now(timezone.utc) - timedelta(hours=1)).strftime("%Y-%m-%dT%H:%M:%SZ")
         out = run_main({"issues": [issue(1, login="ha1f", user_type="User")], "prs": [],
-                        "comments": [self.GROOMING]})
+                        "comments": [status_comment(recent, self.GROOMING_SUMMARY)]})
         records = out["recent_status_records"]
-        self.assertEqual(records[0]["created_at"], "2026-09-26T01:12:24Z")
+        self.assertEqual(records[0]["created_at"], recent)
         self.assertIn("#407 #409", records[0]["summary"])
         self.assertIn("作り直し不要", records[0]["summary"])
         self.assertNotIn("recent_status_records_note", out)
