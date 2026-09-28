@@ -84,6 +84,7 @@
 .post-tags {
   font-size: $base-font-size * 0.875;
   color: $grey-color;
+  word-break: keep-all;
 
   a {
     color: $grey-color;
@@ -272,6 +273,7 @@
   border: 1px solid $grey-color-light;
   border-radius: 3px;
   text-decoration: none;
+  word-break: keep-all;
   transition: color 0.15s, border-color 0.15s;
 
   &:hover,
@@ -343,6 +345,7 @@
 .cross-profile-nav {
   font-size: $base-font-size * 0.875;
   color: $grey-color;
+  word-break: keep-all;
 }
 
 .profile-exclusive-note {
