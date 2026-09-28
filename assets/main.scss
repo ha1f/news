@@ -345,6 +345,7 @@
 .cross-profile-nav {
   font-size: $base-font-size * 0.875;
   color: $grey-color;
+  word-break: keep-all;
 }
 
 .profile-exclusive-note {
