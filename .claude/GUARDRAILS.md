@@ -48,5 +48,6 @@ status issue（📊 daily-loop status）へのコメントは1行目を JSON に
 - 複雑さを増すのは、単純な解が不十分だと観測されたときだけ
 - 対象が無い日は subagent を起動せず早期終了する
 - スクリプトやガードレールは「モデルにできないこと」の仮定。定期的に見直し、不要になった足場は剥がす
+- 利用上限が逼迫しているときは配信（publish-pages）を内部ステージ（develop / review / audit）より優先する。trigger の実行順（README「毎日の自動ループ」の定義表: publish → evaluate → develop → review）自体がこれを体現しており、trigger は human のみ編集できるため、ループが実行中に他ステージを動的に止めることはできない。上限そのものの調整（1日の run 数・コンテキスト量の削減、上限の引き上げ）はオーナー判断（#421）
 
 一次ソース: [Effective harnesses for long-running agents](https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents) / [Harness design for long-running apps](https://www.anthropic.com/engineering/harness-design-long-running-apps) / [Building effective agents](https://www.anthropic.com/research/building-effective-agents) / [Context engineering](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents) / [Skill best practices](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices) / [Writing tools for agents](https://www.anthropic.com/engineering/writing-tools-for-agents)
