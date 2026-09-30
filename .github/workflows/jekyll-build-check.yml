@@ -80,6 +80,10 @@ jobs:
       - name: Check article quality
         run: |
           python3 .claude/scripts/check_article_anchors.py _site
+          # 全投稿に当てる。ツール呼び出し構文の混入は間欠的に起きるので
+          # 「この PR が触った投稿」だけを見ると、別の PR で入った分を素通り
+          # させる。誤検知は持たない（#408 で全 408 本に当てて0件）
+          python3 .claude/scripts/check_tool_artifacts.py
           # 本文が変わった投稿だけを渡す。この2つの検査が見るのは本文の記事項目
           # だけなので、front matter を一括更新した PR に全件を渡すと、その投稿が
           # 書かれた当時のルールで書かれた既存の本文まで今の検査にかかり、PR が
