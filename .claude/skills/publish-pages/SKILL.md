@@ -140,7 +140,7 @@ checks が green になったら、PR を squash マージしてブランチを�
 gh pr merge --squash --delete-branch
 ```
 
-`gh` が使えなければ MCP ツールで squash マージする（`merge_pull_request` に `--delete-branch` 相当のオプションは無い）。リポジトリの「Automatically delete head branches」設定が有効なら、マージ後に GitHub 側でブランチは自動削除される。手動で `git push origin --delete pages/{ブランチ名}` を試みても、既に削除済みなら `remote ref does not exist` で失敗するだけで実害はないため、成功を確認する必要はない。
+`gh` が使えなければ MCP ツールで squash マージする（`merge_pull_request` に `--delete-branch` 相当のオプションは無い）。マージが 502 で返っても実際には通っていることがある。再実行は `405 Merge already in progress` になるので、PR の state ではなく `git fetch origin main` で main の先頭が進んだかを見る（実測 2026-09-29 PR #460: マージ済みなのに `pull_request_read` が 20分以上 `open` のまま、push 起点の pages.yml run も現れなかった）。run が数分経っても現れなければ `actions_run_trigger`(run_workflow, `pages.yml`, ref `main`) で手動デプロイし、`open` のまま残った PR は閉じる（`publish_state` が `running` から戻らないため）。リポジトリの「Automatically delete head branches」設定が有効なら、マージ後に GitHub 側でブランチは自動削除される。手動で `git push origin --delete pages/{ブランチ名}` を試みても、既に削除済みなら `remote ref does not exist` で失敗するだけで実害はないため、成功を確認する必要はない。
 
 マージ後、対応する main のビルド run を特定して完了を待つ（`gh run list --workflow=pages.yml --commit <マージ後の main SHA>` で run を特定し、現れるまで待って `gh run watch <run id>`。`gh` が無ければ MCP の `actions_list`/`actions_get` で代用する。直前の別 run で代用しない）。**SHA は必ず完全な40桁で渡す**（短縮 SHA はエラーにならず `total_count: 0` を返すので、run 待ちのループが永久に回る）。conclusion が failure なら GitHub Pages に壊れた内容がデプロイされている状態なので、原因を直した修正コミットを push するか revert PR を作って自分でマージし、ユーザーに影響と対処を報告する。
 
