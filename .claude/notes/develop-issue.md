@@ -42,7 +42,12 @@ playwright screenshot --browser chromium --full-page \
 
 `npx playwright@<CI のバージョン>` は使えない。CI がピンしている版は `/opt/pw-browsers` にあるものと違う build 番号を要求し、`Executable doesn't exist at /opt/pw-browsers/chromium_headless_shell-<別番号>/...` で落ちる。
 
-- **画像の変換ツールが無い**（実測 2026-09-23: `convert` / `magick` / `rsvg-convert` / `inkscape` いずれも不在、Python の `cairosvg`・`Pillow` も未インストール）。`assets/favicon-32x32.png` / `apple-touch-icon.png` のようなラスタ画像を作り直す作業（#390 等）は、変換手段の調達から始まる。`playwright screenshot` で SVG を開いて撮る手は、`file://` の SVG に `--omit-background` を付けた1回目では出力ファイルができなかった（原因未調査）。見積もりに入れる
+- **画像の変換ツールは無いが、ラスタ画像の作り直しはスクリプト2本で済むようになった**（`convert` / `magick` / `rsvg-convert` / `inkscape` いずれも不在、Python の `cairosvg`・`Pillow` も未インストール。実測 2026-09-23）。#390 で手段を作って repo に入れたので、調達からやり直さない
+  - `node .claude/scripts/render_icons.js` — `assets/favicon.svg` を Chromium に描かせて `favicon-32x32.png` / `apple-touch-icon.png` を撮る。アイコンの色を変えるときは SVG を直してこれを回す
+  - `python3 .claude/scripts/recolor_png.py <入力> <出力> --from '#old' --to '#new'` — 2色ブレンドだけでできた PNG（`assets/og-image.png` が該当）の色を zlib と struct だけで差し替える。書き込む前に2色ブレンドかを検査して中止できる
+  - CLI の `playwright screenshot` で `file://` の SVG を撮る手は使わない（`--omit-background` 付きで出力ファイルができなかった。原因未調査）。Node の API に `setContent` で SVG を埋めた HTML を渡すほうは動く（`render_icons.js` がこれ）
+- **Node の API で Playwright を `require` するパスは `/opt/node22/lib/node_modules/playwright`**（実測 2026-09-30。`/usr/lib/node_modules/playwright-core` は存在せず `Cannot find module` になる）。`npm root -g` が `/opt/node22/lib/node_modules` を返すので、迷ったらそれを見る
+- **スクリーンショットの一致を「変化なし」の根拠にするなら `fullPage: true` で撮る。** 既定のビューポート撮影は下端から先を写さないので、フッタ付近を変えた PR では*変更箇所がフレームの外*になる。実測 2026-09-30（#390）: 1100px 高で撮った dark 8枚が変更前とバイト一致したが、変えた RSS アイコンは y≈3038 にあり1枚にも写っていなかった。フルページで撮り直すと全ページに差分が出た
 - 配信は `python3 -m http.server <port> --directory <dir>` で。`baseurl: /news` を再現するため `<dir>/news/` に `_site` の中身を置く（CI の workflow と同じやり方）
 - Node の API を直接使う場合、dark mode は `browser.newContext({ colorScheme })` か `browser.newPage({ colorScheme })` で。`context.newPage({ colorScheme })` は**黙って無視される**（実測）
 - Node の API で幅を指定するキーは `viewport`。**`viewportSize` は黙って無視され 1280 幅になる**（Python 版のキー名。実測 2026-09-22: `newContext({viewportSize:{width:375,...}})` → `window.innerWidth` 1280 / `newContext({viewport:{width:375,...}})` → 375）。同じ `newContext` で `colorScheme` のほうは効くので、dark だけ合っていて幅が違う絵を撮ってしまう
@@ -69,7 +74,8 @@ artifact に写るのは、その branch の `_posts/` をビルドした結果�
 - 読みどころの欠落: `python3 .claude/scripts/check_article_notes.py`
 - ソース表記の不一致: `python3 .claude/scripts/check_source_hints.py`
 - title が日付のままになっていないか: `python3 .claude/scripts/check_post_titles.py`
-  （上の3つは引数なしで当日 JST 分を検査。`_posts/{YYYY-MM-DD}-*.md` を渡せば日付を固定できる。`--all` で全投稿）
+  （`check_article_notes.py` / `check_source_hints.py` / `check_post_titles.py` の3つは引数なしで当日 JST 分を検査。`_posts/{YYYY-MM-DD}-*.md` を渡せば日付を固定できる。`--all` で全投稿）
+- 記事にツール呼び出し構文（`</content>` 等）が残っていないか: `python3 .claude/scripts/check_tool_artifacts.py`（#408）。**上の3つと違い、引数なしで全投稿を検査する**（混入は間欠的に起きるので「今日は出ていない」を収束と読まないため）。混入を見つけたら取り除いてから**もう一度走らせて0件を確認する**（同じ日の全プロファイルにまとめて出るので、1本直して終わりにならない）
 - ユニットテスト: スクリプトと同じディレクトリで `python3 -m unittest discover -p 'test_*.py'`。
   置き場が分かれているので、触ったものを個別に回す（repo ルートからの discover は 0 件になる）:
   `.claude/scripts` / `.claude/skills/select-and-develop/scripts` /
@@ -83,13 +89,16 @@ artifact に写るのは、その branch の `_posts/` をビルドした結果�
 - `.claude/skills/` 配下のスキルは repo 自身に置かれている。branch を切り替えても開始時に読んだ版に従う
 - スキルのスクリプトは「エージェントの Bash から起動すると stdin が非 tty」を踏まえた分岐になっているか確認する（`not sys.stdin.isatty()` で stdin モードに入る実装は必ず壊れる）
 - 毎朝9時のキュレーションで当日分の投稿が main に入る。`_posts/` の中身に関わるルールを足す PR は、rebase のたびに当日分を揃え直す必要がある
-- レビュー stage で PR を調べるときは、取得元を **git → 素の REST → MCP** の順で選ぶ（MCP は往復が重く、返り値がトークン上限を超えるとファイルに退避される）。実測で迷ったのは次の3つ:
+- レビュー stage で PR を調べるときは、取得元を **git → 素の REST → MCP** の順で選ぶ（MCP は往復が重く、返り値がトークン上限を超えるとファイルに退避される）。実測で迷ったのは次の4つ:
   - **conflict の有無**: git で完結する。`git fetch origin` のうえ `git merge-tree --write-tree origin/<先にマージする head> origin/<次の head>`（exit 0 なら clean）。この loop の PR head は repo 内ブランチなのでローカルで完結し、候補同士のマージ順も先に当てられる（マージ後に初めて conflict を知る順序にならない）。`pull_request_read(get)` は **PR body 全文を返す**（ツールスキーマに `minimal_output` のようなパラメータは無い）ので、`mergeable_state` を見るためだけに呼ぶと body ごと返ってくる（実測 2026-09-22: open PR 7件、body は最大5,114字・7件合計23,122字）。`behind` 等の値が要るときだけ MCP に落とす
     - **`--write-tree` の引数は commit。出力の tree をそのまま次の呼び出しに渡さない。** tree を渡すと `error: ... expected commit type, but the object dereferences to tree type` で **exit 1** になるため、`exit 0 なら clean` だけを見る判定は**エラー終了を conflict と読む**（実測 2026-09-27: 同じファイルを別 hunk で触る2件を conflict と誤判定し、レビューを要修正に落としかけた）。3件目以降のマージ順を模擬するなら `C=$(git commit-tree $(git merge-tree --write-tree origin/main origin/<head1>) -p origin/main -m tmp)` で commit に包んでから `git merge-tree --write-tree $C origin/<head2>` に渡す。判定を exit code だけに任せず stderr も見る
     - **マージ直後の `mergeable` の再計算待ちは長さがばらつく**（実測 2026-09-26、同じ run の4件連続マージ: 確定まで1〜12回・約10秒〜約3分。#427 は96秒の予算を使い切っても `unknown` のままだった）。「もう1回引けば出る」前提でポーリング予算を組まない。**conflict の有無は上の `merge-tree` が最初から確定させているので、`null` / `unknown` のままマージに進む。ポーリングを足さない。** 引き直すのは `behind` など `merge-tree` で代替できない値が要るときだけで、その場合も上限（3分）を決めて打ち切る
   - **checks**: 素の REST で `actions/workflows/jekyll-build-check.yml/runs?per_page=100` を1回引けば head_sha ごとの conclusion がまとめて取れる（PR ごとに引かない）。MCP なら `actions_list(method=list_workflow_runs, resource_id=jekyll-build-check.yml)` が同じもの。1ページ100件に収まらない古い head は落ちるので、見つからない PR だけ `?head_sha=<40桁>` で個別に引く（1ページ100件ぶんしか遡れない。実測: 9/9 に push された PR #292 の run は1ページ目に入らなかった）
   - **分類スクリプトへの入力**: 素の REST だけで組める。`.claude/skills/review-and-merge/scripts/classify_prs.py` は `gh` 不在の環境では `--stdin` のみだが、渡す JSON は `pulls?state=open&per_page=100` 1回 + PR ごとの `pulls/{n}/files` と `pulls/{n}/commits` で揃う（同スクリプトの `fetch_prs_via_gh()` がそのまま仕様。実測 2026-09-22: open PR 3件 = 7 リクエスト / 2.8 秒）。`fetch_prs_via_gh()` は `--paginate` なので、`files` / `commits` が100件を超える PR では `per_page=100` の次ページも辿る（`commits[-1]` が最終 commit でないと quiescence 判定が狂う）
     - **`patches` を `git diff` の出力で組まない。** `version_bump_only()` は GitHub files API の patch 形式（`@@` 始まり・ファイルヘッダなし）を前提にしており、`git diff` は `---` / `+++` 行が削除・追加行として数えられて判定が壊れる。壊れると保護パスのバージョン置換が通常レビューに回らず `protected`（hold + 人間）に落ちる。実測 2026-09-22、PR #369 の `PLAYWRIGHT_VERSION` 更新で同じ1行の変更を両形式に通した: files API の patch → `True` / `git diff` の出力 → `False`
+  - **open issue の一覧**: 素の REST + python で番号・タイトル・ラベルだけ抜く。`list_issues` は open 18件でも **55,634 字**を返してトークン上限を超え、ファイルに退避される（実測 2026-09-28、`perPage: 30`）。退避されたファイルは1行が長すぎて `Read` の offset/limit では読めないが、中身は JSON なので `json.load(open(path))` で普通に読める（案内される `read()[A:B]` の分割は要らない）
+    - **返り値は list でなく dict** `{"issues": [...], "totalCount", "pageInfo"}`。list として回すと `TypeError: string indices must be integers` で落ちる（`list_pull_requests` は list を返すので同じ形だと思って書くと踏む）
+    - **引数名の綴りが issue 系と PR 系で違う。** issue 系は `issue_number`（snake_case）、PR 系は `pullNumber`（camelCase）。`add_issue_comment` に `issueNumber` を渡すと `missing required parameter: issue_number` で弾かれる。**PR にコメント・ラベルを付けるのも issue 系ツール**（`add_issue_comment` / `issue_write`）なので、同じ run で両方の綴りを使うことになる
 - マージ後の branch 削除は repo 設定で自動（実測 2026-09-22 `GET /repos/{owner}/{repo}` → `delete_branch_on_merge: true`）。`gh pr merge --delete-branch` 相当の後始末は不要で、明示的に消しにいくと `remote ref does not exist` で失敗する
 - **走行中か途中で止まったかは `list_triggers` の `last_run.status` では分からない。** これは wake が届いたことしか示さないので、セッションが手順の途中でターンを終えても `SUCCEEDED` のままになる（実測 2026-09-28: 9時の publish が PR #446 を作った19秒後に何もしないまま終了していたが、`last_run.status` は `SUCCEEDED` だった。#447）。生死は `get_session(session_id)` を直接見る: `session_status` が `SESSION_STATUS_IDLE` のまま、そのステージが通常かかる時間を大きく超えても `updated_at` が進んでいなければ止まっている（`SESSION_STATUS_RUNNING` ならまだ動いている）。publish ステージはこの判定を `publish_state`（#449）が PR の状態から既に機械化しているのでそちらに委ね、ここでは他ステージ共通の `session_id` の辿り方だけを扱う:
   - trigger 経由: `list_triggers` → `last_run.session_id`（trigger ごとに直近1件しか残らない）

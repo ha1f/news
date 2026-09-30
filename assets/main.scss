@@ -1,5 +1,21 @@
 ---
 ---
+// パレット（正本は DESIGN.md のパレット表）。
+// minima 2.5.1 の既定色は light で WCAG AA（通常テキスト 4.5:1）に届かないため、
+// import より前に上書きする（minima 側の定義は全て !default）。#390
+$brand-color:      #1c6ace; // 背景 #fdfdfd と 5.16:1（minima 既定 #2a7ae2 は 4.15:1）
+$grey-color:       #6b6b6b; // 背景 #fdfdfd と 5.24:1（minima 既定 #828282 は 3.78:1）
+// 下の2色は minima では $grey-color からの lighten/darken で導出される。
+// $grey-color を暗くすると罫線とサイトタイトルまで一緒に動いてしまうので、
+// 現行の見え方を保つために既定と同じ値で固定する。
+$grey-color-light: #e8e8e8; // 区切り線（装飾。WCAG 1.4.11 の対象外）
+$grey-color-dark:  #424242; // サイトタイトル・ヘッダ上辺 背景 #fdfdfd と 9.88:1
+
+// 入力欄・チップ・ボタンの枠線。これらは背景がページ背景と同じで、枠線が
+// 「ここが操作できる部品」を示す唯一の視覚情報になるため、WCAG 1.4.11 の
+// 3:1 を満たす濃さにする（区切り線の $grey-color-light とは役割が違う）。
+$ui-border-color: #8d8d8d; // 背景 #fdfdfd と 3.26:1
+
 @import "minima";
 
 .post-list li:first-child {
@@ -51,7 +67,7 @@
   font-family: inherit;
   color: $grey-color;
   background: none;
-  border: 1px solid $grey-color-light;
+  border: 1px solid $ui-border-color;
   border-radius: 3px;
   cursor: pointer;
   transition: color 0.15s, border-color 0.15s;
@@ -101,7 +117,7 @@
     width: 100%;
     padding: 0.5em 0.75em;
     font-size: $base-font-size;
-    border: 1px solid $grey-color-light;
+    border: 1px solid $ui-border-color;
     border-radius: 4px;
     background: #fdfdfd;
     color: #111;
@@ -129,7 +145,7 @@
   font-family: inherit;
   color: $grey-color;
   background: none;
-  border: 1px solid $grey-color-light;
+  border: 1px solid $ui-border-color;
   border-radius: 4px;
   cursor: pointer;
   transition: color 0.15s, border-color 0.15s;
@@ -270,7 +286,7 @@
   padding: 0.1em 0.45em;
   font-size: $base-font-size * 0.8125;
   color: $grey-color;
-  border: 1px solid $grey-color-light;
+  border: 1px solid $ui-border-color;
   border-radius: 3px;
   text-decoration: none;
   word-break: keep-all;
@@ -388,6 +404,14 @@
   }
 }
 
+// minima のモバイルメニューは背景がページ背景と同じで、枠線だけがパネルの
+// 境界を示す。$ui-border-color に合わせる。
+@media screen and (max-width: 600px) {
+  .site-nav {
+    border-color: $ui-border-color;
+  }
+}
+
 @media (prefers-color-scheme: dark) {
   body {
     background-color: #171717;
@@ -418,10 +442,16 @@
     fill: #e0e0e0;
   }
 
+  // minima の .svg-icon（フッタの RSS アイコン等）は light の $grey-color を
+  // そのまま焼き込むため、dark では補助テキストの色に合わせる。#390
+  .svg-icon {
+    fill: #8b949e;
+  }
+
   @media screen and (max-width: 600px) {
     .site-nav {
       background-color: #171717;
-      border-color: #383838;
+      border-color: #7a7a7a;
     }
   }
 
@@ -495,7 +525,7 @@
   select {
     background-color: #2d2d2d;
     color: #e0e0e0;
-    border-color: #383838;
+    border-color: #7a7a7a;
   }
 
   .archive-profile-nav {
@@ -508,7 +538,7 @@
 
   .archive-tag {
     color: #8b949e;
-    border-color: #383838;
+    border-color: #7a7a7a;
 
     &:hover {
       color: #58a6ff;
@@ -540,9 +570,11 @@
   .archive-search input {
     background-color: #2d2d2d;
     color: #e0e0e0;
-    border-color: #383838;
+    border-color: #7a7a7a;
 
-    &::placeholder { color: #8b949e; }
+    // 入力欄の背景は #2d2d2d なので、ページ背景基準の #8b949e だと 4.48:1 で
+    // AA を割る。枠内の背景に対して 5.07:1 になる色にする。
+    &::placeholder { color: #959ea8; }
     &:focus { border-color: #58a6ff; }
   }
 
@@ -552,7 +584,7 @@
 
   .archive-show-more {
     color: #8b949e;
-    border-color: #383838;
+    border-color: #7a7a7a;
 
     &:hover {
       color: #58a6ff;
@@ -611,7 +643,7 @@
 
   .profile-nav-topic {
     color: #8b949e;
-    border-color: #383838;
+    border-color: #7a7a7a;
 
     &:hover,
     &:visited:hover {
