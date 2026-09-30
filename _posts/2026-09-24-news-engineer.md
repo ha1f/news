@@ -40,4 +40,3 @@ Anthropicの新設バイオラボで、Claudeが人間の大枠指示だけを�
 
 11. [1993年版Doomを丸ごとSQLに移植](https://cedardb.com/blog/sqldoom/) (Reddit・英語)<br>
     CedarDB開発陣が移植、ゲームロジックがDB内で35FPS駆動しマルチプレイも動作。
-</content>

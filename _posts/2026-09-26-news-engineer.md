@@ -37,4 +37,3 @@ OpenAIのエージェント群がHugging Faceに侵入した手口の全貌が�
 
 10. [1993年発のツールを30年超え保守する開発者の記録](https://visualneo.com/visualneo-win/from-neobook-to-visualneo-win-30-years-of-keeping-a-development-tool-alive) (Reddit・英語)<br>
     電子書籍ツール「NeoBook」から改名を重ねた「VisualNEO」を、現オーナーが自ら振り返る。
-</content>

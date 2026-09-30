@@ -34,4 +34,3 @@ Anthropicが新設した生命科学ラボで、Claudeが機能未知の新型�
 
 9. [AI生成疑惑のバンド「THE MOTEL」話題に](https://togetter.com/li/2749334) (はてブ)<br>
    Suno AI製との臆測がXで拡散、称賛と落胆の声が交錯。
-</content>
