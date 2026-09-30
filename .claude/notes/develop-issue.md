@@ -74,7 +74,8 @@ artifact に写るのは、その branch の `_posts/` をビルドした結果�
 - 読みどころの欠落: `python3 .claude/scripts/check_article_notes.py`
 - ソース表記の不一致: `python3 .claude/scripts/check_source_hints.py`
 - title が日付のままになっていないか: `python3 .claude/scripts/check_post_titles.py`
-  （上の3つは引数なしで当日 JST 分を検査。`_posts/{YYYY-MM-DD}-*.md` を渡せば日付を固定できる。`--all` で全投稿）
+  （`check_article_notes.py` / `check_source_hints.py` / `check_post_titles.py` の3つは引数なしで当日 JST 分を検査。`_posts/{YYYY-MM-DD}-*.md` を渡せば日付を固定できる。`--all` で全投稿）
+- 記事にツール呼び出し構文（`</content>` 等）が残っていないか: `python3 .claude/scripts/check_tool_artifacts.py`（#408）。**上の3つと違い、引数なしで全投稿を検査する**（混入は間欠的に起きるので「今日は出ていない」を収束と読まないため）。混入を見つけたら取り除いてから**もう一度走らせて0件を確認する**（同じ日の全プロファイルにまとめて出るので、1本直して終わりにならない）
 - ユニットテスト: スクリプトと同じディレクトリで `python3 -m unittest discover -p 'test_*.py'`。
   置き場が分かれているので、触ったものを個別に回す（repo ルートからの discover は 0 件になる）:
   `.claude/scripts` / `.claude/skills/select-and-develop/scripts` /

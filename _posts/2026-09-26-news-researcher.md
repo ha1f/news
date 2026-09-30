@@ -34,4 +34,3 @@ NIHの助成金人事を巡り、ホワイトハウスと科学界がオーバ�
 
 9. [音声処理の理論をLLMに応用した「意味ボコーダー」](https://www.reddit.com/r/MachineLearning/comments/1wp4w9a/applying_multirate_dsp_principles_to_llms_a/) (Reddit・英語)<br>
    文単位の「プランナー」と語単位の「ボコーダー」に分離することで、学習が大幅に速く進んだと報告。
-</content>
