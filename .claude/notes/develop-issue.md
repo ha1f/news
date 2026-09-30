@@ -42,7 +42,12 @@ playwright screenshot --browser chromium --full-page \
 
 `npx playwright@<CI のバージョン>` は使えない。CI がピンしている版は `/opt/pw-browsers` にあるものと違う build 番号を要求し、`Executable doesn't exist at /opt/pw-browsers/chromium_headless_shell-<別番号>/...` で落ちる。
 
-- **画像の変換ツールが無い**（実測 2026-09-23: `convert` / `magick` / `rsvg-convert` / `inkscape` いずれも不在、Python の `cairosvg`・`Pillow` も未インストール）。`assets/favicon-32x32.png` / `apple-touch-icon.png` のようなラスタ画像を作り直す作業（#390 等）は、変換手段の調達から始まる。`playwright screenshot` で SVG を開いて撮る手は、`file://` の SVG に `--omit-background` を付けた1回目では出力ファイルができなかった（原因未調査）。見積もりに入れる
+- **画像の変換ツールは無いが、ラスタ画像の作り直しはスクリプト2本で済むようになった**（`convert` / `magick` / `rsvg-convert` / `inkscape` いずれも不在、Python の `cairosvg`・`Pillow` も未インストール。実測 2026-09-23）。#390 で手段を作って repo に入れたので、調達からやり直さない
+  - `node .claude/scripts/render_icons.js` — `assets/favicon.svg` を Chromium に描かせて `favicon-32x32.png` / `apple-touch-icon.png` を撮る。アイコンの色を変えるときは SVG を直してこれを回す
+  - `python3 .claude/scripts/recolor_png.py <入力> <出力> --from '#old' --to '#new'` — 2色ブレンドだけでできた PNG（`assets/og-image.png` が該当）の色を zlib と struct だけで差し替える。書き込む前に2色ブレンドかを検査して中止できる
+  - CLI の `playwright screenshot` で `file://` の SVG を撮る手は使わない（`--omit-background` 付きで出力ファイルができなかった。原因未調査）。Node の API に `setContent` で SVG を埋めた HTML を渡すほうは動く（`render_icons.js` がこれ）
+- **Node の API で Playwright を `require` するパスは `/opt/node22/lib/node_modules/playwright`**（実測 2026-09-30。`/usr/lib/node_modules/playwright-core` は存在せず `Cannot find module` になる）。`npm root -g` が `/opt/node22/lib/node_modules` を返すので、迷ったらそれを見る
+- **スクリーンショットの一致を「変化なし」の根拠にするなら `fullPage: true` で撮る。** 既定のビューポート撮影は下端から先を写さないので、フッタ付近を変えた PR では*変更箇所がフレームの外*になる。実測 2026-09-30（#390）: 1100px 高で撮った dark 8枚が変更前とバイト一致したが、変えた RSS アイコンは y≈3038 にあり1枚にも写っていなかった。フルページで撮り直すと全ページに差分が出た
 - 配信は `python3 -m http.server <port> --directory <dir>` で。`baseurl: /news` を再現するため `<dir>/news/` に `_site` の中身を置く（CI の workflow と同じやり方）
 - Node の API を直接使う場合、dark mode は `browser.newContext({ colorScheme })` か `browser.newPage({ colorScheme })` で。`context.newPage({ colorScheme })` は**黙って無視される**（実測）
 - Node の API で幅を指定するキーは `viewport`。**`viewportSize` は黙って無視され 1280 幅になる**（Python 版のキー名。実測 2026-09-22: `newContext({viewportSize:{width:375,...}})` → `window.innerWidth` 1280 / `newContext({viewport:{width:375,...}})` → 375）。同じ `newContext` で `colorScheme` のほうは効くので、dark だけ合っていて幅が違う絵を撮ってしまう
