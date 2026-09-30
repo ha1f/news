@@ -21,7 +21,7 @@ layout: null
       "type": "image/svg+xml"
     }
   ],
-  "theme_color": "#2a7ae2",
+  "theme_color": "#1c6ace",
   "background_color": "#ffffff",
   "display": "standalone",
   "start_url": "{{ '/' | relative_url }}",
