@@ -23,7 +23,14 @@ exit 0 で素通りする。CI の "Check article quality" に両方が入った
 2 は語彙を知らない新しいツール構文を拾うための網。投稿は markdown で書かれ、
 HTML は行末の `<br>` しか使わない（実測 2026-09-30、全 408 本で行全体がタグ
 だけの行は上記の `</content>` 10 本のみ、本文に現れる HTML タグは `<br>` 4,042 個
-と、コードとして引用された `<usermedia>` / `<NonZeroU8>` だけ）。
+と、タグ名を話題にした2件だけ）。その2件は書き方が違い、どちらも外す必要がある:
+インラインコード（`` `<usermedia>` ``）と、バックスラッシュのエスケープ
+（`Option\<NonZeroU8\>`）。「タグ名はコードで引用されるはず」という前提を置くと
+後者を誤検知する。
+
+記事がツール構文そのものを話題にするときは、markdown として正しい書き方
+（インラインコード・コードフェンス・`\<` `\>` のエスケープ）をすれば検査を通る。
+この検査に除外リストを持たせていないのは、逃げ道がその3つで足りるため。
 
 使い方:
   python3 .claude/scripts/check_tool_artifacts.py                  # 全投稿
@@ -33,6 +40,13 @@ HTML は行末の `<br>` しか使わない（実測 2026-09-30、全 408 本で
 引数なしを「当日分」ではなく「全投稿」にしてあるのは、他の検査と違ってこの検査
 が誤検知を持たず、かつ過去に入った混入を残したままにしないため。混入は間欠的に
 起きるので、「今日は出ていない」は収束の根拠にならない。
+
+混入を取り除いたら、この検査を**もう一度走らせて0件を確認する**。混入は同じ日の
+全プロファイルにまとめて出るので、1本直して終わりにならない。
+
+既知の穴（今の投稿形式では出ないが、HTML/XML を話題にした記事が来たら見直す）:
+4スペース字下げのコードブロックと、フェンスの入れ子は本文として扱う。閉じられて
+いないフェンスはそこから末尾までを検査しない。
 
 終了コード 0 なら、検査した全投稿にツール呼び出し構文が残っていない。
 """
@@ -48,29 +62,47 @@ TOOL_TAG_NAMES = (
     "function_results",
     "content",
 )
+_NAMES = "|".join(TOOL_TAG_NAMES)
+# 閉じの `>` を必須にしない。`</content` のように途中で切れた断片も混入であり、
+# `>` を求めるとそれを見逃す。`\b` があるので `<contents>` のような別語は拾わない
 TOOL_TAG_RE = re.compile(
-    r"</?\s*(?:antml:)?(?:" + "|".join(TOOL_TAG_NAMES) + r")\b[^>]*>",
+    r"</?\s*(?:antml:)?(?:" + _NAMES + r")\b[^<>]*>?",
+    re.IGNORECASE,
+)
+# すでに HTML エスケープされた形。読者には `</content>` と同じに見えるので同じ扱い
+ESCAPED_TAG_RE = re.compile(
+    r"&lt;/?\s*(?:antml:)?(?:" + _NAMES + r")\b[^&]*(?:&gt;)?",
     re.IGNORECASE,
 )
 # `antml:` は記事本文に現れない名前空間なので、タグの形を成していなくても拾う。
 # TOOL_TAG_RE 側の `(?:antml:)?` と重なるが、あちらはタグの形になっているものしか
 # 見ないので、素の文字列として残った場合はこちらだけが効く
 ANTML_RE = re.compile(r"antml:[A-Za-z_][\w.-]*")
-# 行全体がひとつのタグ。開き・閉じ・自己閉じのいずれも見る
-LONE_TAG_RE = re.compile(r"^\s*</?\s*([A-Za-z_][\w.:-]*)[^>]*?/?>\s*$")
+# 行全体がひとつのタグ。開き・閉じ・自己閉じのいずれも見る。
+# タグ名に `:` や `/` を許さず、名前のあとは空白・`/`・`>` のいずれかしか来られない
+# 形にしてある。緩めると markdown の autolink（`<https://example.com/spec>` や
+# `<info@example.com>` が行全体を占める形）をタグと読んで誤検知する
+LONE_TAG_RE = re.compile(r"^\s*</?([A-Za-z][\w-]*)(?:\s[^<>]*)?/?>\s*$")
 # 記事本文が実際に使う block/inline HTML。ここに無いタグが行全体を占めていたら混入を疑う
 ALLOWED_LONE_TAGS = {"br", "hr"}
 
 FENCE_RE = re.compile(r"^\s*(?:```|~~~)")
 INLINE_CODE_RE = re.compile(r"`[^`\n]*`")
+# `\<` `\>` の markdown エスケープ。地の文でタグ名を書く書き方のひとつ
+ESCAPED_ANGLE_RE = re.compile(r"\\[<>]")
 
 
 def strip_code(text: str) -> list:
-    """コードブロックとインラインコードを空白に潰した行のリストを返す。
+    """記事が意図して書いたタグを潰した行のリストを返す。
 
-    行番号を保ちたいので行を削らず、中身だけを落とす。閉じられていないフェンスは
-    そこから末尾までをコードとして扱う（開いたままの投稿は無いが、あったときに
-    本文として誤検知するより、検査しないほうが安全側）。
+    潰すのは3つ。コードフェンスの中、インラインコード、`\\<` `\\>` のエスケープ。
+    どれも「タグとして描画されないことを書き手が明示した」形なので、検査の対象外。
+    この repo の投稿は3つとも実際に使っている（`` `<usermedia>` `` と
+    `Option\\<NonZeroU8\\>`）。
+
+    行番号と列位置を保ちたいので、行を削らず同じ長さの空白に置き換える。
+    閉じられていないフェンスはそこから末尾までをコードとして扱う（開いたままの
+    投稿は無いが、あったときに本文として誤検知するより、検査しないほうが安全側）。
     """
     out = []
     in_fence = False
@@ -82,7 +114,9 @@ def strip_code(text: str) -> list:
         if in_fence:
             out.append("")
             continue
-        out.append(INLINE_CODE_RE.sub(lambda m: " " * len(m.group(0)), line))
+        line = INLINE_CODE_RE.sub(lambda m: " " * len(m.group(0)), line)
+        line = ESCAPED_ANGLE_RE.sub("  ", line)
+        out.append(line)
     return out
 
 
@@ -91,6 +125,8 @@ def problems_of(post: Path):
     found = []
     for lineno, line in enumerate(strip_code(post.read_text(encoding="utf-8")), 1):
         for m in TOOL_TAG_RE.finditer(line):
+            found.append((lineno, f"ツール呼び出し構文が残っています（{m.group(0)}）"))
+        for m in ESCAPED_TAG_RE.finditer(line):
             found.append((lineno, f"ツール呼び出し構文が残っています（{m.group(0)}）"))
         for m in ANTML_RE.finditer(line):
             found.append((lineno, f"ツール呼び出しの名前空間が残っています（{m.group(0)}）"))
@@ -109,6 +145,10 @@ def problems_of(post: Path):
 
 
 def main(argv):
+    unknown = [a for a in argv if a.startswith("--") and a != "--all"]
+    if unknown:
+        print(f"不明なオプション: {' '.join(unknown)}（使えるのは --all だけ）", file=sys.stderr)
+        return 2
     paths = [a for a in argv if not a.startswith("--")]
     if paths:
         posts = [Path(a) for a in paths]

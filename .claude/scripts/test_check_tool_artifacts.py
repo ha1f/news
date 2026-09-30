@@ -6,11 +6,24 @@
 落とさないこと。後者を取り違えると、記事の話題そのもので CI が red になり、
 検査が無視されるようになる。
 """
+import contextlib
+import os
 import tempfile
 import unittest
 from pathlib import Path
 
 import check_tool_artifacts as c
+
+
+@contextlib.contextmanager
+def in_dir(path):
+    """cwd を一時的に移す。例外で抜けても必ず戻す"""
+    cwd = Path.cwd()
+    os.chdir(path)
+    try:
+        yield
+    finally:
+        os.chdir(cwd)
 
 
 def write(text):
@@ -81,6 +94,22 @@ class TestDetects(unittest.TestCase):
         self.assertEqual(len(c.problems_of(p)), 1)
 
 
+    def test_escaped_html_entities(self):
+        """`&lt;/content&gt;` は読者に `</content>` と見えるので同じ扱い"""
+        p = write(FRONT + "要約の途中に &lt;/content&gt; が紛れた\n")
+        self.assertEqual(len(c.problems_of(p)), 1)
+
+    def test_truncated_tag_without_closing_bracket(self):
+        """`>` を欠いた断片も混入（閉じを必須にすると見逃す）"""
+        p = write(FRONT + "要約の途中に </content が紛れた\n")
+        self.assertEqual(len(c.problems_of(p)), 1)
+
+    def test_indented_unknown_lone_tag(self):
+        """字下げされた未知タグも拾う（行頭固定にしない）"""
+        p = write(FRONT + "   <some_future_tool_tag>\n")
+        self.assertEqual(len(c.problems_of(p)), 1)
+
+
 class TestDoesNotDetect(unittest.TestCase):
     def test_clean_post(self):
         p = write(FRONT + "1. [記事](https://example.com) (はてブ)<br>\n   要約\n")
@@ -117,6 +146,30 @@ class TestDoesNotDetect(unittest.TestCase):
         p = write(FRONT + "[リンク](https://example.com/a<b>c)\n")
         self.assertEqual(c.problems_of(p), [])
 
+    def test_backslash_escaped_angles(self):
+        """`Option\\<NonZeroU8\\>` の書き方。この repo の投稿に実在する"""
+        p = write(FRONT + "   Option\\<NonZeroU8\\>が1バイトに収まる仕組み\n")
+        self.assertEqual(c.problems_of(p), [])
+
+    def test_backslash_escaped_tool_tag_name(self):
+        """語彙のタグ名でも、エスケープしてあれば記事の話題として通す"""
+        p = write(FRONT + "9. [Atom の \\<content\\> 要素を再考する](https://e.com) (はてブ)<br>\n")
+        self.assertEqual(c.problems_of(p), [])
+
+    def test_lone_autolink_url(self):
+        """行全体が markdown の autolink。タグではない"""
+        p = write(FRONT + "<https://example.com/spec>\n")
+        self.assertEqual(c.problems_of(p), [])
+
+    def test_lone_autolink_mail(self):
+        p = write(FRONT + "<info@example.com>\n")
+        self.assertEqual(c.problems_of(p), [])
+
+    def test_similar_word_is_not_a_tool_tag(self):
+        """語彙に似た別語を拾わない（`\\b` が効いていること）"""
+        p = write(FRONT + "要約の途中に <contents> や <parameters> がある\n")
+        self.assertEqual(c.problems_of(p), [])
+
 
 class TestStripCode(unittest.TestCase):
     def test_keeps_line_numbers(self):
@@ -148,16 +201,36 @@ class TestMain(unittest.TestCase):
     def test_missing_file_is_failure(self):
         self.assertEqual(c.main(["_posts/does-not-exist.md"]), 1)
 
+    def test_missing_file_alongside_a_clean_one_is_failure(self):
+        """欠損1件だけを渡すと「対象0件」側で exit 1 になり、欠損の扱いを固定できない"""
+        clean = write(FRONT + "本文\n")
+        self.assertEqual(c.main([str(clean), "_posts/does-not-exist.md"]), 1)
+
     def test_no_posts_is_failure(self):
         """対象0件を成功にしない（パスを間違えた実行が黙って通る）"""
-        d = Path(tempfile.mkdtemp())
-        cwd = Path.cwd()
-        import os
-        os.chdir(d)
-        try:
+        with in_dir(Path(tempfile.mkdtemp())):
             self.assertEqual(c.main([]), 1)
-        finally:
-            os.chdir(cwd)
+
+    def test_default_target_is_all_posts(self):
+        """引数なしの既定が `_posts` 全件であること。
+
+        このスクリプトの中心的な設計判断（他の検査は引数なし = 当日分）なので、
+        既定が空や当日分に変わったら落ちるようにしておく。
+        """
+        d = Path(tempfile.mkdtemp())
+        (d / "_posts").mkdir()
+        (d / "_posts" / "2020-01-01-old.md").write_text(FRONT + "古い本文\n", encoding="utf-8")
+        (d / "_posts" / "2020-01-02-old.md").write_text(FRONT + "</content>\n", encoding="utf-8")
+        with in_dir(d):
+            # 当日分だけを見る実装なら対象0件で 1、既定が空でも 1。全件を見るから 1
+            self.assertEqual(c.main([]), 1)
+            (d / "_posts" / "2020-01-02-old.md").write_text(FRONT + "本文\n", encoding="utf-8")
+            # 2件とも clean になったら 0。対象0件の実装ならここで 1 のまま
+            self.assertEqual(c.main([]), 0)
+
+    def test_unknown_option_is_rejected(self):
+        """`--al` のような打ち間違いが「引数なし = 全投稿」に化けない"""
+        self.assertEqual(c.main(["--al"]), 2)
 
 
 if __name__ == "__main__":
