@@ -21,6 +21,7 @@
 
 - RSS 1.0 (RDF) 形式 + Dublin Core拡張 + PRISM拡張（名前空間: `http://prismstandard.org/namespaces/basic/2.0/`）
 - `dc:type` で記事種別（Research Article, Perspective等）が判別可能
+- description は巻号・ページのみ（例: `Science, Volume 393, Issue 6818, Page 1305-1305, September 2026.`）で、読みどころの材料はフィード外から取る
 
 ## フィールドマッピング
 
@@ -54,7 +55,7 @@
 - **商用利用（課金）**: 不可（personal, non-commercial 限定。商用は AAAS の書面許諾が必要）
 - **広告掲載での利用**: 不可（同上）
 - **義務**: AAAS への帰属表示の維持
-- **制約**: 体系的取得・DB 化は express consent 必要（現状の該当性は要判断）。robots.txt はフィードを明示 Allow。フィードの description は巻号・ページのみで読みどころの材料にならず、記事ページ取得は上の AI クローラ拒否と衝突しうる → #241 論点1拡張の対象
+- **制約**: 体系的取得・DB 化は express consent 必要（現状の該当性は要判断）。robots.txt はフィードを明示 Allow。記事ページ取得は AI クローラ拒否と衝突しうる → #241 論点1拡張の対象
 - **根拠**: https://www.aaas.org/terms-of-use （確認日 2026-08-28。science.org 側 ToS は bot 遮断で未確認）
 
 ## 実装
