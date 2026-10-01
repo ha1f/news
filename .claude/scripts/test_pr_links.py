@@ -67,6 +67,18 @@ class ExtractLinkedIssues(unittest.TestCase):
         """```` で開いたフェンスは ``` では閉じない（閉じは開きと同じ長さ以上）"""
         self.assertEqual(
             pr_links.extract_linked_issues("````\n```\nCloses #1\n````"), [])
+        # 「以上」の上側。``` で開いたフェンスは ````` でも閉じる
+        self.assertEqual(
+            pr_links.extract_linked_issues("```\nx\n`````\n本物: Closes #7"), [7])
+
+    def test_closing_fence_cannot_have_an_info_string(self):
+        """閉じフェンスの行に info 文字列は置けない（CommonMark）。
+
+        置けることにすると、閉じに見える行でフェンスが終わらず、その先の
+        本物の `Closes #N` を取りこぼす
+        """
+        self.assertEqual(
+            pr_links.extract_linked_issues("```\nCloses #1\n``` js\nCloses #2"), [])
 
     def test_inline_code_is_not_a_link(self):
         self.assertEqual(pr_links.extract_linked_issues("`Closes #421` はコード引用"), [])
@@ -77,9 +89,24 @@ class ExtractLinkedIssues(unittest.TestCase):
         self.assertEqual(pr_links.extract_linked_issues("``a ` b`` Refs #6"), [6])
         self.assertEqual(pr_links.extract_linked_issues("``Closes #8`` だけ"), [])
 
+    def test_code_span_does_not_cross_a_blank_line(self):
+        """対応の付かないバッククォートが、離れた段落の本物のリンクを飲まない。
+
+        コードスパンは段落をまたがない（CommonMark のインライン解析はブロック単位）。
+        またげると、孤立したバッククォート1個と後続のコードスパンの間に挟まれた
+        `Closes #N` が消え、マージしても issue が close されなくなる
+        """
+        body = ("バッククォート ` を1個だけ書いた\n\n"
+                "本物: Closes #5\n\n"
+                "`gh` を使う\n")
+        self.assertEqual(pr_links.extract_linked_issues(body), [5])
+
     def test_code_span_is_closed_only_by_an_equal_length_run(self):
         """`` で開いたコードスパンは、中の単独の ` では閉じない"""
         self.assertEqual(pr_links.extract_linked_issues("`` ` Closes #1 ``"), [])
+        # 「同じ長さ」の上側。1個で開いたスパンは、より長い列では閉じない。
+        # 閉じてしまうと、本来スパンの内側だった `Closes #9` が外に出る
+        self.assertEqual(pr_links.extract_linked_issues("`a ``` Closes #9 b`"), [])
 
     def test_lone_backtick_is_not_a_code_span(self):
         """閉じが無いバッククォートは、それ以降を飲み込まない"""

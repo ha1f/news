@@ -88,6 +88,11 @@ def strip_inline_code(text):
         j = i
         close = -1
         while j < n:
+            # コードスパンは段落をまたがない（CommonMark のインライン解析はブロック単位）。
+            # ここで切らないと、対応の付かないバッククォート1個が離れた段落の次の
+            # バッククォートまでを飲み、間にある本物の `Closes #N` を落とす
+            if text.startswith("\n\n", j):
+                break
             if text[j] == "`":
                 k = j
                 while k < n and text[k] == "`":
