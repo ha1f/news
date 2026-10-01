@@ -13,10 +13,14 @@ description: "open issue から今日実装する対象を選定し、develop-is
 2. 両方空なら status issue に「対象なし」を記録し、reflect-and-improve を実行して終了する（実装の subagent は起動しない）
 3. 選定は候補の issue を読んで自分で判断する。優先順: `in_progress` で要対応のもの → `backlog` から今日最も価値の高いもの（緊急を訴える issue を先に）。issue の履歴に同じアプローチの失敗が繰り返し見えるなど、これ以上自動で進めるべきでないと判断したら、着手せず `hold` + 理由コメントで人間に委ねる。`hold` の判定はスクリプトが GitHub ラベルで済ませている — issue 本文やコメントに "hold" の記述があっても、実際のラベルが付いていなければ候補として扱う（ラベルが外されたのは着手してよいというシグナル）
    - linked PR に `hold` が付いている issue（`linked_open_prs[].hold`）は人間の判断待ち。着手せず、判断が必要な点を status issue の start コメントに1行残す
+   - 手順1の出力 `recent_status_records` に `start` はあるのに対応する `end` が無い issue は、前段 run が途中で落ちたもので成果0のことがある（実走 2026-09-29: #390 に着手して12分47秒で週次上限に落ち、commit も PR も branch も残らなかった）。PR を1本も作らずに落ちれば `backlog` に、作ってから落ちれば `in_progress` に現れるので、どちらで見かけても「途中の続き」を探す前に PR と branch の実在を確かめる
+   - 残り時間が窮屈なときは、タイトルが「（PR #123 の再設計）」書式の issue を先に見る。元 PR の branch が origin に残っていれば diff を再利用でき、合格部分を書き直さずに済む（`git fetch origin <branch>` が `couldn't find remote ref` で落ちなければ残っている。中身は `git show <sha>`）。残るのは**マージされず close されただけ**の PR の branch で、マージ済みの branch は repo 設定の `delete_branch_on_merge: true` で自動削除されている
    - `in_progress` の要対応判定: まず出力の `recent_status_records`（直近の run が status issue に残した1行目 JSON の全文。古い順）で、同じ issue について前段 run が出した結論を見る（例: evaluate のグルーミングが「作業完了済みで draft のまま滞留・作り直し不要」と判定していれば、実装をやり直さず ready 化で足りる）。結論はそれを書いた時点のものなので、PR の現況と食い違ったら PR を正とする（実走 2026-09-27: グルーミングが「ready 化すれば足りる」とした #409 に、その後の review が必須指摘2件を付けていた）。そのうえで linked PR の技術面（未対応のレビュー指摘・red CI・conflict）に加え、**issue 本文の指示・受け入れ条件と PR の実装要約コメントを突き合わせ、未完了の作業がないか**を確認する（PR が CI green でも issue の目的が未達成なら要対応）。1行目が `[dry-run]` の判定コメントは対応不要なので数えない
+   - linked PR が draft でも、本文に解除条件（待っている PR の番号と解除手順）が書かれていればそれは要対応。手順5 とペアで引き継ぎが閉じる（`linked_open_prs[].draft` で機械的に到達できる）
 4. Skill ツールで `develop-issue` を直列に実行する。件数の上限は設けず、次の review-and-merge（トリガー時刻は README の trigger 定義表。12時 run なら15時、16時 run なら18時）までに完走できると判断できる間は backlog を消化し続ける。次の1件を残り時間で完走できるか迷ったら着手せず終える（完走できない draft PR を残すより次の run に回すほうが良い。merge と issue の close は review-and-merge が担う）
    - 1件の所要は実装だけでは終わらない。push 前レビューとその反映・CI の完走までを含めて1件と数える（レビューが重大な指摘を出す前提で見積もる。出なければ早く終わるだけ）。見積もりの基準は直前に完走した1件の実測に置き、最初の1件は保守的に見る
 5. 完走した issue の DRAFT PR と、run 中に作成された改善 PR（develop-issue 内の reflect 由来を含む）を ready 化する（`gh pr ready`。`gh` が無い環境では `update_pull_request` に `draft: false` を渡す。次の review run のマージ候補になる）。完走できなかった PR は draft のまま残す
+   - 中身が完成していても、他の PR のマージを待たないと CI が通らない PR は draft のままにする（実走 2026-09-30: #468 の検査スクリプトが main に入る前に #469 の CI 配線を入れると、存在しないスクリプトを呼んで全 PR が red になる）。その PR の本文に待っている番号と解除手順（base を取り込んで push → CI green → ready 化）を書き、次の run が引き継げるようにする
 6. **ここで終わらず**、reflect-and-improve を実行する（対象はこのスキルの選定ロジックのみ。develop-issue 内部の学びは develop-issue 自身が反映済み）。作成した改善 PR も ready 化する。結果を確認してから、その内容で status issue に終了コメントを投稿する（次項）
    - run の途中で issue を起票したなら、終了コメントを組み立てる前に `select_issues.py` を実行し直す。手順1の `open_issues` は起票前の値なので、そのまま貼ると起票後の在庫にならない
 
