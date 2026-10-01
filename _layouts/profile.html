@@ -234,7 +234,9 @@ layout: default
   {%- comment -%}トピックの絞り込みはこのページ自身が ?tag= で受ける (#354)。
   メインフィード限定の archive.html に送ると、このプロファイルの記事が構造上1件も入らない
   日付一覧に着地する。tag_array (このプロファイルの記事に実在するタグ) に無い topic は、
-  リンク先に対応するボタンが無く押しても何も絞られないので出さない{%- endcomment -%}
+  リンク先に対応するボタンが無く押しても何も絞られないので出さない。
+  tag_array はこのファイル冒頭 (profile_posts が空でないときの分岐) で assign したもので、
+  記事が無いプロファイルでは nil になり contains が false を返す = 導線ごと出ない{%- endcomment -%}
   {%- assign nav_topics = "" -%}
   {%- for topic in page.topics -%}
     {%- if tag_array contains topic -%}
