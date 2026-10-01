@@ -50,11 +50,11 @@
 
 ## 利用条件
 
-- **AI利用**: 可（規定なし）
+- **AI利用**: 可（規定なし。robots.txt は `anthropic-ai` / `GPTBot` を全面 Disallow。2026-09-27 確認）
 - **商用利用（課金）**: 不可（personal, non-commercial 限定。商用は AAAS の書面許諾が必要）
 - **広告掲載での利用**: 不可（同上）
 - **義務**: AAAS への帰属表示の維持
-- **制約**: 体系的取得・DB 化は express consent 必要（現状の該当性は要判断）。robots.txt はフィードを明示 Allow
+- **制約**: 体系的取得・DB 化は express consent 必要（現状の該当性は要判断）。robots.txt はフィードを明示 Allow。フィードの description は巻号・ページのみで読みどころの材料にならず、記事ページ取得は上の AI クローラ拒否と衝突しうる → #241 論点1拡張の対象
 - **根拠**: https://www.aaas.org/terms-of-use （確認日 2026-08-28。science.org 側 ToS は bot 遮断で未確認）
 
 ## 実装
