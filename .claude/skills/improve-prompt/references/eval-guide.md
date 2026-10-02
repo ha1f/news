@@ -49,7 +49,6 @@ LLM-as-judge を使うときの規律:
 
 ## ツール
 
-- Anthropic Console evaluation tool: `{{variable}}` でテストセット作成、side-by-side 比較、5 段階採点。https://platform.claude.com/docs/en/test-and-evaluate/eval-tool
 - skill-creator プラグイン: スキルの with/without 並列実行・blind 比較・variance 分析の参考実装
 - promptfoo: YAML 宣言で assertion と CI 統合。https://www.promptfoo.dev
 
