@@ -148,7 +148,7 @@ gh pr merge --squash --delete-branch
 git fetch origin main && python3 .claude/scripts/wait_for_run.py pages.yml "$(git rev-parse origin/main)"
 ```
 
-このスクリプトが SHA の40桁化・run の出現待ち・完了待ちをまとめて面倒を見る（#426。直前の別 run で代用しない）。exit code で分岐する: 0 = success、1 = completed だが failure、3 = run が現れない（SHA 違いか workflow が起動していない）、4 = 上限まで待っても未完了。3 なら上段の手動デプロイ（`actions_run_trigger`）に進む。conclusion が failure なら GitHub Pages に壊れた内容がデプロイされている状態なので、原因を直した修正コミットを push するか revert PR を作って自分でマージし、ユーザーに影響と対処を報告する。
+このスクリプトが SHA の40桁化・run の出現待ち・完了待ちをまとめて面倒を見る（#426。直前の別 run で代用しない）。exit code で分岐する: 0 = success、1 = completed だが failure、2 = SHA を40桁にできない / API に到達できない（`git fetch` し直して再実行）、3 = run が現れない（SHA 違いか workflow が起動していない）、4 = 上限まで待っても未完了。3 なら上段の手動デプロイ（`actions_run_trigger`）に進み、4 なら `--timeout` を延ばして待ち直す（run は在るので手動デプロイを重ねない）。conclusion が failure なら GitHub Pages に壊れた内容がデプロイされている状態なので、原因を直した修正コミットを push するか revert PR を作って自分でマージし、ユーザーに影響と対処を報告する。
 
 最後に、配信できたことを機械で確かめる:
 

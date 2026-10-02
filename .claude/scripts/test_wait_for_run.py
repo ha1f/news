@@ -240,15 +240,110 @@ class ExitCodeTest(unittest.TestCase):
         self.assertEqual(w.EXIT["running"], 4)
 
     def test_short_sha_exits_2_without_touching_the_api(self):
-        # 実プロセスで確認する（短縮 SHA は API に到達する前に落ちる）
+        # 実プロセスで確認する（短縮 SHA は API に到達する前に落ちる）。
+        # --git-root を解決できない場所に向けることで、ローカルに object が来ても
+        # 展開が成功して偽 red にならないようにする
         proc = subprocess.run(
             [sys.executable, str(SCRIPT), "pages.yml", "141c828",
-             "--repo", "o/r", "--once", "--quiet"],
+             "--git-root", "/nonexistent-repo-for-test", "--once", "--quiet"],
             capture_output=True, text=True, timeout=60)
         self.assertEqual(proc.returncode, 2)
         payload = json.loads(proc.stdout.strip().splitlines()[-1])
         self.assertEqual(payload["state"], "usage")
         self.assertIn("40桁", payload["message"])
+        # usage 経路でも出力のキーが揃っている（`jq -r .transport` が落ちない）
+        self.assertEqual(
+            sorted(payload),
+            sorted(["state", "sha", "workflow", "repo", "run_id", "status", "conclusion",
+                    "html_url", "polls", "waited_seconds", "transport", "message"]))
+
+    def test_other_repo_with_short_sha_exits_2(self):
+        # ローカルの commit に展開した40桁を別 repo に投げると静かに not_found になる
+        proc = subprocess.run(
+            [sys.executable, str(SCRIPT), "pages.yml", "HEAD",
+             "--repo", "someone-else/other-repo", "--once", "--quiet"],
+            capture_output=True, text=True, timeout=60)
+        self.assertEqual(proc.returncode, 2)
+        payload = json.loads(proc.stdout.strip().splitlines()[-1])
+        self.assertEqual(payload["state"], "usage")
+        self.assertIn("--repo", payload["message"])
+
+
+class DefaultsTest(unittest.TestCase):
+    """実測に由来する既定値を固定する（#426 の受け入れ条件4）。
+
+    期待値はテスト側に直書きする（対象モジュールの定数から作ると、定数を変える
+    変更で検査の対象まで一緒に動いて緑のまま通る）。由来の実測:
+    build は push から2分弱、マージ後の pages.yml は1分未満、run の出現は最大19秒。
+    """
+
+    def test_default_interval_is_30_seconds(self):
+        self.assertEqual(w.DEFAULT_INTERVAL, 30)
+
+    def test_default_timeout_is_600_seconds(self):
+        self.assertEqual(w.DEFAULT_TIMEOUT, 600)
+
+    def test_default_appear_timeout_is_120_seconds(self):
+        self.assertEqual(w.DEFAULT_APPEAR_TIMEOUT, 120)
+
+    def test_appear_timeout_is_shorter_than_timeout(self):
+        # run の出現待ちが全体の上限と同じだと、SHA 違いに気づくのが遅れる
+        self.assertLess(w.DEFAULT_APPEAR_TIMEOUT, w.DEFAULT_TIMEOUT)
+
+    def test_interval_covers_the_measured_completion_times(self):
+        # 間隔が長すぎると build（約2分）の完了に気づくのが遅れ、
+        # 上限が短すぎると完了前に打ち切る
+        self.assertLessEqual(w.DEFAULT_INTERVAL, 60)
+        self.assertGreaterEqual(w.DEFAULT_TIMEOUT, 300)
+
+    def test_parser_defaults_match_the_constants(self):
+        args = w.build_parser().parse_args(["pages.yml", FULL])
+        self.assertEqual(args.interval, 30)
+        self.assertEqual(args.timeout, 600)
+        self.assertEqual(args.appear_timeout, 120)
+        self.assertFalse(args.once)
+        self.assertFalse(args.no_gh)
+
+    def test_wait_sleeps_between_polls(self):
+        # time.sleep を外す変更で、間隔の既定値が意味を失う。
+        # 終了条件は取得回数で決める（slept の件数で決めると、sleep を外した実装が
+        # ハングして結果を読めなくなる。LESSONS: 検証器が止まると判定できない）
+        slept, calls = [], []
+
+        def fetch(path):
+            calls.append(path)
+            return (run_payload() if len(calls) >= 3
+                    else run_payload(status="in_progress", conclusion=None))
+
+        original = w.time.sleep
+        w.time.sleep = slept.append
+        try:
+            result = w.wait(fetch, "o", "r", "pages.yml", FULL, interval=7,
+                            timeout=600, appear_timeout=120, once=False)
+        finally:
+            w.time.sleep = original
+        self.assertEqual(result["state"], "success")
+        self.assertEqual(len(calls), 3)
+        self.assertEqual(slept, [7, 7])
+
+
+class FetcherTest(unittest.TestCase):
+    def test_prefer_gh_false_uses_rest(self):
+        _, state = w.make_fetcher(prefer_gh=False)
+        self.assertEqual(state["transport"], "rest")
+
+    def test_no_gh_flag_is_parsed(self):
+        self.assertTrue(w.build_parser().parse_args(["pages.yml", FULL, "--no-gh"]).no_gh)
+
+
+class ExpandShaRepoScopeTest(unittest.TestCase):
+    def test_allow_git_false_rejects_short_sha(self):
+        with self.assertRaises(ValueError) as caught:
+            w.expand_sha("141c828", allow_git=False)
+        self.assertIn("--repo", str(caught.exception))
+
+    def test_allow_git_false_still_accepts_full_sha(self):
+        self.assertEqual(w.expand_sha(FULL, allow_git=False), FULL)
 
 
 class ResolveRepoTest(unittest.TestCase):

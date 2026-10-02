@@ -52,7 +52,7 @@ FULL_SHA_RE = re.compile(r"\A[0-9a-f]{40}\Z")
 #   - PR の jekyll-build-check は push から2分弱で completed（実測 2026-09-26）
 #   - マージ後の pages.yml は run の出現がマージ後 2〜19 秒、completed まで 47〜77 秒
 #     （実測 2026-09-22、12件）
-# 30 秒間隔なら pages.yml は2〜3回、build は4回前後で収束する。
+# push 直後を1回目として 30 秒間隔で引くと、pages.yml は3〜4回、build は5回前後で当たる。
 DEFAULT_INTERVAL = 30
 DEFAULT_TIMEOUT = 600
 # run の出現は実測で最大19秒。120 秒待って現れないのは「まだ」ではなく、SHA 違いか
@@ -79,19 +79,27 @@ def resolve_repo(explicit=None):
     return m.group("owner"), m.group("repo")
 
 
-def expand_sha(raw, git_root=None):
+def expand_sha(raw, git_root=None, allow_git=True):
     """40桁の SHA を返す。短縮 SHA・ref は git で展開し、できなければ ValueError。
 
     短縮 SHA をそのまま API に渡すと HTTP 200 / `total_count: 0` が返り、run 待ちの
-    ループが永久に回る（実測: 7桁・12桁とも0件、40桁で1件）。ここで必ず弾く。"""
+    ループが永久に回る（実測: 7桁・12桁とも0件、40桁で1件）。ここで必ず弾く。
+
+    `allow_git=False` のときは git での展開を行わない。ローカル以外の repo を
+    `--repo` で指定した場合に使う（ローカルの commit に展開した40桁を別 repo に投げると、
+    エラーにならず静かに not_found になる）。"""
     candidate = (raw or "").strip()
     if not candidate:
         raise ValueError("SHA が空です")
-    if FULL_SHA_RE.match(candidate):
-        return candidate
     if FULL_SHA_RE.match(candidate.lower()):
         # 大文字混じりの40桁は API が受けるが、比較のため小文字に正規化する
         return candidate.lower()
+    if not allow_git:
+        raise ValueError(
+            f"40桁の SHA を渡してください: {candidate!r}\n"
+            "ローカルの repo 以外（--repo 指定）では git での展開を行いません。"
+            "ローカルの commit に展開した40桁を別 repo に投げると、エラーにならず "
+            "静かに not_found になります。")
     root = git_root or str(Path(__file__).resolve().parents[2])
     proc = subprocess.run(["git", "-C", root, "rev-parse", "--verify", f"{candidate}^{{commit}}"],
                           capture_output=True, text=True)
@@ -230,6 +238,7 @@ def build_parser():
     parser.add_argument("workflow", help="workflow のファイル名（例 pages.yml）または ID")
     parser.add_argument("sha", help="head SHA。40桁でなければ git rev-parse で展開を試みる")
     parser.add_argument("--repo", help="owner/repo（既定は origin の remote URL から解決）")
+    parser.add_argument("--git-root", help="SHA の展開に使うローカル checkout（既定は repo ルート）")
     parser.add_argument("--interval", type=float, default=DEFAULT_INTERVAL,
                         help=f"ポーリング間隔（秒、既定 {DEFAULT_INTERVAL}）")
     parser.add_argument("--timeout", type=float, default=DEFAULT_TIMEOUT,
@@ -243,13 +252,29 @@ def build_parser():
     return parser
 
 
+def usage_payload(message, sha=None, workflow=None, repo=None):
+    """docstring が謳う全フィールドを埋めた usage レスポンス（純関数）。
+
+    `jq -r .transport` のような読み方が usage 経路で落ちないよう、キーは常に揃える。"""
+    return {"state": "usage", "sha": sha, "workflow": workflow, "repo": repo,
+            "run_id": None, "status": None, "conclusion": None, "html_url": None,
+            "polls": 0, "waited_seconds": 0, "transport": None, "message": message}
+
+
 def main(argv=None):
     args = build_parser().parse_args(argv)
     try:
         owner, repo = resolve_repo(args.repo)
-        sha = expand_sha(args.sha)
+        local = None
+        try:
+            local = resolve_repo()
+        except (ValueError, subprocess.CalledProcessError, OSError):
+            local = None
+        sha = expand_sha(args.sha, git_root=args.git_root,
+                         allow_git=(local is None or local == (owner, repo)))
     except (ValueError, subprocess.CalledProcessError) as error:
-        print(json.dumps({"state": "usage", "message": str(error)}, ensure_ascii=False))
+        print(json.dumps(usage_payload(str(error), workflow=args.workflow),
+                         ensure_ascii=False))
         print(error, file=sys.stderr)
         return EXIT["usage"]
 
@@ -260,8 +285,9 @@ def main(argv=None):
                       interval=args.interval, timeout=args.timeout,
                       appear_timeout=args.appear_timeout, once=args.once, log=log)
     except (RuntimeError, OSError) as error:
-        print(json.dumps({"state": "usage", "sha": sha, "workflow": args.workflow,
-                          "message": f"run を取得できません: {error}"}, ensure_ascii=False))
+        print(json.dumps(usage_payload(f"run を取得できません: {error}", sha=sha,
+                                       workflow=args.workflow, repo=f"{owner}/{repo}"),
+                         ensure_ascii=False))
         print(error, file=sys.stderr)
         return EXIT["usage"]
     result["transport"] = transport["transport"]
