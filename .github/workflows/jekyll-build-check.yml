@@ -75,6 +75,20 @@ jobs:
         with:
           name: screenshots
           path: screenshots/
+      # `.claude/` 配下の Python ユニットテストは置き場がスキルごとに分かれており、
+      # repo ルートからの `unittest discover` は 0 件になる。置き場を見つけて回すのは
+      # run_unit_tests.py の仕事（#413）。`.claude/` を触らない PR（毎朝のキュレーション等）
+      # では走らせない
+      - name: Run Python unit tests
+        run: |
+          changed=$(git diff --name-only \
+            "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}" \
+            -- '.claude/')
+          if [ -z "$changed" ]; then
+            echo "この PR は .claude/ を変更していないためスキップ"
+            exit 0
+          fi
+          python3 .claude/scripts/run_unit_tests.py
       # スクリーンショットを撮り終えたあとに置く。ここが失敗しても撮れた分は
       # 上のステップで既にアップロード済みなので、レビュー材料が失われない
       - name: Check article quality
