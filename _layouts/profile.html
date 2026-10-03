@@ -131,10 +131,12 @@ layout: default
         .catch(function() {})
         .then(function() {
           indexInFlight = false;
-          // この applyFilters は indexTriedQuery === query のまま走るので再取得しない。
-          // 抑止を解くのはそのあとで、次に読者が動かしたときに取り直せるようにする
+          // この applyFilters は取得中にクエリが変わっていると新しい取得を始める
+          // (indexInFlight が立ち直す) ので、その場合は目印を消さない。消すと次の失敗で
+          // また取得が走り、読者が何も触らなくても再取得が止まらなくなる。
+          // 取得が走らなかったときだけ抑止を解き、次に読者が動いたとき取り直せるようにする
           applyFilters();
-          if (!contentIndex) indexTriedQuery = null;
+          if (!contentIndex && !indexInFlight) indexTriedQuery = null;
         });
     }
 
@@ -246,6 +248,10 @@ layout: default
 
     if (input) {
       input.addEventListener('input', applyFilters);
+      // 本文インデックスは検索窓に触れた時点で取りにいく。1文字目を待つと、
+      // 到着までのあいだタイトル・日付だけで当たった少ない結果が完成品の顔で出る。
+      // 窓に触れない読者 (タグ・「過去の記事も見る」だけ) は取得しない
+      input.addEventListener('focus', function() { loadContentIndex(''); });
       input.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') {
           this.value = '';
