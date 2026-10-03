@@ -65,6 +65,24 @@ class ClassifyTest(unittest.TestCase):
         result = classify([pr(1, body="Closes #26\nRefs #30")], CONFIG, NOW)
         self.assertEqual(result["merge_candidates"][0]["linked_issues"], [26, 30])
 
+    def test_quoted_link_keywords_are_not_linked_issues(self):
+        """コードとして引用したリンクキーワードを linked issue に数えない (#473)。
+
+        linked_issues は「合格した PR が linked issue を close してよいか」の根拠に
+        なるため、偽リンクは無関係な issue の誤 close に直結する。実測 (PR #471):
+        正規表現の挙動表と他 PR の引用だけで `[408, 421]` を生んでいた
+        """
+        body = ("~~~\n'Refs #408' -> ['408']\n'Closes #421' -> ['421']\n~~~\n"
+                "散文での引用も同じ: `Refs #408`\n")
+        result = classify([pr(1, body=body)], CONFIG, NOW)
+        self.assertEqual(result["merge_candidates"][0]["linked_issues"], [])
+
+    def test_prose_link_keyword_survives_code_stripping(self):
+        """コードを落とす処理が、実際に issue を進める `Closes #N` を巻き添えにしない"""
+        body = "```\nCloses #421\n```\n\n実際に進めるのはこちら。Closes #26\n"
+        result = classify([pr(1, body=body)], CONFIG, NOW)
+        self.assertEqual(result["merge_candidates"][0]["linked_issues"], [26])
+
     def test_head_in_repo_decides_trust_regardless_of_author_kind(self):
         # bot でも人間でも、この repo に branch を持てる名義は書き込み権限の証明
         prs = [
