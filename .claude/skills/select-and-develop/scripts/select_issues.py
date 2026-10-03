@@ -18,6 +18,13 @@ issue の author_association が欠落していても author が collaborator �
   - in_progress: open な linked PR を持つ issue（要対応かはエージェントが判断）
     linked_open_prs の各要素は {number, draft, hold}。hold は人間の判断待ちの印
   - backlog: linked PR の無い issue。作成日の古い順
+  - 各 issue の linked_merged_prs: **マージ済み**で、その issue を本文で `Closes`/`Refs` 等
+    でリンクしている PR（{number, title, merged_at}）。`Refs` で issue を閉じずに一部だけ
+    入れた PR は open でも closed でもなく本文にも出ないので、これが無いと「切り出し A は
+    済んでいる」と気づけず作り直す。issue の timeline から取るので全期間が見える
+    （`pulls?state=closed` の1ページ目は直近14日しか覆わない）。空なら該当なし
+  - linked_merged_prs_note: timeline を取れなかったときだけ出る1行（候補の出力は止めない。
+    その場合 linked_merged_prs は付かない＝「無い」とは読めない）
   - recent_status_records: status issue コメント1行目の stage レコードを直近 RECORDS_LIMIT 件
     （古い順）。前段 run の結論（evaluate のグルーミング判断等）をこの run が読み返す経路。
     読み方の正本は check_state.py:parse_status_records で、ここはそれを読み込んで使う
@@ -49,9 +56,9 @@ RECORDS_LIMIT = 12
 RECORDS_SINCE_DAYS = 2  # status issue コメントを何日ぶん取るか
 
 
-def gh_json(path):
-    out = subprocess.run(["gh", "api", "--paginate", path],
-                         check=True, capture_output=True, text=True).stdout
+def gh_json(path, paginate=True):
+    cmd = ["gh", "api"] + (["--paginate"] if paginate else []) + [path]
+    out = subprocess.run(cmd, check=True, capture_output=True, text=True).stdout
     return json.loads(out)
 
 
@@ -138,6 +145,89 @@ def fetch_status_comments_via_api(status_issue, since):
     owner, repo = resolve_repo()
     return api_json(f"repos/{owner}/{repo}/issues/{status_issue}/comments"
                     f"?per_page=100&since={since}")
+
+
+TIMELINE_PAGE_SIZE = 100
+TIMELINE_MAX_PAGES = 20  # 暴走防止。2,000 イベントを超える issue は想定しない
+
+
+def collect_pages(get_page):
+    """get_page(N) -> list を、1ページが満杯でなくなるまで N=1,2,… と辿って連結する（純関数）。
+
+    timeline は古い順に返るので、100 件で打ち切ると**最も新しい参照から**落ちる
+    （= 既に作業済みの可能性が最も高い直近の PR が消える）。`gh api --paginate` は
+    Link ヘッダの `/repositories/{id}/...` を辿って proxy に 403 で弾かれるため、
+    ページ番号を自前で進める（`with_page` と同じ理由）。"""
+    items = []
+    for page in range(1, TIMELINE_MAX_PAGES + 1):
+        chunk = get_page(page)
+        items.extend(chunk)
+        if len(chunk) < TIMELINE_PAGE_SIZE:
+            break
+    return items
+
+
+def timeline_path(owner, repo, number):
+    return f"repos/{owner}/{repo}/issues/{number}/timeline?per_page={TIMELINE_PAGE_SIZE}"
+
+
+def fetch_timeline_via_api(number):
+    # api_json は Link ヘッダの有無でページ番号を自前で進めるので 100 件超でも全部取れる
+    owner, repo = resolve_repo()
+    return api_json(timeline_path(owner, repo, number))
+
+
+def fetch_timeline_via_gh(number):
+    path = timeline_path("{owner}", "{repo}", number)
+    return collect_pages(lambda page: gh_json(with_page(path, page), paginate=False))
+
+
+def merged_prs_linking(events, issue_number):
+    """issue の timeline から、その issue を本文でリンクしているマージ済み PR を返す（純関数）。
+
+    素の cross-reference は「番号に触れただけ」の PR も拾う（#354 で4件中1件、#362 で8件中1件が
+    正解）ので、open PR の判定（build_candidates）と同じ LINK_RE を本文に当てて絞る。
+    `source.issue.pull_request` を持たない（PR でない）参照と、マージされていない PR は落ちる。"""
+    found = {}
+    for event in events:
+        if event.get("event") != "cross-referenced":
+            continue
+        source = (event.get("source") or {}).get("issue") or {}
+        merged_at = (source.get("pull_request") or {}).get("merged_at")
+        if not merged_at:
+            continue
+        linked = {int(m.group(1)) for m in LINK_RE.finditer(source.get("body") or "")}
+        if issue_number in linked:
+            found[source["number"]] = {"number": source["number"],
+                                       "title": source.get("title", ""),
+                                       "merged_at": merged_at}
+    return sorted(found.values(), key=lambda pr: pr["merged_at"])
+
+
+def attach_merged_prs(entries, timelines, fetch_timeline):
+    """各候補に linked_merged_prs を付け、(注記 or None) を返す。
+
+    timelines: --stdin で渡された {issue 番号(文字列): イベント配列}（無ければ None）。
+    取れなかった issue には付けない（空リストにすると「該当なし」と区別がつかない）。
+    付随値なので、失敗しても候補の出力は止めない。"""
+    failed = []
+    for entry in entries:
+        number = entry["number"]
+        try:
+            if timelines is not None:
+                events = timelines[str(number)]
+            elif fetch_timeline is not None:
+                events = fetch_timeline(number)
+            else:
+                raise KeyError(number)
+        except Exception as error:  # ネットワーク・権限・--stdin に当該 issue が無い
+            failed.append(f"#{number} ({type(error).__name__})")
+            continue
+        entry["linked_merged_prs"] = merged_prs_linking(events, number)
+    if failed:
+        return ("timeline を取得できなかった issue は linked_merged_prs を付けていません"
+                f"（マージ済みの関連 PR が無いとは読めない）: {', '.join(failed)}")
+    return None
 
 
 def parse_guardrails(text):
@@ -351,6 +441,8 @@ data.json の形:
   {"issues": [...],          # list_issues (state=OPEN) の結果
    "prs": [...],             # list_pull_requests (state=open) の結果
    "collaborators": ["..."],  # list_repository_collaborators の login のリスト (任意)
+   "timelines": {"354": [...]},  # 候補 issue ごとの issues/{番号}/timeline?per_page=100 (任意。無いと linked_merged_prs が付かない)
+                             #   100 件で打ち切られるので、満杯なら page=2,3… も連結して渡す (古い順なので最新の参照から落ちる)
    "comments": [...]}         # status issue のコメント (任意。無いと recent_status_records が空)
                              #   `issues/{status_issue}/comments?per_page=100&since={2日前, UTC の Z 形式}`
                              #   since を省いて1ページ目を渡すと最古の100件が入る (古いレコードは落とす)
@@ -375,6 +467,7 @@ def main():
             return 1
         collaborators = data.get("collaborators")
         comments, fetch_comments = data.get("comments"), None
+        timelines, fetch_timeline = data.get("timelines"), None
     elif shutil.which("gh"):
         try:
             issues, prs = fetch_via_gh()
@@ -385,6 +478,7 @@ def main():
             return 1
         collaborators = None
         comments, fetch_comments = None, fetch_status_comments_via_gh
+        timelines, fetch_timeline = None, fetch_timeline_via_gh
     else:
         try:
             issues, prs = fetch_via_api()
@@ -395,8 +489,10 @@ def main():
             return 1
         collaborators = None
         comments, fetch_comments = None, fetch_status_comments_via_api
+        timelines, fetch_timeline = None, fetch_timeline_via_api
 
     status_issue, in_progress, backlog = build_candidates(issues, prs, collaborators)
+    merged_note = attach_merged_prs(in_progress + backlog, timelines, fetch_timeline)
     # 候補（hold と信頼できない名義を除いたもの）とは別に、cap と突き合わせる
     # open issue の総数も出す。数え方は check_state.py が正本
     open_issues, open_issues_note = count_open_issues(issues)
@@ -414,6 +510,8 @@ def main():
     }
     if open_issues_note:
         result["open_issues_note"] = open_issues_note
+    if merged_note:
+        result["linked_merged_prs_note"] = merged_note
     if records_note or load_note:
         result["recent_status_records_note"] = records_note or load_note
     json.dump(result, sys.stdout, ensure_ascii=False, indent=1)
