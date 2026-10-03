@@ -419,5 +419,153 @@ class WithPageTest(unittest.TestCase):
                          "https://api.github.com/repos/o/r/issues?state=open&page=3&per_page=100")
 
 
+def xref(number, body="", merged_at="2026-10-01T00:00:00Z", title="t", is_pr=True):
+    """timeline の cross-referenced イベント。PR でない参照は pull_request キーが無い"""
+    source = {"number": number, "title": title, "body": body}
+    if is_pr:
+        source["pull_request"] = {"merged_at": merged_at}
+    return {"event": "cross-referenced", "source": {"issue": source}}
+
+
+class MergedPrsLinkingTest(unittest.TestCase):
+    """マージ済みで issue を閉じない PR（`Refs`）を timeline から拾う (#498)"""
+
+    def test_354_picks_only_the_pr_that_links_it(self):
+        # 実測 2026-10-03: 素のフィルタは #360 #392 #476 #484 の4件、本文リンクのある #476 だけが正解
+        events = [xref(360, "see #354 for context"), xref(392, "#354 を参照"),
+                  xref(476, "切り出し A\n\nRefs #354", merged_at="2026-10-01T05:00:00Z"),
+                  xref(484, "関連: #354 は別 PR")]
+        self.assertEqual([p["number"] for p in select_issues.merged_prs_linking(events, 354)], [476])
+
+    def test_362_picks_only_the_pr_that_links_it(self):
+        events = [xref(n, f"mentions #362 only {n}") for n in (350, 351, 352, 353, 355, 356, 357)]
+        events.append(xref(489, "Closes #362"))
+        self.assertEqual([p["number"] for p in select_issues.merged_prs_linking(events, 362)], [489])
+
+    def test_unmerged_and_non_pr_references_are_dropped(self):
+        events = [xref(1, "Refs #5", merged_at=None), xref(2, "Refs #5", is_pr=False),
+                  {"event": "labeled"}, {"event": "cross-referenced"}]
+        self.assertEqual(select_issues.merged_prs_linking(events, 5), [])
+
+    def test_does_not_confuse_a_longer_number(self):
+        self.assertEqual(select_issues.merged_prs_linking([xref(9, "Refs #3540")], 354), [])
+
+    def test_same_pr_referenced_twice_is_listed_once(self):
+        events = [xref(476, "Refs #354"), xref(476, "Refs #354")]
+        self.assertEqual(len(select_issues.merged_prs_linking(events, 354)), 1)
+
+
+class CollectPagesTest(unittest.TestCase):
+    def test_full_first_page_pulls_the_next_page(self):
+        """100件で打ち切ると最新の参照が落ちる (#25 で実測)。満杯なら次ページも引く"""
+        pages = {1: [{"id": i} for i in range(100)], 2: [{"id": "latest"}]}
+        calls = []
+
+        def get_page(n):
+            calls.append(n)
+            return pages[n]
+
+        items = select_issues.collect_pages(get_page)
+        self.assertEqual(calls, [1, 2])
+        self.assertEqual(items[-1], {"id": "latest"})
+        self.assertEqual(len(items), 101)
+
+    def test_short_page_stops(self):
+        calls = []
+        select_issues.collect_pages(lambda n: calls.append(n) or [1, 2, 3])
+        self.assertEqual(calls, [1])
+
+    def test_exactly_full_last_page_costs_one_empty_request(self):
+        pages = {1: list(range(100)), 2: []}
+        self.assertEqual(len(select_issues.collect_pages(lambda n: pages[n])), 100)
+
+    def test_stops_at_page_limit(self):
+        calls = []
+        select_issues.collect_pages(lambda n: calls.append(n) or list(range(100)))
+        self.assertEqual(len(calls), select_issues.TIMELINE_MAX_PAGES)
+
+    def test_latest_reference_beyond_page_one_reaches_the_extraction(self):
+        """100件の timeline の page2 にだけある最新の merged PR を落とさない"""
+        filler = [{"event": "commented"} for _ in range(99)] + [xref(24, "Refs #25", merged_at="2026-09-01T00:00:00Z")]
+        pages = {1: filler, 2: [xref(156, "Refs #25", merged_at="2026-09-30T00:00:00Z")]}
+        events = select_issues.collect_pages(lambda n: pages[n])
+        self.assertEqual([p["number"] for p in select_issues.merged_prs_linking(events, 25)],
+                         [24, 156])
+
+    def test_gh_path_does_not_use_paginate_and_walks_pages_itself(self):
+        paths = []
+        original = select_issues.gh_json
+
+        def fake(path, paginate=True):
+            assert paginate is False
+            paths.append(path)
+            return [0] * 100 if "page=2" not in path else []
+
+        select_issues.gh_json = fake
+        try:
+            select_issues.fetch_timeline_via_gh(25)
+        finally:
+            select_issues.gh_json = original
+        self.assertEqual(paths, ["repos/{owner}/{repo}/issues/25/timeline?per_page=100&page=1",
+                                 "repos/{owner}/{repo}/issues/25/timeline?per_page=100&page=2"])
+
+    def test_api_path_is_the_timeline_endpoint(self):
+        paths = []
+        original_api, original_resolve = select_issues.api_json, select_issues.resolve_repo
+        select_issues.api_json = lambda path: paths.append(path) or []
+        select_issues.resolve_repo = lambda: ("o", "r")
+        try:
+            select_issues.fetch_timeline_via_api(354)
+        finally:
+            select_issues.api_json, select_issues.resolve_repo = original_api, original_resolve
+        self.assertEqual(paths, ["repos/o/r/issues/354/timeline?per_page=100"])
+
+
+class LinkedMergedPrsOutputTest(unittest.TestCase):
+    def payload(self, **extra):
+        data = {"issues": [issue(354, created="2026-09-20T00:00:00Z"),
+                           issue(362, created="2026-09-21T00:00:00Z")],
+                "prs": [pr(900, "Closes #362")]}
+        data.update(extra)
+        return data
+
+    def test_stdin_timelines_attach_to_backlog_and_in_progress(self):
+        out = run_main(self.payload(timelines={
+            "354": [xref(476, "Refs #354")], "362": [xref(489, "Closes #362")]}))
+        self.assertEqual([p["number"] for p in out["backlog"][0]["linked_merged_prs"]], [476])
+        self.assertEqual([p["number"] for p in out["in_progress"][0]["linked_merged_prs"]], [489])
+        self.assertNotIn("linked_merged_prs_note", out)
+
+    def test_no_match_is_an_empty_list_not_missing(self):
+        out = run_main(self.payload(timelines={"354": [], "362": []}))
+        self.assertEqual(out["backlog"][0]["linked_merged_prs"], [])
+
+    def test_stdin_without_timelines_says_so_and_does_not_claim_empty(self):
+        out = run_main(self.payload())
+        self.assertNotIn("linked_merged_prs", out["backlog"][0])
+        self.assertIn("#354", out["linked_merged_prs_note"])
+
+    def test_fetch_failure_does_not_drop_candidates(self):
+        def boom(number):
+            raise RuntimeError("403")
+
+        entries = [{"number": 7}, {"number": 8}]
+        note = select_issues.attach_merged_prs(entries, None, boom)
+        self.assertIn("#7", note)
+        self.assertNotIn("linked_merged_prs", entries[0])
+
+    def test_one_failure_keeps_the_others(self):
+        def fetch(number):
+            if number == 7:
+                raise RuntimeError("403")
+            return [xref(1, f"Refs #{number}")]
+
+        entries = [{"number": 7}, {"number": 8}]
+        note = select_issues.attach_merged_prs(entries, None, fetch)
+        self.assertIn("#7", note)
+        self.assertNotIn("#8", note)
+        self.assertEqual(entries[1]["linked_merged_prs"][0]["number"], 1)
+
+
 if __name__ == "__main__":
     unittest.main()
