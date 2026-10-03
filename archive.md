@@ -110,20 +110,29 @@ title: "アーカイブ"
   // 本文一致を足す。取得に失敗しても絞り込み自体は止めず、当たり幅が
   // タイトル・日付どまりになるだけにする
   var contentIndex = null;
-  var contentIndexState = 'idle';
+  var indexInFlight = false;
+  var indexTriedQuery = null;
   var contentIndexUrl = '{{ "/archive-index.json" | relative_url }}';
 
-  function loadContentIndex() {
-    if (contentIndexState !== 'idle' || typeof fetch !== 'function') return;
-    contentIndexState = 'loading';
+  // 同じクエリでは取得を繰り返さないが、失敗したあと次の入力が来れば取り直す。
+  // 一度の失敗 (電波の瞬断、一瞬の 5xx) がその訪問のあいだ本文一致を殺したまま
+  // になると、読者には手がかりが何も出ない
+  function loadContentIndex(query) {
+    if (contentIndex || indexInFlight || indexTriedQuery === query) return;
+    if (typeof fetch !== 'function') return;
+    indexTriedQuery = query;
+    indexInFlight = true;
     fetch(contentIndexUrl)
       .then(function(res) { return res.ok ? res.json() : Promise.reject(res.status); })
-      .then(function(data) {
-        contentIndex = data;
-        contentIndexState = 'loaded';
+      .then(function(data) { contentIndex = data; })
+      .catch(function() {})
+      .then(function() {
+        indexInFlight = false;
+        // この applyFilters は indexTriedQuery === query のまま走るので再取得しない。
+        // 抑止を解くのはそのあとで、次に読者が動かしたときに取り直せるようにする
         applyFilters();
-      })
-      .catch(function() { contentIndexState = 'failed'; });
+        if (!contentIndex) indexTriedQuery = null;
+      });
   }
 
   if (!showAll) {
@@ -171,7 +180,7 @@ title: "アーカイブ"
   function applyFilters() {
     var query = (input ? input.value : '').toLowerCase().trim();
     var isFiltering = !!(query || activeTag);
-    if (query) loadContentIndex();
+    if (query) loadContentIndex(query);
     var totalVisible = 0;
 
     for (var i = 0; i < months.length; i++) {
@@ -219,7 +228,10 @@ title: "アーカイブ"
     }
 
     if (moreBtn) moreBtn.hidden = showAll || isFiltering;
-    noResults.hidden = totalVisible > 0 || (!query && !activeTag);
+    // 本文インデックスの取得中は「見つかりません」を出さない。本文でしか
+    // 当たらない語は到着するまで 0 件に見えるので、断定して出すと読者には
+    // 「無かった」と読める (実測: 50KB/s の回線で最大約3秒この状態だった)
+    noResults.hidden = totalVisible > 0 || (!query && !activeTag) || (indexInFlight && !!query);
     if (tagFeedEl) {
       if (activeTag) {
         tagFeedLink.href = tagsBaseUrl + encodeURIComponent(activeTag) + '/feed.xml';
