@@ -1,0 +1,16 @@
+---
+layout: null
+permalink: /archive-index.json
+---
+{%- comment -%}アーカイブのキーワード絞り込み用の本文インデックス (#354)。
+archive.html に data-content として埋めていた本文テキストを外に出したもの。
+読者が検索窓に文字を入れた時点で初めて取得されるので、絞り込む前に受け取る
+HTML から本文のぶん (実測 401KB / 全体の 47%) が落ちる。
+テキストの作り方は data-content と同一に保つ (strip_html | strip_newlines |
+truncatewords: 100)。変えると絞り込みの当たり幅が変わる{%- endcomment -%}
+{%- assign default_posts = site.posts | where_exp: "post", "post.profile == nil" -%}
+{
+{%- for post in default_posts -%}
+{{ post.url | relative_url | jsonify }}: {{ post.content | strip_html | strip_newlines | truncatewords: 100 | jsonify }}{%- unless forloop.last -%},{%- endunless -%}
+{%- endfor -%}
+}

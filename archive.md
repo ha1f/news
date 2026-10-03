@@ -55,10 +55,11 @@ title: "アーカイブ"
 
 <ul class="archive-list">
 {% for post in group.items %}
-  {%- comment -%}data-content はキーワード絞り込みの対象。truncatewords は空白区切りの語数を
-  数えるので日本語では実質 no-op で、いまは本文全文が入っている。絞り込みの当たり幅を変えて
-  しまうため本 PR では挙動を変えない{%- endcomment -%}
-  <li data-content="{{ post.content | strip_html | strip_newlines | truncatewords: 100 | escape }}" data-tags="{{ post.tags | join: ',' | escape }}">
+  {%- comment -%}絞り込み対象の本文テキストは archive-index.json に出してある (#354)。
+  ここに data-content として埋めると、読者が絞り込む前に本文全文 (実測 401KB /
+  ページ全体の 47%) を受け取ることになり、記事の蓄積に比例して増え続ける。
+  data-url が JSON のキー{%- endcomment -%}
+  <li data-url="{{ post.url | relative_url }}" data-tags="{{ post.tags | join: ',' | escape }}">
     <span class="archive-item-date">{{ post.date | date: date_format }}</span>
     <a href="{{ post.url | relative_url }}">{{ post.title }}</a>
     {% if post.tags.size > 0 %}<span class="archive-item-tags">{{ post.tags | join: " / " }}</span>{% endif %}
@@ -103,6 +104,27 @@ title: "アーカイブ"
   var tagsBaseUrl = '{{ "/tags/" | relative_url }}';
   var showAll = months.length <= INITIAL_MONTHS;
   var moreBtn = null;
+
+  // 本文テキストは絞り込みを始めるまで取得しない (#354)。到着するまでは
+  // タイトルと日付だけで当て、到着したら applyFilters をもう一度回して
+  // 本文一致を足す。取得に失敗しても絞り込み自体は止めず、当たり幅が
+  // タイトル・日付どまりになるだけにする
+  var contentIndex = null;
+  var contentIndexState = 'idle';
+  var contentIndexUrl = '{{ "/archive-index.json" | relative_url }}';
+
+  function loadContentIndex() {
+    if (contentIndexState !== 'idle' || typeof fetch !== 'function') return;
+    contentIndexState = 'loading';
+    fetch(contentIndexUrl)
+      .then(function(res) { return res.ok ? res.json() : Promise.reject(res.status); })
+      .then(function(data) {
+        contentIndex = data;
+        contentIndexState = 'loaded';
+        applyFilters();
+      })
+      .catch(function() { contentIndexState = 'failed'; });
+  }
 
   if (!showAll) {
     moreBtn = document.createElement('button');
@@ -149,6 +171,7 @@ title: "アーカイブ"
   function applyFilters() {
     var query = (input ? input.value : '').toLowerCase().trim();
     var isFiltering = !!(query || activeTag);
+    if (query) loadContentIndex();
     var totalVisible = 0;
 
     for (var i = 0; i < months.length; i++) {
@@ -170,7 +193,9 @@ title: "アーカイブ"
         }
 
         if (query) {
-          var content = (items[j].getAttribute('data-content') || '').toLowerCase();
+          var url = items[j].getAttribute('data-url');
+          var indexed = (contentIndex && url && contentIndex[url]) || '';
+          var content = indexed.toLowerCase();
           var titleEl = items[j].querySelector('a');
           var title = (titleEl ? titleEl.textContent : '').toLowerCase();
           // 日付バッジも絞り込みの対象にする。新形式の title には日付が入らないので、
