@@ -17,6 +17,12 @@ description: "open issue から今日実装する対象を選定し、develop-is
    - 残り時間が窮屈なときは、タイトルが「（PR #123 の再設計）」書式の issue を先に見る。元 PR の branch が origin に残っていれば diff を再利用でき、合格部分を書き直さずに済む（`git fetch origin <branch>` が `couldn't find remote ref` で落ちなければ残っている。中身は `git diff origin/main...FETCH_HEAD` で見る — `git show` は先端1 commit しか出さず、実測 PR #445 では19行中1行しか見えない。shallow clone で `no merge base` になったら REST の `pulls/<番号>/files` を引く）。再利用できるかは diff を実際に見てから決める（再設計 issue が新規実装を求めていることもある）。残るのは**マージされず close されただけ**の PR の branch で、マージ済みの branch は repo 設定の `delete_branch_on_merge: true` で自動削除されている
    - `in_progress` の要対応判定: まず `recent_status_records` で、同じ issue について前段 run が出した結論を見る（例: evaluate のグルーミングが「作業完了済みで draft のまま滞留・作り直し不要」と判定していれば、実装をやり直さず ready 化で足りる）。結論はそれを書いた時点のものなので、PR の現況と食い違ったら PR を正とする（実走 2026-09-27: グルーミングが「ready 化すれば足りる」とした #409 に、その後の review が必須指摘2件を付けていた）。そのうえで linked PR の技術面（未対応のレビュー指摘・red CI・conflict）に加え、**issue 本文の指示・受け入れ条件と PR の実装要約コメントを突き合わせ、未完了の作業がないか**を確認する（PR が CI green でも issue の目的が未達成なら要対応）。1行目が `[dry-run]` の判定コメントは対応不要なので数えない
    - linked PR が draft（`linked_open_prs[].draft`）でも、本文に解除条件（待っている PR の番号と解除手順）が書かれていればそれは要対応。ただし `hold` が付いている PR は上の bullet が優先で、着手しない
+   - **着手する issue を決めたら、その issue を参照してマージ済みの PR を探す。** 手順1が返す `linked_open_prs` は **open の PR だけ**なので、`Closes` でなく `Refs` で issue を閉じずに一部だけ入れたマージ済み PR は、選定の出力にも issue の open/closed にも現れない。受け入れ条件を複数に切り出した issue（「切り出し A / B / C」形式）は特にこれで、本文は起票時のまま残る（実走 2026-10-03: #354 の切り出し A は PR #476 で既に main に入り配信中だったが、本文は未着手のままで、着手してファイルを読むまで気づけなかった）
+     ```
+     gh api 'repos/{owner}/{repo}/pulls?state=closed&per_page=100' \
+       --jq '.[] | select(.merged_at) | select(.body | test("#<番号>([^0-9]|$)")) | {number, title}'
+     ```
+     **本文が番号に触れただけの PR も拾う**ので、出るのは候補であって完了の証拠ではない（実測: #354 で4件中1件、#362 では5件すべてが無関係な言及だった）。タイトルを見て関係しそうなものだけ diff を読む。済んでいた部分があれば issue にコメントで記録し、残りから選び直す
 4. Skill ツールで `develop-issue` を直列に実行する。件数の上限は設けず、次の review-and-merge（トリガー時刻は README の trigger 定義表。12時 run なら15時、16時 run なら18時）までに完走できると判断できる間は backlog を消化し続ける。次の1件を残り時間で完走できるか迷ったら着手せず終える（完走できない draft PR を残すより次の run に回すほうが良い。merge と issue の close は review-and-merge が担う）
    - 1件の所要は実装だけでは終わらない。push 前レビューとその反映・CI の完走までを含めて1件と数える（レビューが重大な指摘を出す前提で見積もる。出なければ早く終わるだけ）。見積もりの基準は直前に完走した1件の実測に置き、最初の1件は保守的に見る
 5. 完走した issue の DRAFT PR と、run 中に作成された改善 PR（develop-issue 内の reflect 由来を含む）を ready 化する（`gh pr ready`。`gh` が無い環境では `update_pull_request` に `draft: false` を渡す。次の review run のマージ候補になる）。完走できなかった PR は draft のまま残す
