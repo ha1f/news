@@ -21,24 +21,22 @@
   {% assign emitted = 0 %}
   {% for post in posts %}
     {% if emitted >= 20 %}{% break %}{% endif %}
-    {% if post.article_tags %}
+    {% if post.article_tags and post.article_tags.size > 0 %}
       {% assign items = post.content | split: '<li>' %}
-      {% assign n = 0 %}
       {% for item in items offset: 1 %}
         {% if item contains '</a>' %}
           {% assign link_html = item | split: '</a>' | first %}
           {% assign link_text = link_html | strip_html | strip %}
           {% if link_text.size > 1 %}
-            {% assign n = n | plus: 1 %}
             {% assign tags_of_item = post.article_tags[forloop.index0] %}
             {% if emitted < 20 and tags_of_item contains page.tag %}
               {% assign emitted = emitted | plus: 1 %}
     <entry>
       <title type="html">{{ link_text | smartify | normalize_whitespace | xml_escape }}</title>
-      <link href="{{ post.url | absolute_url }}#article-{{ n }}" rel="alternate" type="text/html" title="{{ link_text | xml_escape }}" />
+      <link href="{{ post.url | absolute_url }}#article-{{ forloop.index }}" rel="alternate" type="text/html" title="{{ link_text | xml_escape }}" />
       <published>{{ post.date | date_to_xmlschema }}</published>
       <updated>{{ post.last_modified_at | default: post.date | date_to_xmlschema }}</updated>
-      <id>{{ post.id | absolute_url | xml_escape }}#article-{{ n }}</id>
+      <id>{{ post.id | absolute_url | xml_escape }}#article-{{ forloop.index }}</id>
       <author>
         <name>{{ site.author | xml_escape }}</name>
       </author>
