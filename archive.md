@@ -59,7 +59,11 @@ title: "アーカイブ"
   ここに data-content として埋めると、読者が絞り込む前に本文全文 (実測 401KB /
   ページ全体の 47%) を受け取ることになり、記事の蓄積に比例して増え続ける。
   data-url が JSON のキー{%- endcomment -%}
-  <li data-url="{{ post.url | relative_url }}" data-tags="{{ post.tags | join: ',' | escape }}">
+  {%- comment -%}article_tags（記事単位のトピック）を持つ日は、トピックで絞ったときに
+  その日の見出しのうち該当する記事だけを残す (#354)。持たない日は従来どおり日単位で当てる。
+  N 本目の見出しに article_tags の N 番目を当てる番号は、#article-N の着地点と同じ
+  split: '<li>' の位置番号{%- endcomment -%}
+  <li data-url="{{ post.url | relative_url }}" data-tags="{{ post.tags | join: ',' | escape }}"{% if post.article_tags %} data-article-tags{% endif %}>
     <span class="archive-item-date">{{ post.date | date: date_format }}</span>
     <a href="{{ post.url | relative_url }}">{{ post.title }}</a>
     {% if post.tags.size > 0 %}<span class="archive-item-tags">{{ post.tags | join: " / " }}</span>{% endif %}
@@ -74,7 +78,7 @@ title: "アーカイブ"
           {%- assign link_text = before_close_a | strip_html -%}
           {%- if link_text.size > 1 -%}
             {%- assign article_count = article_count | plus: 1 -%}
-            <li{% if article_count > 3 %} class="archive-article-extra" hidden{% endif %}><a href="{{ post.url | relative_url }}#article-{{ forloop.index }}">{{ link_text }}</a></li>
+            <li{% if article_count > 3 %} class="archive-article-extra" hidden{% endif %}{% if post.article_tags %} data-tags="{{ post.article_tags[forloop.index0] | join: ',' | escape }}"{% endif %}><a href="{{ post.url | relative_url }}#article-{{ forloop.index }}">{{ link_text }}</a></li>
           {%- endif -%}
         {%- endif -%}
       {%- endfor -%}
@@ -149,19 +153,43 @@ title: "アーカイブ"
     });
   }
 
+  function articleTitles(item) {
+    return item.querySelectorAll('.archive-article-titles > li:not(.archive-article-more)');
+  }
+
+  function hasArticleTag(li, tag) {
+    return (li.getAttribute('data-tags') || '').split(',').indexOf(tag) !== -1;
+  }
+
+  // 記事単位のトピックを持つ日で、そのトピックの記事
+  function titlesWithTag(item, tag) {
+    var result = [];
+    if (!tag || !item.hasAttribute('data-article-tags')) return result;
+    var titles = articleTitles(item);
+    for (var i = 0; i < titles.length; i++) {
+      if (hasArticleTag(titles[i], tag)) result.push(titles[i]);
+    }
+    return result;
+  }
+
   // 既定は先頭3件だけを見せる。キーワードで絞ったときは一致した見出し「だけ」を
   // 残して、何が一致したのかを結果から読み取れるようにする。見出しが1件も一致
-  // しない日（概況文や本文で一致した日）は既定の3件に戻す
-  function revealMatchingTitles(item, query) {
-    var titles = item.querySelectorAll('.archive-article-titles > li:not(.archive-article-more)');
+  // しない日（概況文や本文で一致した日）は既定の3件に戻す。
+  // トピックで絞ったときは、記事単位のトピックを持つ日ならそのトピックの記事「だけ」を
+  // 残す (#354)。キーワードとの併用では、そのうち見出しが一致したものに絞る
+  function revealMatchingTitles(item, query, tag) {
+    var titles = articleTitles(item);
     var more = item.querySelector('.archive-article-more');
     var matched = [];
+    var tagged = titlesWithTag(item, tag);
+    var pool = tagged.length > 0 ? tagged : titles;
 
     if (query) {
-      for (var i = 0; i < titles.length; i++) {
-        if (titles[i].textContent.toLowerCase().indexOf(query) !== -1) matched.push(titles[i]);
+      for (var i = 0; i < pool.length; i++) {
+        if (pool[i].textContent.toLowerCase().indexOf(query) !== -1) matched.push(pool[i]);
       }
     }
+    if (matched.length === 0 && tagged.length > 0) matched = tagged;
 
     var hiddenCount = 0;
     for (var j = 0; j < titles.length; j++) {
@@ -199,8 +227,10 @@ title: "アーカイブ"
         var matchQuery = true;
 
         if (activeTag) {
-          var tags = (items[j].getAttribute('data-tags') || '').split(',');
-          matchTag = tags.indexOf(activeTag) !== -1;
+          // 記事単位のトピックを持つ日は、そのトピックの記事が1本でもあるかで当てる
+          matchTag = items[j].hasAttribute('data-article-tags')
+            ? titlesWithTag(items[j], activeTag).length > 0
+            : hasArticleTag(items[j], activeTag);
         }
 
         if (query) {
@@ -221,7 +251,7 @@ title: "アーカイブ"
         items[j].style.display = visible ? '' : 'none';
         if (visible) {
           monthVisible++;
-          revealMatchingTitles(items[j], query);
+          revealMatchingTitles(items[j], query, activeTag);
         }
       }
 
