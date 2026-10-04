@@ -203,7 +203,8 @@ title: "アーカイブ"
     if (more) {
       more.hidden = hiddenCount === 0;
       var link = more.querySelector('a');
-      if (link && hiddenCount > 0) link.textContent = '他' + hiddenCount + '件';
+      // トピックで絞った日の残りは「同じトピックの続き」ではなく別トピックの記事
+      if (link && hiddenCount > 0) link.textContent = (tagged.length > 0 ? '別トピック' : '他') + hiddenCount + '件';
     }
   }
 
