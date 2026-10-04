@@ -62,7 +62,7 @@ playwright screenshot --browser chromium --full-page \
 
 ### CI の screenshot artifact を取る
 
-push 後はこちらも見る。ローカルで撮るのは1〜2枚だが、CI は6ページ × light/dark をデスクトップ幅とモバイル幅で撮っている。MCP 経由なら認証込みで取得できる（実測）:
+push 後はこちらも見る。ローカルで撮るのは1〜2枚だが、CI は5ページ（トップ・最新記事・archive・profiles 一覧・プロファイル1件）× light/dark に、トップだけモバイル幅（375×812）を加えた12枚を撮っている（`jekyll-build-check.yml` の「Screenshot pages」が正）。MCP 経由なら認証込みで取得できる（実測）:
 
 ```
 mcp__github__actions_list(method=list_workflow_run_artifacts, resource_id=<run id>)
