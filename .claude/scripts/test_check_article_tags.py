@@ -35,7 +35,7 @@ class TestCheck(unittest.TestCase):
         self.assertEqual(c.check(GOOD, require=True), [])
 
     def test_parse_keeps_order_and_empty(self):
-        tags, article_tags, count = c.parse(GOOD)
+        tags, article_tags, count, _ = c.parse(GOOD)
         self.assertEqual(tags, ["AI", "セキュリティ"])
         self.assertEqual(article_tags, [["AI"], ["セキュリティ", "AI"], []])
         self.assertEqual(count, 3)
@@ -91,6 +91,33 @@ class TestCheck(unittest.TestCase):
     def test_quoted_topics(self):
         text = post("tags: [\"AI\"]\narticle_tags:\n  - [\"AI\"]\n  - []\n  - []\n")
         self.assertEqual(c.check(text, require=True), [])
+
+    def test_other_list_items_shift_numbering(self):
+        """リード文の箇条書きは `<li>` になり、表示側の記事番号をずらす。要素数が合っていても落とす"""
+        text = post("tags: [AI]\narticle_tags:\n  - [AI]\n  - []\n  - []\n").replace(
+            "リード文。\n", "リード文。\n\n- 補足A\n- 補足B\n")
+        self.assertTrue(any("リスト項目が 2 個" in e for e in c.check(text, require=True)))
+
+    def test_nested_list_item(self):
+        text = post("tags: [AI]\narticle_tags:\n  - [AI]\n  - []\n  - []\n").replace(
+            "   読みどころ1\n", "   読みどころ1\n   - 入れ子\n")
+        self.assertTrue(any("リスト項目が 1 個" in e for e in c.check(text, require=True)))
+
+    def test_flow_style_raises(self):
+        """flow 形式は Jekyll が読むので、--all で黙って飛ばさない"""
+        text = post("tags: [AI]\narticle_tags: [[AI], [], []]\n")
+        with self.assertRaises(ValueError):
+            c.check(text, require=False)
+
+    def test_comments_are_skipped(self):
+        text = post("tags: [AI]\narticle_tags:\n  - [AI]  # 1本目\n  # …記事の本数だけ並べる\n  - []\n  - []\n")
+        self.assertEqual(c.check(text, require=True), [])
+
+    def test_title_with_triple_dash(self):
+        """title に `---` を含んでも front matter を途中で切らない"""
+        text = post("tags: [AI]\narticle_tags:\n  - [AI]\n  - []\n").replace(
+            'title: "見出し"', 'title: "A---B"')
+        self.assertTrue(any("2 件" in e for e in c.check(text, require=False)))
 
 
 if __name__ == "__main__":

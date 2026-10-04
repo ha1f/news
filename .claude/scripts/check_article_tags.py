@@ -6,13 +6,16 @@
 1本ずつにトピックを持たせ、アーカイブの絞り込みが記事にたどり着けるようにする。
 
   article_tags:
-    - [AI, 社会]        # 1本目
-    - [セキュリティ]    # 2本目
-    - []                # 該当なし
+    - [AI, 社会]
+    - [セキュリティ]
+    - []
 
-検査するのは次の4つ:
+検査するのは次の5つ:
   1. `article_tags` の要素数が、本文の番号付き記事の数と一致する
      （表示側は N 本目の `<li>` に N 番目の要素を当てるので、ずれると全部ずれる）
+  1'. 本文に番号付き記事以外のリスト項目（`- ` の箇条書きや入れ子）が無い
+     （表示側の番号は `split: '<li>'` の位置なので、他のリスト項目が1つでもあると
+     要素数が合っていても以降の記事が別の要素を指す）
   2. 各トピックが語彙（publish-pages/SKILL.md のトピック一覧）に入っている
   3. 1本に付けるトピックは3個まで（全部付けると絞り込みとして働かない）
   4. `tags` が `article_tags` の和集合と一致する（日単位の導線と記事単位の導線で
@@ -39,9 +42,12 @@ VOCAB = ("AI", "開発", "セキュリティ", "ビジネス", "科学", "デザ
 MAX_PER_ARTICLE = 3
 # 本文の番号付き記事。kramdown が `<li>` にするのは行頭（3字までの字下げ）の `N. `
 ITEM_RE = re.compile(r"^ {0,3}\d+\.\s", re.M)
+# `<li>` になりうる行すべて（箇条書き・入れ子を含む）
+ANY_LIST_ITEM_RE = re.compile(r"^[ \t]*(?:[-*+]|\d+\.)[ \t]", re.M)
+FRONT_RE = re.compile(r"\A---[ \t]*\n(?P<front>.*?)\n---[ \t]*\n(?P<body>.*)\Z", re.S)
 TAGS_RE = re.compile(r"^tags:\s*\[(?P<body>[^\]]*)\]\s*$", re.M)
-ARTICLE_TAGS_HEAD_RE = re.compile(r"^article_tags:\s*$", re.M)
-ARTICLE_TAGS_ITEM_RE = re.compile(r"^\s+-\s*\[(?P<body>[^\]]*)\]\s*$")
+ARTICLE_TAGS_HEAD_RE = re.compile(r"^article_tags:(?P<rest>.*)$", re.M)
+ARTICLE_TAGS_ITEM_RE = re.compile(r"^\s+-\s*\[(?P<body>[^\]]*)\]\s*(?:#.*)?$")
 
 
 def split_list(body: str):
@@ -49,20 +55,24 @@ def split_list(body: str):
 
 
 def parse(text: str):
-    """(tags, article_tags, 記事数) を返す。front matter が無ければ None。
+    """(tags, article_tags, 記事数, リスト項目数) を返す。front matter が無ければ None。
 
     article_tags が無ければ None、あるが書式が崩れていれば ValueError"""
-    if not text.startswith("---"):
+    fm = FRONT_RE.match(text)
+    if not fm:
         return None
-    _, front, body = text.split("---", 2)
+    front, body = fm.group("front"), fm.group("body")
     m = TAGS_RE.search(front)
     tags = split_list(m.group("body")) if m else None
     article_tags = None
     head = ARTICLE_TAGS_HEAD_RE.search(front)
     if head:
+        if head.group("rest").split("#")[0].strip():
+            # flow 形式（`article_tags: [[AI], []]`）も Jekyll は読むので、黙って飛ばさず落とす
+            raise ValueError("article_tags はブロック形式（1行1記事の `  - [...]`）で書く")
         article_tags = []
         for line in front[head.end():].splitlines()[1:]:
-            if not line.strip():
+            if not line.strip() or line.strip().startswith("#"):
                 continue
             im = ARTICLE_TAGS_ITEM_RE.match(line)
             if im:
@@ -71,7 +81,7 @@ def parse(text: str):
                 raise ValueError(f"article_tags の行を読めない: {line.strip()}")
             else:
                 break
-    return tags, article_tags, len(ITEM_RE.findall(body))
+    return tags, article_tags, len(ITEM_RE.findall(body)), len(ANY_LIST_ITEM_RE.findall(body))
 
 
 def check(text: str, require: bool):
@@ -79,12 +89,14 @@ def check(text: str, require: bool):
     parsed = parse(text)
     if parsed is None:
         return ["front matter が無い"]
-    tags, article_tags, count = parsed
+    tags, article_tags, count, list_items = parsed
     if article_tags is None:
         return ["article_tags が無い"] if require else []
     errors = []
     if len(article_tags) != count:
         errors.append(f"article_tags が {len(article_tags)} 件、本文の記事は {count} 本")
+    if list_items != count:
+        errors.append(f"本文に番号付き記事以外のリスト項目が {list_items - count} 個ある（表示側の記事番号がずれる）")
     for i, topics in enumerate(article_tags, 1):
         unknown = [t for t in topics if t not in VOCAB]
         if unknown:
@@ -116,7 +128,8 @@ def main(argv):
         text = post.read_text(encoding="utf-8")
         try:
             errors = check(text, require)
-            if require or parse(text)[1] is not None:
+            parsed = parse(text)
+            if require or (parsed and parsed[1] is not None):
                 checked += 1
         except ValueError as e:
             errors = [str(e)]
