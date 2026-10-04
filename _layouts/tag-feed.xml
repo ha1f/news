@@ -14,8 +14,42 @@
       <name>{{ site.author | xml_escape }}</name>
     </author>
   {% endif %}
+  {%- comment -%}記事単位のトピック (article_tags, #354) を持つ日は、そのトピックの記事だけを1記事1エントリで出す。
+  持たない日は従来どおり日単位のエントリ。N 本目の見出しに article_tags の N 番目を当てる番号は
+  archive.md と同じ split: '<li>' の位置番号。エントリ id は日の id + #article-N で、記事の順序が変わらない限り安定{%- endcomment -%}
   {% assign posts = site.posts | where_exp: "post", "post.profile == nil" | where_exp: "post", "post.tags contains page.tag" | sort: "date" | reverse %}
-  {% for post in posts limit: 20 %}
+  {% assign emitted = 0 %}
+  {% for post in posts %}
+    {% if emitted >= 20 %}{% break %}{% endif %}
+    {% if post.article_tags %}
+      {% assign items = post.content | split: '<li>' %}
+      {% assign n = 0 %}
+      {% for item in items offset: 1 %}
+        {% if item contains '</a>' %}
+          {% assign link_html = item | split: '</a>' | first %}
+          {% assign link_text = link_html | strip_html | strip %}
+          {% if link_text.size > 1 %}
+            {% assign n = n | plus: 1 %}
+            {% assign tags_of_item = post.article_tags[forloop.index0] %}
+            {% if emitted < 20 and tags_of_item contains page.tag %}
+              {% assign emitted = emitted | plus: 1 %}
+    <entry>
+      <title type="html">{{ link_text | smartify | normalize_whitespace | xml_escape }}</title>
+      <link href="{{ post.url | absolute_url }}#article-{{ n }}" rel="alternate" type="text/html" title="{{ link_text | xml_escape }}" />
+      <published>{{ post.date | date_to_xmlschema }}</published>
+      <updated>{{ post.last_modified_at | default: post.date | date_to_xmlschema }}</updated>
+      <id>{{ post.id | absolute_url | xml_escape }}#article-{{ n }}</id>
+      <author>
+        <name>{{ site.author | xml_escape }}</name>
+      </author>
+      <summary type="html"><![CDATA[{{ item | split: '</a>' | last | strip_html | normalize_whitespace }}]]></summary>
+    </entry>
+            {% endif %}
+          {% endif %}
+        {% endif %}
+      {% endfor %}
+    {% else %}
+      {% assign emitted = emitted | plus: 1 %}
     <entry>
       <title type="html">{{ post.title | smartify | strip_html | normalize_whitespace | xml_escape }}</title>
       <link href="{{ post.url | absolute_url }}" rel="alternate" type="text/html" title="{{ post.title | xml_escape }}" />
@@ -31,5 +65,6 @@
         <summary type="html"><![CDATA[{{ post_summary | strip_html | normalize_whitespace }}]]></summary>
       {% endif %}
     </entry>
+    {% endif %}
   {% endfor %}
 </feed>
