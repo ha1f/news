@@ -50,15 +50,15 @@ title: "アーカイブ"
 
 {%- comment -%}絞り込み前に受け取る HTML が記事の蓄積に比例して増え続けないよう、
 ページに直接描くのは直近 initial_months か月分だけにする (#354)。それより前の月は
-archive/older.html に描き、「過去の記事を表示」か絞り込みを始めた時点で取得して差し込む。
-JS が動かない読者にはそのままリンクとして働く。月数は archive/older.html と共有するため _config.yml に置く{%- endcomment -%}
+archive-older.html に描き、「過去の記事を表示」か絞り込みを始めた時点で取得して差し込む。
+JS が動かない読者にはそのままリンクとして働く。月数は archive-older.html と共有するため _config.yml に置く{%- endcomment -%}
 {%- assign initial_months = site.archive_initial_months | default: 3 -%}
 <div id="archive-months">
 {% include archive-months.html groups=posts_by_month offset=0 limit=initial_months %}
 </div>
 {%- assign older_months = posts_by_month.size | minus: initial_months -%}
 {%- if older_months > 0 %}
-<div class="archive-older"><a id="archive-show-older" class="archive-show-more" href="{{ '/archive/older.html' | relative_url }}">過去の記事を表示（他{{ older_months }}ヶ月分）</a></div>
+<div class="archive-older"><a id="archive-show-older" class="archive-show-more" href="{{ '/archive-older.html' | relative_url }}">過去の記事を表示（他{{ older_months }}ヶ月分）</a></div>
 {%- endif %}
 
 <script>
@@ -77,7 +77,7 @@ JS が動かない読者にはそのままリンクとして働く。月数は a
   var moreBtn = document.getElementById('archive-show-older');
   var showAll = !moreBtn;
 
-  // 直近 INITIAL_MONTHS か月より前は archive/older.html にあり、ページには入っていない
+  // 直近 INITIAL_MONTHS か月より前は archive-older.html にあり、ページには入っていない
   // (#354)。「過去の記事を表示」を押すか絞り込みを始めた時点で取得して差し込む。
   // 取得に失敗したら moreBtn をリンクのまま残し、読者が自分で開けるようにする
   var olderLoaded = !moreBtn;
@@ -85,6 +85,7 @@ JS が動かない読者にはそのままリンクとして働く。月数は a
   // 失敗したら、読者が次に操作するまで取り直さない。取得後の applyFilters が
   // 絞り込み中に再び取得を始めるので、抑止が無いと失敗→再取得が止まらなくなる
   var olderFailed = false;
+  var focusFirstOlder = false;
 
   function loadOlderMonths() {
     if (olderLoaded || olderInFlight || olderFailed) return;
@@ -95,6 +96,9 @@ JS が動かない読者にはそのままリンクとして働く。月数は a
       .then(function(html) {
         var doc = new DOMParser().parseFromString(html, 'text/html');
         var older = doc.querySelectorAll('#archive-months .archive-month');
+        // 200 でも中身が想定外 (ログイン画面・プロキシのエラーページ) なら失敗として扱う。
+        // 0 件を「読み込み済み」にすると、リンクが消えたまま古い月に二度と届かない
+        if (older.length === 0) return Promise.reject('empty');
         for (var i = 0; i < older.length; i++) {
           monthsEl.appendChild(document.importNode(older[i], true));
         }
@@ -105,6 +109,14 @@ JS が動かない読者にはそのままリンクとして働く。月数は a
       .then(function() {
         olderInFlight = false;
         applyFilters();
+        // 表示されてからでないとフォーカスできないので applyFilters の後
+        var first = olderLoaded && focusFirstOlder && months[INITIAL_MONTHS];
+        var heading = first && first.style.display !== 'none' && first.querySelector('h2');
+        if (heading) {
+          heading.setAttribute('tabindex', '-1');
+          heading.focus();
+        }
+        focusFirstOlder = false;
       });
   }
 
@@ -142,11 +154,15 @@ JS が動かない読者にはそのままリンクとして働く。月数は a
 
   if (moreBtn) {
     moreBtn.addEventListener('click', function(e) {
-      // 取得できない環境ではリンクとして archive/older.html を開かせる
+      // 取得できない環境と、新しいタブで開く操作 (修飾キー) はリンクのまま通す
       if (typeof fetch !== 'function' || typeof DOMParser !== 'function') return;
+      if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
       e.preventDefault();
       showAll = true;
       olderFailed = false;
+      // 押したリンク自身が消えるので、取得後にフォーカスを先頭の古い月の見出しへ移す
+      // (キーボード・読み上げの利用者が位置を見失わないように)
+      focusFirstOlder = true;
       loadOlderMonths();
       applyFilters();
     });
@@ -266,9 +282,10 @@ JS が動かない読者にはそのままリンクとして働く。月数は a
     // 本文インデックスの取得中は「見つかりません」を出さない。本文でしか
     // 当たらない語は到着するまで 0 件に見えるので、断定して出すと読者には
     // 「無かった」と読める (実測: 50KB/s の回線で最大約3秒この状態だった)
-    // 古い月の取得中も同じ理由で出さない (直近の月に無くても古い月で当たりうる)
+    // 古い月を取得できていない間 (取得中・失敗) も同じ理由で出さない。直近の月に無くても
+    // 古い月で当たりうる。失敗時は残したリンクが「まだ先がある」ことを示す
     noResults.hidden = totalVisible > 0 || (!query && !activeTag) || (indexInFlight && !!query)
-      || (olderInFlight && isFiltering);
+      || (!olderLoaded && isFiltering);
     if (tagFeedEl) {
       if (activeTag) {
         tagFeedLink.href = tagsBaseUrl + encodeURIComponent(activeTag) + '/feed.xml';
