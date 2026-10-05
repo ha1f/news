@@ -149,11 +149,18 @@ $ui-border-color: #8d8d8d; // 背景 #fdfdfd と 3.26:1
   border-radius: 4px;
   cursor: pointer;
   transition: color 0.15s, border-color 0.15s;
+  // アーカイブでは古い月へのリンク (<a>) にも使う (#354)。button と同じ見た目に揃える
+  box-sizing: border-box;
+  text-align: center;
+  text-decoration: none;
 
   &:hover {
     color: $brand-color;
     border-color: $brand-color;
+    text-decoration: none;
   }
+
+  &[hidden] { display: none; }
 }
 
 .archive-excerpt {

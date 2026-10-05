@@ -1,0 +1,48 @@
+{%- comment -%}アーカイブの月ブロック。archive.md（直近の月）と archive-older.html（それより前）が
+同じ描画を使う (#354)。include.groups は月ごとに group_by_exp した投稿、
+include.offset / include.limit でどの月を描くかを決める{%- endcomment -%}
+{%- assign date_format = site.minima.date_format | default: "%Y年%-m月%-d日" -%}
+{% for group in include.groups offset: include.offset limit: include.limit %}
+<div class="archive-month" data-month="{{ group.name }}">
+<h2>{{ group.items.first.date | date: '%Y年%-m月' }}</h2>
+
+<ul class="archive-list">
+{% for post in group.items %}
+  {%- comment -%}絞り込み対象の本文テキストは archive-index.json に出してある (#354)。
+  ここに data-content として埋めると、読者が絞り込む前に本文全文 (実測 401KB /
+  ページ全体の 47%) を受け取ることになり、記事の蓄積に比例して増え続ける。
+  data-url が JSON のキー{%- endcomment -%}
+  {%- comment -%}article_tags（記事単位のトピック）を持つ日は、トピックで絞ったときに
+  その日の見出しのうち該当する記事だけを残す (#354)。持たない日は従来どおり日単位で当てる。
+  N 本目の見出しに article_tags の N 番目を当てる番号は、#article-N の着地点と同じ
+  split: '<li>' の位置番号{%- endcomment -%}
+  <li data-url="{{ post.url | relative_url }}" data-tags="{{ post.tags | join: ',' | escape }}"{% if post.article_tags %} data-article-tags{% endif %}>
+    <span class="archive-item-date">{{ post.date | date: date_format }}</span>
+    <a href="{{ post.url | relative_url }}">{{ post.title }}</a>
+    {% if post.tags.size > 0 %}<span class="archive-item-tags">{{ post.tags | join: " / " }}</span>{% endif %}
+    {% if post.excerpt %}<p class="archive-excerpt">{{ post.excerpt | strip_html | truncate: 100 }}</p>{% endif %}
+    {%- if post.content contains '<li>' -%}
+    {%- assign article_items = post.content | split: '<li>' -%}
+    {%- assign article_count = 0 -%}
+    <ul class="archive-article-titles">
+      {%- for item in article_items offset: 1 -%}
+        {%- if item contains '</a>' -%}
+          {%- assign before_close_a = item | split: '</a>' | first -%}
+          {%- assign link_text = before_close_a | strip_html -%}
+          {%- if link_text.size > 1 -%}
+            {%- assign article_count = article_count | plus: 1 -%}
+            <li{% if article_count > 3 %} class="archive-article-extra" hidden{% endif %}{% if post.article_tags %} data-tags="{{ post.article_tags[forloop.index0] | join: ',' | escape }}"{% endif %}><a href="{{ post.url | relative_url }}#article-{{ forloop.index }}">{{ link_text }}</a></li>
+          {%- endif -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {%- assign remaining = article_count | minus: 3 -%}
+      {%- if remaining > 0 -%}
+      <li class="archive-article-more"><a href="{{ post.url | relative_url }}">他{{ remaining }}件</a></li>
+      {%- endif -%}
+    </ul>
+    {%- endif -%}
+  </li>
+{% endfor %}
+</ul>
+</div>
+{% endfor %}

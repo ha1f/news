@@ -12,6 +12,8 @@ baseurl: "/news"
 plugins:
   - jekyll-sitemap
 header_pages: [about.md, profiles/index.md, archive.md]
+# archive.html に直接描く直近の月数。それより前は archive-older.html に分け、必要になった時点で取得する (#354)
+archive_initial_months: 3
 exclude: [CLAUDE.md, README.md, DESIGN.md, VISION.md]
 rss: "RSS"
 

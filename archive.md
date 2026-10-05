@@ -14,7 +14,6 @@ title: "アーカイブ"
 {%- endif -%}
 
 {% assign default_posts = site.posts | where_exp: "post", "post.profile == nil" %}
-{%- assign date_format = site.minima.date_format | default: "%Y年%-m月%-d日" -%}
 
 {%- assign all_tags = "" -%}
 {%- for post in default_posts -%}
@@ -49,65 +48,77 @@ title: "アーカイブ"
 
 {% assign posts_by_month = default_posts | group_by_exp: "post", "post.date | date: '%Y%m'" | sort: "name" | reverse %}
 
-{% for group in posts_by_month %}
-<div class="archive-month" data-month="{{ group.name }}">
-<h2>{{ group.items.first.date | date: '%Y年%-m月' }}</h2>
-
-<ul class="archive-list">
-{% for post in group.items %}
-  {%- comment -%}絞り込み対象の本文テキストは archive-index.json に出してある (#354)。
-  ここに data-content として埋めると、読者が絞り込む前に本文全文 (実測 401KB /
-  ページ全体の 47%) を受け取ることになり、記事の蓄積に比例して増え続ける。
-  data-url が JSON のキー{%- endcomment -%}
-  {%- comment -%}article_tags（記事単位のトピック）を持つ日は、トピックで絞ったときに
-  その日の見出しのうち該当する記事だけを残す (#354)。持たない日は従来どおり日単位で当てる。
-  N 本目の見出しに article_tags の N 番目を当てる番号は、#article-N の着地点と同じ
-  split: '<li>' の位置番号{%- endcomment -%}
-  <li data-url="{{ post.url | relative_url }}" data-tags="{{ post.tags | join: ',' | escape }}"{% if post.article_tags %} data-article-tags{% endif %}>
-    <span class="archive-item-date">{{ post.date | date: date_format }}</span>
-    <a href="{{ post.url | relative_url }}">{{ post.title }}</a>
-    {% if post.tags.size > 0 %}<span class="archive-item-tags">{{ post.tags | join: " / " }}</span>{% endif %}
-    {% if post.excerpt %}<p class="archive-excerpt">{{ post.excerpt | strip_html | truncate: 100 }}</p>{% endif %}
-    {%- if post.content contains '<li>' -%}
-    {%- assign article_items = post.content | split: '<li>' -%}
-    {%- assign article_count = 0 -%}
-    <ul class="archive-article-titles">
-      {%- for item in article_items offset: 1 -%}
-        {%- if item contains '</a>' -%}
-          {%- assign before_close_a = item | split: '</a>' | first -%}
-          {%- assign link_text = before_close_a | strip_html -%}
-          {%- if link_text.size > 1 -%}
-            {%- assign article_count = article_count | plus: 1 -%}
-            <li{% if article_count > 3 %} class="archive-article-extra" hidden{% endif %}{% if post.article_tags %} data-tags="{{ post.article_tags[forloop.index0] | join: ',' | escape }}"{% endif %}><a href="{{ post.url | relative_url }}#article-{{ forloop.index }}">{{ link_text }}</a></li>
-          {%- endif -%}
-        {%- endif -%}
-      {%- endfor -%}
-      {%- assign remaining = article_count | minus: 3 -%}
-      {%- if remaining > 0 -%}
-      <li class="archive-article-more"><a href="{{ post.url | relative_url }}">他{{ remaining }}件</a></li>
-      {%- endif -%}
-    </ul>
-    {%- endif -%}
-  </li>
-{% endfor %}
-</ul>
+{%- comment -%}絞り込み前に受け取る HTML が記事の蓄積に比例して増え続けないよう、
+ページに直接描くのは直近 initial_months か月分だけにする (#354)。それより前の月は
+archive-older.html に描き、「過去の記事を表示」か絞り込みを始めた時点で取得して差し込む。
+JS が動かない読者にはそのままリンクとして働く。月数は archive-older.html と共有するため _config.yml に置く{%- endcomment -%}
+{%- assign initial_months = site.archive_initial_months | default: 3 -%}
+<div id="archive-months">
+{% include archive-months.html groups=posts_by_month offset=0 limit=initial_months %}
 </div>
-{% endfor %}
+{%- assign older_months = posts_by_month.size | minus: initial_months -%}
+{%- if older_months > 0 %}
+<div class="archive-older"><a id="archive-show-older" class="archive-show-more" href="{{ '/archive-older.html' | relative_url }}">過去の記事を表示（他{{ older_months }}ヶ月分）</a></div>
+{%- endif %}
 
 <script>
 (function() {
-  var INITIAL_MONTHS = 3;
+  var INITIAL_MONTHS = {{ initial_months }};
   var input = document.getElementById('archive-filter');
   var noResults = document.getElementById('archive-no-results');
-  var months = document.querySelectorAll('.archive-month');
+  var monthsEl = document.getElementById('archive-months');
+  var months = monthsEl.querySelectorAll('.archive-month');
   var tagButtons = document.querySelectorAll('.archive-tag');
   var activeTag = null;
   var tagFeedEl = document.getElementById('archive-tag-feed');
   var tagFeedLink = document.getElementById('archive-tag-feed-link');
   var tagFeedName = document.getElementById('archive-tag-feed-name');
   var tagsBaseUrl = '{{ "/tags/" | relative_url }}';
-  var showAll = months.length <= INITIAL_MONTHS;
-  var moreBtn = null;
+  var moreBtn = document.getElementById('archive-show-older');
+  var showAll = !moreBtn;
+
+  // 直近 INITIAL_MONTHS か月より前は archive-older.html にあり、ページには入っていない
+  // (#354)。「過去の記事を表示」を押すか絞り込みを始めた時点で取得して差し込む。
+  // 取得に失敗したら moreBtn をリンクのまま残し、読者が自分で開けるようにする
+  var olderLoaded = !moreBtn;
+  var olderInFlight = false;
+  // 失敗したら、読者が次に操作するまで取り直さない。取得後の applyFilters が
+  // 絞り込み中に再び取得を始めるので、抑止が無いと失敗→再取得が止まらなくなる
+  var olderFailed = false;
+  var focusFirstOlder = false;
+
+  function loadOlderMonths() {
+    if (olderLoaded || olderInFlight || olderFailed) return;
+    if (typeof fetch !== 'function' || typeof DOMParser !== 'function') return;
+    olderInFlight = true;
+    fetch(moreBtn.href)
+      .then(function(res) { return res.ok ? res.text() : Promise.reject(res.status); })
+      .then(function(html) {
+        var doc = new DOMParser().parseFromString(html, 'text/html');
+        var older = doc.querySelectorAll('#archive-months .archive-month');
+        // 200 でも中身が想定外 (ログイン画面・プロキシのエラーページ) なら失敗として扱う。
+        // 0 件を「読み込み済み」にすると、リンクが消えたまま古い月に二度と届かない
+        if (older.length === 0) return Promise.reject('empty');
+        for (var i = 0; i < older.length; i++) {
+          monthsEl.appendChild(document.importNode(older[i], true));
+        }
+        months = monthsEl.querySelectorAll('.archive-month');
+        olderLoaded = true;
+      })
+      .catch(function() { olderFailed = true; })
+      .then(function() {
+        olderInFlight = false;
+        applyFilters();
+        // 表示されてからでないとフォーカスできないので applyFilters の後
+        var first = olderLoaded && focusFirstOlder && months[INITIAL_MONTHS];
+        var heading = first && first.style.display !== 'none' && first.querySelector('h2');
+        if (heading) {
+          heading.setAttribute('tabindex', '-1');
+          heading.focus();
+        }
+        focusFirstOlder = false;
+      });
+  }
 
   // 本文テキストは絞り込みを始めるまで取得しない (#354)。到着するまでは
   // タイトルと日付だけで当て、到着したら applyFilters をもう一度回して
@@ -141,14 +152,18 @@ title: "アーカイブ"
       });
   }
 
-  if (!showAll) {
-    moreBtn = document.createElement('button');
-    moreBtn.className = 'archive-show-more';
-    var hiddenCount = months.length - INITIAL_MONTHS;
-    moreBtn.textContent = '過去の記事を表示（他' + hiddenCount + 'ヶ月分）';
-    months[months.length - 1].parentNode.appendChild(moreBtn);
-    moreBtn.addEventListener('click', function() {
+  if (moreBtn) {
+    moreBtn.addEventListener('click', function(e) {
+      // 取得できない環境と、新しいタブで開く操作 (修飾キー) はリンクのまま通す
+      if (typeof fetch !== 'function' || typeof DOMParser !== 'function') return;
+      if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+      e.preventDefault();
       showAll = true;
+      olderFailed = false;
+      // 押したリンク自身が消えるので、取得後にフォーカスを先頭の古い月の見出しへ移す
+      // (キーボード・読み上げの利用者が位置を見失わないように)
+      focusFirstOlder = true;
+      loadOlderMonths();
       applyFilters();
     });
   }
@@ -212,6 +227,7 @@ title: "アーカイブ"
     var query = (input ? input.value : '').toLowerCase().trim();
     var isFiltering = !!(query || activeTag);
     if (query) loadContentIndex(query);
+    if (isFiltering) loadOlderMonths();
     var totalVisible = 0;
 
     for (var i = 0; i < months.length; i++) {
@@ -260,11 +276,16 @@ title: "アーカイブ"
       totalVisible += monthVisible;
     }
 
-    if (moreBtn) moreBtn.hidden = showAll || isFiltering;
+    // 古い月を取得できなかったとき (取得中を除く) は、絞り込み中でもリンクを残す。
+    // 結果が直近の月だけに偏っていることを読者が知る手がかりはこれしかない
+    if (moreBtn) moreBtn.hidden = olderLoaded ? (showAll || isFiltering) : olderInFlight;
     // 本文インデックスの取得中は「見つかりません」を出さない。本文でしか
     // 当たらない語は到着するまで 0 件に見えるので、断定して出すと読者には
     // 「無かった」と読める (実測: 50KB/s の回線で最大約3秒この状態だった)
-    noResults.hidden = totalVisible > 0 || (!query && !activeTag) || (indexInFlight && !!query);
+    // 古い月を取得できていない間 (取得中・失敗) も同じ理由で出さない。直近の月に無くても
+    // 古い月で当たりうる。失敗時は残したリンクが「まだ先がある」ことを示す
+    noResults.hidden = totalVisible > 0 || (!query && !activeTag) || (indexInFlight && !!query)
+      || (!olderLoaded && isFiltering);
     if (tagFeedEl) {
       if (activeTag) {
         tagFeedLink.href = tagsBaseUrl + encodeURIComponent(activeTag) + '/feed.xml';
@@ -281,6 +302,7 @@ title: "アーカイブ"
   for (var k = 0; k < tagButtons.length; k++) {
     tagButtons[k].addEventListener('click', function() {
       var tag = this.getAttribute('data-tag');
+      olderFailed = false;
       if (activeTag === tag) {
         activeTag = null;
         this.classList.remove('active');
@@ -296,7 +318,10 @@ title: "アーカイブ"
   }
 
   if (input) {
-    input.addEventListener('input', applyFilters);
+    input.addEventListener('input', function() {
+      olderFailed = false;
+      applyFilters();
+    });
     // 本文インデックスは検索窓に触れた時点で取りにいく。1文字目を待つと、
     // 到着までのあいだタイトル・日付だけで当たった少ない結果が完成品の顔で出る。
     // 窓に触れない読者 (タグ・「過去の記事も見る」だけ) は取得しない
