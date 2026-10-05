@@ -196,6 +196,8 @@ layout: default
     // 既定は先頭3件だけを見せる。トピックで絞ったときは、記事単位のトピックを持つ日なら
     // そのトピックの記事「だけ」を残す (#354)。持たない日は既定の3件のまま
     function revealTaggedTitles(item, tag) {
+      // 持たない日は 4 本目以降を DOM に持たないので、触ると「他N件」が隠れる
+      if (!item.hasAttribute('data-article-tags')) return;
       var titles = articleTitles(item);
       var more = item.querySelector('.archive-article-more');
       var tagged = titlesWithTag(item, tag);
