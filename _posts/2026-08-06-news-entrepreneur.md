@@ -3,7 +3,18 @@ layout: post
 title: "Jeff DeanらがDiscovery Loopを創業（起業家）"
 date: 2026-08-06
 profile: entrepreneur
-tags: [AI, デザイン, ハードウェア, ビジネス, 科学, 経済, 開発]
+tags: [AI, ビジネス, 経済, ハードウェア]
+article_tags:
+  - [ビジネス, AI]
+  - [ビジネス]
+  - [ビジネス]
+  - [AI, ビジネス]
+  - [ビジネス]
+  - [ビジネス]
+  - [ハードウェア, AI]
+  - [経済]
+  - [ビジネス]
+  - [ビジネス]
 ---
 
 Jeff Deanら伝説的Google AI研究者がまとめて独立し、スタートアップ「Discovery Loop」を設立。KlaviyoはAgency買収でCPOを獲得、ShopifyのQ2ではAI経由トラフィックが前年比3倍——AI時代の人材と事業の再編が一気に動いた。一方でStarlinkに押されたHughesnetが破産申請、競争の明暗がくっきりと分かれる。

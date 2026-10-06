@@ -3,7 +3,18 @@ layout: post
 title: "Anthropic IPOにNVIDIAが1.5兆円検討（起業家）"
 date: 2026-09-16
 profile: entrepreneur
-tags: [AI, ビジネス, 経済, 社会]
+tags: [AI, ビジネス, 社会]
+article_tags:
+  - [AI, 社会]
+  - [ビジネス]
+  - [ビジネス]
+  - [ビジネス, AI]
+  - [ビジネス, AI]
+  - [ビジネス]
+  - [ビジネス, 社会]
+  - [社会, AI]
+  - [AI]
+  - [社会]
 ---
 
 OpenAI・Anthropic・Google DeepMindの3社がAI安全性について非公式に協議していたことが判明、Anthropicの11月IPOではNVIDIAが約1.5兆円のアンカー投資を検討中。AEO（AI検索最適化）のProfoundがシリーズDで$1.8B評価に到達するなど、AI関連の資金調達が加速する一日。

@@ -4,6 +4,17 @@ title: "Sonnet 5.5公開、Cloudflareはエージェント向けCLIへ（ソフ�
 date: 2026-09-29
 profile: engineer
 tags: [AI, 開発, セキュリティ, ハードウェア]
+article_tags:
+  - [AI]
+  - [AI, セキュリティ]
+  - [開発, AI]
+  - [開発]
+  - [開発]
+  - [セキュリティ, 開発]
+  - [開発]
+  - [開発]
+  - [ハードウェア]
+  - [開発]
 ---
 
 Anthropic が Claude Sonnet 5.5 を公開した。前世代より3割以上速く、料金は据え置き。暴走するAIエージェントへの対策が Nvidia から出る一方、Cloudflare は CLI の主な利用者をエージェントと見て作り直した。Rust、Java、HTTP/3 と、足回りの話も続く。

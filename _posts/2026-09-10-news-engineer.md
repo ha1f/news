@@ -3,7 +3,18 @@ layout: post
 title: "Tailwind買収とCUDAカーネルのRust対応（ソフトウェアエンジニア）"
 date: 2026-09-10
 profile: engineer
-tags: [開発, AI, ハードウェア]
+tags: [AI, 開発, ビジネス, ハードウェア]
+article_tags:
+  - [ビジネス, 開発]
+  - [開発, ハードウェア]
+  - [開発, ハードウェア]
+  - [AI, 開発]
+  - [AI, 開発]
+  - [AI, 開発]
+  - [開発, AI]
+  - [開発]
+  - [開発]
+  - [AI, 開発]
 ---
 
 Tailwind CSSがShopifyに買収され、CSSフレームワークの未来に議論が沸騰。AppleはiPhone Duo発表でiOS開発者に新しい画面サイズを突きつけ、NVIDIAはGPUカーネルをRustで書く公式ルートを整えた。開発者ツールの地殻変動が一日に集中した。

@@ -3,7 +3,18 @@ layout: post
 title: "ChatGPTからPhotoshop操作、Adobe連携（デザイナー）"
 date: 2026-08-08
 profile: designer
-tags: [AI, セキュリティ, デザイン, ハードウェア, 科学, 経済, 開発]
+tags: [AI, 開発, デザイン, ハードウェア, 社会]
+article_tags:
+  - [AI, デザイン]
+  - [ハードウェア, デザイン]
+  - [AI, デザイン]
+  - [AI]
+  - [AI, 開発]
+  - [AI]
+  - [デザイン]
+  - [社会, AI]
+  - [AI, デザイン]
+  - [開発]
 ---
 
 ChatGPTからPhotoshopやIllustratorを直接操作できる「Adobe for ChatGPT」がリリース。OpenAIは動く部品で「生きている感」を追求するスマートスピーカーを発表し、Gen Zのマッチングアプリはスワイプを捨ててAIマッチングに舵を切った。デザインの手段もプロダクトの形も、静かに塗り替わり始めている。

@@ -3,7 +3,16 @@ layout: post
 title: "Anthropicのバイオ兵器悪用疑惑に論争（研究者）"
 date: 2026-09-23
 profile: researcher
-tags: [AI, 科学]
+tags: [AI, セキュリティ, 科学]
+article_tags:
+  - [AI, セキュリティ]
+  - [AI]
+  - [AI]
+  - [AI]
+  - [AI]
+  - [AI]
+  - [科学]
+  - [AI]
 ---
 
 AnthropicのAIがバイオ兵器研究に悪用された疑いを巡る報告書が科学者の間で論争を呼ぶ一方、AI業界の誇大宣伝そのものに警鐘を鳴らす声も強まった一日。OpenAIの新型AI「GPT-6 Astra」は80年以上前の未解読暗号を独力で解いてみせ、査読制度や遺伝子解析の現場では地道な検証が続く。

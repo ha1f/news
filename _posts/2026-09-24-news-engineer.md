@@ -3,7 +3,19 @@ layout: post
 title: "Claude Code、AGENTS.md読込に対応（ソフトウェアエンジニア）"
 date: 2026-09-24
 profile: engineer
-tags: [AI, 開発, セキュリティ, 科学, ハードウェア]
+tags: [AI, 開発, セキュリティ, 科学]
+article_tags:
+  - [AI, 科学]
+  - [AI, 開発]
+  - [開発, セキュリティ]
+  - [セキュリティ, 開発]
+  - [開発]
+  - [AI, 開発]
+  - [AI]
+  - [開発]
+  - [開発]
+  - [開発]
+  - [開発]
 ---
 
 Anthropicの新設バイオラボで、Claudeが人間の大枠指示だけを頼りに未知の酵素系を見つけた。同じタイミングでClaude CodeがAGENTS.md対応を明かし、コーディングエージェントを手元環境からどう隔離するかを巡る議論もHackerNewsで熱を帯びた。足元にはB+ツリーやRailway指向設計といった定番の設計論、締めにはDoomをSQLへ移植する酔狂な実験まで、振れ幅の大きい一日。

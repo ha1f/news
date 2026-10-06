@@ -3,7 +3,18 @@ layout: post
 title: "Nvidiaは「AIの中央銀行」、年内IPOは否定（起業家）"
 date: 2026-09-13
 profile: entrepreneur
-tags: [AI, ビジネス, 経済, セキュリティ, 社会]
+tags: [AI, セキュリティ, ビジネス, 経済, 社会]
+article_tags:
+  - [ビジネス]
+  - [AI, 経済]
+  - [AI, ビジネス]
+  - [AI, ビジネス]
+  - [ビジネス]
+  - [経済]
+  - [経済, 社会]
+  - [社会, AI]
+  - [セキュリティ]
+  - [ビジネス]
 ---
 
 アルトマンCEOが「2026年のIPOは賢明ではない」と明言、Economist誌はNvidiaを「AIの中央銀行」と表現した。MetaのAIエージェント「Muse」が米国アプリ2位に急浮上し、インドのPocket FMはAI活用で売上$500Mに倍増——AIマネーの流れと新興市場の勢いが交差する一日。

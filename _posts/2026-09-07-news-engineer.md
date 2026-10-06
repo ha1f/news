@@ -3,7 +3,18 @@ layout: post
 title: "Asahi LinuxがM3対応、短い出力は逆にコスト増（ソフトウェアエンジニア）"
 date: 2026-09-07
 profile: engineer
-tags: [AI, 開発, セキュリティ, ハードウェア, 社会]
+tags: [AI, 開発, セキュリティ, ハードウェア]
+article_tags:
+  - [ハードウェア, 開発]
+  - [AI, 開発]
+  - [AI, セキュリティ]
+  - [開発]
+  - [開発]
+  - [開発, AI]
+  - [開発]
+  - [開発]
+  - [開発, セキュリティ]
+  - [開発]
 ---
 
 Asahi LinuxがM3チップへの対応を発表、Apple Silicon上のLinux環境がまた一歩前進。AIコーディングではGitHubが「出力を短くすると逆にコスト増」という実測データを公開し、GPT-6 Astraは公開24時間でジェイルブレークされた。開発ツールではMicrosoftのトライグラムgrep「tgrep」やJSをCにコンパイルする「porffor」など、実用性の高いツールが次々と登場している。

@@ -4,6 +4,17 @@ title: "Tailscale、16年前のSQLiteバグ特定（ソフトウェアエンジ�
 date: 2026-08-13
 profile: engineer
 tags: [AI, 開発, セキュリティ]
+article_tags:
+  - [開発]
+  - [AI]
+  - [AI]
+  - [AI, 開発]
+  - [開発]
+  - [開発]
+  - [開発]
+  - [開発]
+  - [開発]
+  - [セキュリティ, AI]
 ---
 
 Tailscaleが16年潜伏したSQLite WALリセットバグを特定、HNで746ポイントの注目を集める。DeepSeek V4 Pro・Qwen3.8-2.4T・Grok 4.6が同日リリースでモデル競争が過熱。MCPの仕様からセッションが消え、開発者コミュニティは「REST回帰」を議論中。

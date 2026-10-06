@@ -3,7 +3,18 @@ layout: post
 title: "OpenRouter買収とPayPal身売り交渉（起業家）"
 date: 2026-08-17
 profile: entrepreneur
-tags: [AI, ビジネス, 経済, 科学, 社会]
+tags: [AI, ビジネス, 経済, 社会]
+article_tags:
+  - [ビジネス]
+  - [ビジネス]
+  - [ビジネス]
+  - [ビジネス, AI]
+  - [ビジネス]
+  - [ビジネス, AI]
+  - [ビジネス]
+  - [ビジネス, AI]
+  - [経済]
+  - [社会, 経済]
 ---
 
 Stripeが7000億円超でOpenRouterを買収へ——同日、PayPalの身売り交渉も進行中と報じられ、決済業界が大きく動く。OpenAIではIPOを前に幹部退社が続き、VCからはAI投資の「過熱」への警鐘も。M&Aと資金調達の嵐の中、日経平均は年内7万5000円予想まで飛び出す。

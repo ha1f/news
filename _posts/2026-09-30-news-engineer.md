@@ -4,6 +4,18 @@ title: "DevDayでdotsとGPT-6.1 Sol登場、npmではワームが拡散（ソフ
 date: 2026-09-30
 profile: engineer
 tags: [AI, 開発, セキュリティ, ハードウェア]
+article_tags:
+  - [AI, 開発]
+  - [セキュリティ, 開発]
+  - [AI, 開発]
+  - [開発]
+  - [開発]
+  - [開発]
+  - [開発]
+  - [開発, AI]
+  - [開発]
+  - [セキュリティ]
+  - [ハードウェア]
 ---
 
 OpenAI が開発者会議 DevDay 2026 で20件超を発表し、24時間稼働のエージェント「dots」と新モデル「GPT-6.1 Sol」を投入した。開発現場では WSL containers の一般提供や Git 3.0 に向けた動きなど土台の更新が続き、npm では Express を装う9パッケージがワームを広めている。

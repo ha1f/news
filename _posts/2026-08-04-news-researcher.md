@@ -3,7 +3,18 @@ layout: post
 title: "強化学習で結晶設計、脳活動でLLM推論を改善（研究者）"
 date: 2026-08-04
 profile: researcher
-tags: [AI, セキュリティ, ハードウェア, 社会, 科学]
+tags: [AI, 科学, 社会]
+article_tags:
+  - [科学, AI]
+  - [AI, 科学]
+  - [AI]
+  - [AI]
+  - [AI]
+  - [AI]
+  - [科学]
+  - [社会, AI]
+  - [科学]
+  - [科学]
 ---
 
 Nature Machine Intelligenceに強化学習で新規結晶を設計する手法と、脳活動でLLMの推論を改善する研究が同時掲載。NeurIPS 2026の査読シーズンでは「再現コードなし論文のデスクリジェクト」を求める声がr/MachineLearningで白熱している。

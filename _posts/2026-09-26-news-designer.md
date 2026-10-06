@@ -3,7 +3,16 @@ layout: post
 title: "Figmaの作法、ライブWebとAIへ拡大（デザイナー）"
 date: 2026-09-26
 profile: designer
-tags: [デザイン, AI, 開発]
+tags: [AI, 開発, デザイン]
+article_tags:
+  - [デザイン]
+  - [デザイン]
+  - [デザイン]
+  - [開発, デザイン]
+  - [デザイン]
+  - [AI, デザイン]
+  - [AI]
+  - [デザイン]
 ---
 
 初代iPhoneの画面変遷をたどれる「iOS Eras」が公開され、DribbbleではCapCutとのコラボで9つのブランドコンセプトが受賞。React向けの「Once UI」やブラウザ拡張「Squints」など、Figmaの作法をライブなWebに持ち込むツールが相次ぐ一方、PinterestとGoogleフォトはAIで部屋やワードローブを可視化する機能を投入した。

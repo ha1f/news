@@ -3,7 +3,15 @@ layout: post
 title: "AI量産感を正すデザインツール台頭（デザイナー）"
 date: 2026-09-27
 profile: designer
-tags: [AI, デザイン, 開発]
+tags: [AI, 開発, デザイン]
+article_tags:
+  - [デザイン, AI]
+  - [デザイン, 開発]
+  - [AI]
+  - [デザイン, AI]
+  - [デザイン]
+  - [デザイン, AI]
+  - [AI]
 ---
 
 GitHubトレンドには、AIコーディングエージェント特有の「量産型UI」を正すデザインツール『Impeccable』が浮上。レビューツールのlayernoteはFigmaとライブサイトの差分をそのままコーディングエージェントに渡す仕組みを整え、写真編集AI『FinalFrame』は「直すべき一点」だけを1分で示す。DribbbleにはエンタープライズAIのUX設計論やクライアントワークの実践知、QiitaにはAI生成AWS構成図の「AI感」を消す比較検証も並んだ。

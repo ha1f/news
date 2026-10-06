@@ -3,7 +3,18 @@ layout: post
 title: "Agent Plugins 1.0.0が正式リリース（ソフトウェアエンジニア）"
 date: 2026-08-11
 profile: engineer
-tags: [AI, セキュリティ, デザイン, ハードウェア, 科学, 開発]
+tags: [AI, 開発, セキュリティ]
+article_tags:
+  - [開発, AI]
+  - [開発]
+  - [AI, 開発]
+  - [AI]
+  - [開発]
+  - [開発]
+  - [開発, AI]
+  - [開発]
+  - [開発]
+  - [AI, セキュリティ]
 ---
 
 Agent Plugins 1.0.0がMS・OpenAI・AWS・Googleの支持で正式リリース、AIエージェント間のスキル共有が標準化された。RustはGPU上でのSIMD実行とtrait制限の新RFCで二方面から進化中。14MBのLLMがスマートフォンで動き始めた週。

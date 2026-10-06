@@ -4,6 +4,17 @@ title: "MistralとMozillaがブラウザ内AIで提携（ソフトウェアエ�
 date: 2026-09-17
 profile: engineer
 tags: [AI, 開発, セキュリティ]
+article_tags:
+  - [AI]
+  - [AI]
+  - [開発, AI]
+  - [AI, 開発]
+  - [AI, 開発]
+  - [AI, 開発]
+  - [セキュリティ]
+  - [開発]
+  - [AI]
+  - [開発]
 ---
 
 MistralとMozillaがブラウザ内蔵AIで提携し、AIの「使う場所」が広がり始めた。一方でAnthropicはClaudeのチャットとCoworkを統合、DevinはmacOS仮想環境を解放し、開発者の手元でAIが動く面積が一段と拡大している。

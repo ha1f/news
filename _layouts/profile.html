@@ -53,66 +53,95 @@ layout: default
 
   {%- assign posts_by_month = profile_posts | group_by_exp: "post", "post.date | date: '%Y%m'" | sort: "name" | reverse -%}
 
-  {%- for group in posts_by_month -%}
-  <div class="archive-month" data-month="{{ group.name }}">
-  <h2>{{ group.items.first.date | date: '%Y年%-m月' }}</h2>
-
-  <ul class="archive-list">
-  {%- for post in group.items -%}
-    {%- comment -%}絞り込み対象の本文テキストは profiles/{profile}-index.json に出してある (#354)。
-    ここに data-content として埋めると、読者が絞り込む前に本文全文 (実測でこのページの
-    約60%) を受け取ることになり、記事の蓄積に比例して増え続ける。data-url が JSON の
-    キー{%- endcomment -%}
-    {%- comment -%}article_tags（記事単位のトピック）を持つ日は、トピックで絞ったときにその日の
-    見出しのうち該当する記事だけを残す (#354, アーカイブ #502 と同じ)。持たない日は従来どおり
-    日単位で当てる。N 本目の見出しに article_tags の N 番目を当てる番号は、#article-N の着地点と
-    同じ split: '<li>' の位置番号{%- endcomment -%}
-    <li data-date="{{ post.date | date: '%Y-%m-%d' }}" data-url="{{ post.url | relative_url }}" data-tags="{{ post.tags | join: ',' | escape }}"{% if post.article_tags %} data-article-tags{% endif %}>
-      <span class="archive-item-date">{{ post.date | date: date_format }}</span>
-      <a href="{{ post.url | relative_url }}">{{ post.title }}</a>
-      {%- if post.tags.size > 0 %}<span class="archive-item-tags">{{ post.tags | join: " / " }}</span>{% endif -%}
-      {%- if post.excerpt -%}<p class="archive-excerpt">{{ post.excerpt | strip_html | truncate: 100 }}</p>{%- endif -%}
-      {%- if post.content contains '<li>' -%}
-      {%- assign article_items = post.content | split: '<li>' -%}
-      {%- assign article_count = 0 -%}
-      <ul class="archive-article-titles">
-        {%- for item in article_items offset: 1 -%}
-          {%- if item contains '</a>' -%}
-            {%- assign before_close_a = item | split: '</a>' | first -%}
-            {%- assign link_text = before_close_a | strip_html -%}
-            {%- if link_text.size > 1 -%}
-              {%- assign article_count = article_count | plus: 1 -%}
-              {%- comment -%}4本目以降は article_tags を持つ日だけ隠して持つ。持たない日は絞り込みで
-              見せ分ける先が無く、全日ぶん持つとページが約2倍になる (実測 84→157KB){%- endcomment -%}
-              {%- if article_count <= 3 or post.article_tags -%}
-              <li{% if article_count > 3 %} class="archive-article-extra" hidden{% endif %}{% if post.article_tags %} data-tags="{{ post.article_tags[forloop.index0] | join: ',' | escape }}"{% endif %}><a href="{{ post.url | relative_url }}#article-{{ forloop.index }}">{{ link_text }}</a></li>
-              {%- endif -%}
-            {%- endif -%}
-          {%- endif -%}
-        {%- endfor -%}
-        {%- assign remaining = article_count | minus: 3 -%}
-        {%- if remaining > 0 -%}
-        <li class="archive-article-more"><a href="{{ post.url | relative_url }}">他{{ remaining }}件</a></li>
-        {%- endif -%}
-      </ul>
-      {%- endif -%}
-    </li>
+  {%- comment -%}絞り込み前に受け取る HTML が記事の蓄積に比例して増え続けないよう、ページに直接描くのは
+  直近 initial_months か月分だけにする (#508、アーカイブ #505 と同じ方式)。それより前の月は
+  profiles/older/{profile}.html に描き、「過去の記事も見る」か絞り込みを始めた時点で取得して差し込む。
+  既定で見せるのは直近 RECENT_DAYS 日だけなので1か月で足りる。月初めにその日数が前月にかかる日は、
+  script が古い月を先に取得する。月数は profiles/older/*.html と共有するため _config.yml に置く{%- endcomment -%}
+  {%- assign initial_months = site.profile_initial_months | default: 1 -%}
+  {%- assign older_post_count = 0 -%}
+  {%- for group in posts_by_month offset: initial_months -%}
+    {%- assign older_post_count = older_post_count | plus: group.items.size -%}
   {%- endfor -%}
-  </ul>
+  <div id="archive-months">
+  {% include archive-months.html groups=posts_by_month offset=0 limit=initial_months with_date=true %}
   </div>
-  {%- endfor -%}
 
+  {%- if older_post_count > 0 %}
+  <div class="archive-older"><a id="archive-show-older" class="archive-show-more" href="{{ '/profiles/older/' | append: page.profile | append: '.html' | relative_url }}">過去の記事を表示（他{{ older_post_count }}件）</a></div>
+  {%- else %}
   <button id="archive-show-older" class="archive-show-more" hidden></button>
+  {%- endif %}
 
   <script>
   (function() {
     var input = document.getElementById('archive-filter');
     var noResults = document.getElementById('archive-no-results');
     var showOlderBtn = document.getElementById('archive-show-older');
-    var months = document.querySelectorAll('.archive-month');
+    var monthsEl = document.getElementById('archive-months');
+    var months = monthsEl.querySelectorAll('.archive-month');
+    var INITIAL_MONTHS = {{ initial_months }};
+    // ページに入っていない古い月 (profiles/older/{profile}.html) の記事数
+    var OLDER_POSTS = {{ older_post_count }};
     var tagButtons = document.querySelectorAll('.archive-tag');
     var activeTag = null;
     var folded = true;
+
+    // 直近 INITIAL_MONTHS か月より前は profiles/older/{profile}.html にあり、ページには入っていない
+    // (#508)。「過去の記事も見る」を押すか絞り込みを始めた時点で取得して差し込む。
+    // 取得に失敗したらボタンをリンクのまま残し、読者が自分で開けるようにする
+    var olderLoaded = OLDER_POSTS === 0;
+    var olderInFlight = false;
+    // 失敗したら、読者が次に操作するまで取り直さない。取得後の applyFilters が
+    // 絞り込み中に再び取得を始めるので、抑止が無いと失敗→再取得が止まらなくなる
+    var olderFailed = false;
+    var focusFirstOlder = false;
+
+    function loadOlderMonths() {
+      if (olderLoaded || olderInFlight || olderFailed) return;
+      if (typeof fetch !== 'function' || typeof DOMParser !== 'function') return;
+      olderInFlight = true;
+      fetch(showOlderBtn.href)
+        .then(function(res) { return res.ok ? res.text() : Promise.reject(res.status); })
+        .then(function(html) {
+          var doc = new DOMParser().parseFromString(html, 'text/html');
+          var older = doc.querySelectorAll('#archive-months .archive-month');
+          // 200 でも中身が想定外 (ログイン画面・プロキシのエラーページ) なら失敗として扱う。
+          // 0 件を「読み込み済み」にすると、リンクが消えたまま古い月に二度と届かない
+          if (older.length === 0) return Promise.reject('empty');
+          for (var i = 0; i < older.length; i++) {
+            monthsEl.appendChild(document.importNode(older[i], true));
+          }
+          months = monthsEl.querySelectorAll('.archive-month');
+          olderLoaded = true;
+        })
+        .catch(function() { olderFailed = true; })
+        .then(function() {
+          olderInFlight = false;
+          applyFilters();
+          if (focusFirstOlder) {
+            // 取得に失敗したら、リンクに戻ったボタンへフォーカスを返す
+            if (olderLoaded) focusFirstRevealed();
+            else if (showOlderBtn && !showOlderBtn.hidden) showOlderBtn.focus();
+          }
+          focusFirstOlder = false;
+        });
+    }
+
+    // 押したボタン自身が消えるので、新しく見えた最初の日 (折りたたんでいた最新の日) の
+    // 見出しリンクへフォーカスを移す (キーボード・読み上げの利用者が位置を見失わないように)。
+    // 畳むのは日単位なので、古い月の先頭へ移すと当月の途中で出た日を飛ばす。
+    // 表示されてからでないとフォーカスできないので applyFilters の後に呼ぶ
+    function focusFirstRevealed() {
+      var items = monthsEl.querySelectorAll('.archive-list > li[data-date]');
+      for (var i = 0; i < items.length; i++) {
+        if (!cutoffDate || new Date(items[i].getAttribute('data-date') + 'T00:00:00') >= cutoffDate) continue;
+        if (items[i].style.display === 'none') continue;
+        var link = items[i].querySelector('a');
+        if (link) link.focus();
+        return;
+      }
+    }
 
     // 本文テキストは絞り込みを始めるまで取得しない (#354)。到着するまでは
     // タイトルと日付だけで当て、到着したら applyFilters をもう一度回して
@@ -149,28 +178,54 @@ layout: default
     var RECENT_DAYS = 3;
     var cutoffDate = null;
     var olderCount = 0;
+    var earliestInPage = null;
     var allItems = document.querySelectorAll('.archive-list li[data-date]');
     if (allItems.length > 0) {
       var mostRecent = null;
       for (var i = 0; i < allItems.length; i++) {
         var d = new Date(allItems[i].getAttribute('data-date') + 'T00:00:00');
         if (!mostRecent || d > mostRecent) mostRecent = d;
+        if (!earliestInPage || d < earliestInPage) earliestInPage = d;
       }
       cutoffDate = new Date(mostRecent);
       cutoffDate.setDate(cutoffDate.getDate() - (RECENT_DAYS - 1));
-      for (var i = 0; i < allItems.length; i++) {
-        var d = new Date(allItems[i].getAttribute('data-date') + 'T00:00:00');
-        if (d < cutoffDate) olderCount++;
-      }
     }
+
+    // まだ見えていない日数。古い月を取得する前は、その月の記事数 (OLDER_POSTS) をまとめて数える。
+    // 展開後 (取得に失敗してリンクが残ったとき) は、ページ内の日はもう見えているので数えない
+    function countOlder() {
+      var items = monthsEl.querySelectorAll('.archive-list li[data-date]');
+      var count = olderLoaded ? 0 : OLDER_POSTS;
+      if (!folded) return count;
+      for (var i = 0; i < items.length; i++) {
+        if (cutoffDate && new Date(items[i].getAttribute('data-date') + 'T00:00:00') < cutoffDate) count++;
+      }
+      return count;
+    }
+    olderCount = countOlder();
+
+    // 月初めは直近 RECENT_DAYS 日の一部が前月 (= ページに入っていない古い月) にある。
+    // その日だけ古い月を先に取得し、既定の表示から直近の日が欠けないようにする
+    if (OLDER_POSTS > 0 && cutoffDate && earliestInPage > cutoffDate) loadOlderMonths();
 
     if (olderCount > 0 && showOlderBtn) {
       showOlderBtn.textContent = '過去の記事も見る（' + olderCount + '件）';
       showOlderBtn.hidden = false;
-      showOlderBtn.addEventListener('click', function() {
+      showOlderBtn.addEventListener('click', function(e) {
+        // 古い月がページの外にあるとき、ボタンは古い月のページへのリンク。新しいタブで開く
+        // 操作 (修飾キー) は取得済みでもリンクのまま通し、取得できない環境も通す
+        if (OLDER_POSTS > 0) {
+          if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+          if (!olderLoaded && (typeof fetch !== 'function' || typeof DOMParser !== 'function')) return;
+        }
+        e.preventDefault();
         folded = false;
-        this.hidden = true;
+        olderFailed = false;
+        // 未取得なら取得後にフォーカスを移す
+        focusFirstOlder = !olderLoaded;
+        loadOlderMonths();
         applyFilters();
+        if (olderLoaded) focusFirstRevealed();
       });
     }
 
@@ -193,22 +248,34 @@ layout: default
       return result;
     }
 
-    // 既定は先頭3件だけを見せる。トピックで絞ったときは、記事単位のトピックを持つ日なら
-    // そのトピックの記事「だけ」を残す (#354)。持たない日は既定の3件のまま
-    function revealTaggedTitles(item, tag) {
-      // 持たない日は 4 本目以降を DOM に持たないので、触ると「他N件」が隠れる
-      if (!item.hasAttribute('data-article-tags')) return;
+    // 既定は先頭3件だけを見せる。キーワードで絞ったときは一致した見出し「だけ」を
+    // 残して、何が一致したのかを結果から読み取れるようにする。見出しが1件も一致
+    // しない日（概況文や本文で一致した日）は既定の3件に戻す。
+    // トピックで絞ったときは、そのトピックの記事「だけ」を残す (#354)。キーワードとの
+    // 併用では、そのうち見出しが一致したものに絞る (#508、アーカイブと同じ)
+    function revealMatchingTitles(item, query, tag) {
       var titles = articleTitles(item);
       var more = item.querySelector('.archive-article-more');
+      var matched = [];
       var tagged = titlesWithTag(item, tag);
+      var pool = tagged.length > 0 ? tagged : titles;
+
+      if (query) {
+        for (var i = 0; i < pool.length; i++) {
+          if (pool[i].textContent.toLowerCase().indexOf(query) !== -1) matched.push(pool[i]);
+        }
+      }
+      if (matched.length === 0 && tagged.length > 0) matched = tagged;
+
       var hiddenCount = 0;
       for (var j = 0; j < titles.length; j++) {
-        var show = tagged.length > 0
-          ? tagged.indexOf(titles[j]) !== -1
+        var show = matched.length > 0
+          ? matched.indexOf(titles[j]) !== -1
           : !titles[j].classList.contains('archive-article-extra');
         titles[j].hidden = !show;
         if (!show) hiddenCount++;
       }
+
       if (more) {
         more.hidden = hiddenCount === 0;
         var link = more.querySelector('a');
@@ -222,6 +289,7 @@ layout: default
       var isFiltering = !!(query || activeTag);
       var totalVisible = 0;
       if (query) loadContentIndex(query);
+      if (isFiltering) loadOlderMonths();
 
       for (var i = 0; i < months.length; i++) {
         var items = months[i].querySelectorAll('.archive-list > li');
@@ -264,7 +332,7 @@ layout: default
           items[j].style.display = visible ? '' : 'none';
           if (visible) {
             monthVisible++;
-            revealTaggedTitles(items[j], activeTag);
+            revealMatchingTitles(items[j], query, activeTag);
           }
         }
 
@@ -275,9 +343,16 @@ layout: default
       // 本文インデックスの取得中は「見つかりません」を出さない。本文でしか
       // 当たらない語は到着するまで 0 件に見えるので、断定して出すと読者には
       // 「無かった」と読める
-      noResults.hidden = totalVisible > 0 || (!query && !activeTag) || (indexInFlight && !!query);
+      // 古い月を取得できていない間 (取得中・失敗) も同じ理由で出さない。直近の月に無くても
+      // 古い月で当たりうる。失敗時は残したリンクが「まだ先がある」ことを示す
+      noResults.hidden = totalVisible > 0 || (!query && !activeTag) || (indexInFlight && !!query)
+        || (!olderLoaded && isFiltering);
       if (showOlderBtn && olderCount > 0) {
-        showOlderBtn.hidden = !folded || isFiltering;
+        // 件数は折りたたみの解除・古い月の取得で変わる (月初めに先取りした直近の日は数えない)
+        olderCount = countOlder();
+        showOlderBtn.textContent = '過去の記事も見る（' + olderCount + '件）';
+        // 古い月を取得できなかったとき (取得中を除く) は、絞り込み中でも展開後でもリンクを残す
+        showOlderBtn.hidden = olderLoaded ? (!folded || isFiltering) : olderInFlight;
       }
     }
 
@@ -286,6 +361,7 @@ layout: default
     for (var k = 0; k < tagButtons.length; k++) {
       tagButtons[k].addEventListener('click', function() {
         var tag = this.getAttribute('data-tag');
+        olderFailed = false;
         if (activeTag === tag) {
           activeTag = null;
           this.classList.remove('active');
@@ -301,7 +377,10 @@ layout: default
     }
 
     if (input) {
-      input.addEventListener('input', applyFilters);
+      input.addEventListener('input', function() {
+        olderFailed = false;
+        applyFilters();
+      });
       // 本文インデックスは検索窓に触れた時点で取りにいく。1文字目を待つと、
       // 到着までのあいだタイトル・日付だけで当たった少ない結果が完成品の顔で出る。
       // 窓に触れない読者 (タグ・「過去の記事も見る」だけ) は取得しない

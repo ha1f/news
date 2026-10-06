@@ -3,7 +3,18 @@ layout: post
 title: "InstagramのAIがReels編集を10秒に（デザイナー）"
 date: 2026-08-26
 profile: designer
-tags: [AI, デザイン, 開発, 社会]
+tags: [AI, 開発, セキュリティ, ビジネス, デザイン, ハードウェア]
+article_tags:
+  - [AI]
+  - [ビジネス, デザイン]
+  - [AI]
+  - [開発]
+  - [デザイン, ハードウェア]
+  - [デザイン]
+  - [開発]
+  - [セキュリティ]
+  - [セキュリティ, ハードウェア]
+  - []
 ---
 
 InstagramがAIでReels編集を10秒で仕上げる「First Draft」を投入、AIデザインツールの買収も続く。HTMLをCanvasに描画する新APIやNothing OS 5.0のUI刷新など、ビジュアルと技術の両面から「つくる」が変わりつつある一日。

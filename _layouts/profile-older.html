@@ -1,0 +1,16 @@
+---
+layout: page
+---
+{%- comment -%}プロファイルページ (profile.html) が直接描かない古い月の一覧 (#508)。profile.html の
+script が「過去の記事も見る」や絞り込みのときにこのページを取得し、.archive-month だけを取り出して
+差し込む。JS が動かない読者はリンクからこのページそのものを読む。
+offset は profile.html と同じ _config.yml の profile_initial_months。
+ページは profiles/older/ に置く。profiles/ 直下に {profile}-older.html と並べると、CI のスクリーンショットが
+`find _site/profiles -name '*.html' | sort | head -1` で選ぶプロファイルページがこちらに入れ替わりうる{%- endcomment -%}
+{%- assign initial_months = site.profile_initial_months | default: 1 -%}
+{%- assign profile_posts = site.posts | where: "profile", page.profile -%}
+{%- assign posts_by_month = profile_posts | group_by_exp: "post", "post.date | date: '%Y%m'" | sort: "name" | reverse -%}
+<p><a href="{{ '/profiles/' | append: page.profile | append: '.html' | relative_url }}">&larr; {{ page.profile_title | escape }}のフィードに戻る</a>（トピック・キーワードでの絞り込みは全期間が対象です）</p>
+<div id="archive-months">
+{% include archive-months.html groups=posts_by_month offset=initial_months limit=10000 with_date=true %}
+</div>

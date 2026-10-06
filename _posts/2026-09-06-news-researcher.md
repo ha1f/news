@@ -3,7 +3,18 @@ layout: post
 title: "「LLMは認知ウイルス」論文とAI査読ツール（研究者）"
 date: 2026-09-06
 profile: researcher
-tags: [AI, 科学, セキュリティ, 社会]
+tags: [AI, 科学, 社会]
+article_tags:
+  - [AI]
+  - [AI]
+  - [AI]
+  - [AI, 科学]
+  - [科学]
+  - [科学]
+  - [科学]
+  - [社会]
+  - [社会, AI]
+  - [AI]
 ---
 
 「LLMは認知ウイルスだ」という論文がarXivに投稿されHacker Newsで激論。NeurIPS 2026では参照の正当性を自動検証するツールが発表され、査読プロセスへのAI導入が加速する。Science誌ではGLP-1受容体作動薬の大量処方がもたらす予期せぬ副作用に光が当たった。

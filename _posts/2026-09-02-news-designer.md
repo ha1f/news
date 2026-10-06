@@ -3,7 +3,18 @@ layout: post
 title: "Google Pics発表、Canva領域にAI参入（デザイナー）"
 date: 2026-09-02
 profile: designer
-tags: [デザイン, AI, 開発, ハードウェア, 社会]
+tags: [AI, 開発, ビジネス, デザイン, ハードウェア, 社会]
+article_tags:
+  - [デザイン, 開発]
+  - [AI, デザイン]
+  - [デザイン, ビジネス]
+  - [デザイン]
+  - [デザイン]
+  - [ハードウェア, デザイン]
+  - [開発]
+  - [社会]
+  - [AI]
+  - [デザイン]
 ---
 
 CSSの表現力を一段引き上げる「Ambient CSS v3」がHacker Newsで185ポイント、Blenderライクな3D操作をCSSで実現する野心的なプロジェクトが注目を集める。GoogleはCanva対抗のAIデザインツール「Google Pics」を発表し、プロンプトベースのデザイン制作に本格参入。クリエイティブツールとAIの境界線が一層あいまいになる一日。

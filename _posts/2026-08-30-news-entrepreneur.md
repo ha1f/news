@@ -3,7 +3,18 @@ layout: post
 title: "Anthropic提訴とLambdaの10億ドル借入（起業家）"
 date: 2026-08-30
 profile: entrepreneur
-tags: [AI, ビジネス, 経済]
+tags: [AI, ビジネス, 社会]
+article_tags:
+  - [ビジネス]
+  - [社会, AI]
+  - [ビジネス]
+  - [ビジネス]
+  - [ビジネス]
+  - [ビジネス]
+  - [ビジネス, AI]
+  - [AI]
+  - [ビジネス]
+  - [ビジネス]
 ---
 
 OpenAIがSpaceX傘下となったCursorへのモデル提供を11月で打ち切ると発表し、M&A後の契約リスクがAI業界で初めて具体化した。SonyとWarnerによるAnthropic提訴、Lambdaの$10億負債調達と、法務と資金の両面で業界が激しく動いている。国内ではホンダ・日産の車載AI連合やローソンの新出店戦略など、テック外にも戦略転換が広がる。

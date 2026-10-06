@@ -4,6 +4,16 @@ title: "AIとScience誌、CRISPR起源に新発見相次ぐ（研究者）"
 date: 2026-09-24
 profile: researcher
 tags: [AI, 科学, 社会]
+article_tags:
+  - [AI, 科学]
+  - [科学]
+  - [社会, 科学]
+  - [AI, 科学]
+  - [AI]
+  - [AI]
+  - [AI]
+  - [科学]
+  - [AI]
 ---
 
 Anthropicが新設した生命科学ラボで、Claudeが機能未知の新型酵素系をCRISPR類似の反復配列から発見。同じ号のScienceには、CRISPRの起源とされる「VIPR」システムの立体構造を解いた論文が載る。arXivには3団体から複数年契約の支援が入り、独立非営利化への足場が固まった一日。

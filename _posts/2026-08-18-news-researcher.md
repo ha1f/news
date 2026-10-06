@@ -3,7 +3,18 @@ layout: post
 title: "MLでジャズ演奏の「指紋」を検出（研究者）"
 date: 2026-08-18
 profile: researcher
-tags: [AI, 科学, 社会]
+tags: [AI, 開発, 科学, 社会]
+article_tags:
+  - [AI, 科学]
+  - [科学]
+  - [科学]
+  - [社会, 科学]
+  - [科学]
+  - [AI]
+  - [AI]
+  - [AI, 開発]
+  - [社会, AI]
+  - [AI, 社会]
 ---
 
 Nature Machine Intelligenceにジャズ演奏の「指紋」を機械学習で検出する論文が掲載。Scienceでは科学資金の新モデル「民主主義税」が提案され、高血圧の臓器横断シングルセル解析やエボラワクチンの新展開も。AI研究と基礎科学の両面から目が離せない週明け。

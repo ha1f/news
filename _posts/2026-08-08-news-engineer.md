@@ -3,7 +3,18 @@ layout: post
 title: "OracleがOpenJDKでAI生成コード禁止（ソフトウェアエンジニア）"
 date: 2026-08-08
 profile: engineer
-tags: [AI, セキュリティ, ハードウェア, ビジネス, 開発]
+tags: [AI, 開発]
+article_tags:
+  - [開発, AI]
+  - [開発, AI]
+  - [開発, AI]
+  - [開発]
+  - [開発]
+  - [開発]
+  - [開発]
+  - [開発]
+  - [開発]
+  - [開発]
 ---
 
 OracleがOpenJDKへのAI生成コード受け入れを禁止——CEOエリソンの「もうコードは書いていない」発言の直後に。CloudflareはV8ベースのエージェント専用ブラウザをOSSで公開し、SHEでは58%のPRをAIが承認する運用が始まった。開発者のワークフローがAIで塗り替わる一日。

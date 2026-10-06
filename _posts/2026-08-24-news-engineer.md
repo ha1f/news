@@ -3,7 +3,18 @@ layout: post
 title: "LinusがAIでGPUドライバのバグ特定（ソフトウェアエンジニア）"
 date: 2026-08-24
 profile: engineer
-tags: [AI, 開発, セキュリティ, 社会]
+tags: [AI, 開発, ビジネス, 社会]
+article_tags:
+  - [AI]
+  - [開発]
+  - [AI, 開発]
+  - [開発]
+  - [開発]
+  - [開発]
+  - [開発]
+  - [開発, ビジネス]
+  - [AI]
+  - [社会]
 ---
 
 Linus TorvaldsがAIを使ってIntel GPUドライバのバグを特定したコミットが話題に。Cursorは「Origin」でGitHub対抗のホスティングに乗り出し、AIエージェント時代の開発インフラが急速に再編されつつある。

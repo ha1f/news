@@ -3,7 +3,18 @@ layout: post
 title: "NeurIPS採択論文がGitHubに流出（研究者）"
 date: 2026-08-31
 profile: researcher
-tags: [AI, 科学, セキュリティ]
+tags: [AI, 開発, 科学, 社会]
+article_tags:
+  - [AI]
+  - [AI]
+  - [AI, 科学]
+  - [科学, AI]
+  - [科学, AI]
+  - [科学]
+  - [科学]
+  - [社会]
+  - [AI, 科学]
+  - [AI, 開発]
 ---
 
 NeurIPS 2026の採択論文リストがGitHubに流出し、査読プロセスの透明性を巡る議論が再燃。Nature Machine Intelligenceでは暗黙的ニューラル表現による科学データ圧縮、Scienceではサンゴ記録が温暖化によるエルニーニョの強化を示す研究が注目を集めている。

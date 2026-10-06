@@ -3,7 +3,18 @@ layout: post
 title: "DuckDB v2.0プレビューとMojo 1.0到達（ソフトウェアエンジニア）"
 date: 2026-08-18
 profile: engineer
-tags: [AI, 開発, セキュリティ]
+tags: [AI, 開発, セキュリティ, ハードウェア]
+article_tags:
+  - [開発]
+  - [開発, AI]
+  - [開発, AI]
+  - [セキュリティ, AI]
+  - [AI, セキュリティ]
+  - [開発]
+  - [開発]
+  - [開発, ハードウェア]
+  - [開発]
+  - [開発]
 ---
 
 DuckDB v2.0プレビューがHNで500超スコアを記録、Mojo 1.0到達やVS Code 1.133リリースなどOSSの節目が重なる週明け。一方でCopilot Autofixの脆弱性がCI/CDパイプラインを脅かし、GitHub障害を機に代替論も活発化。

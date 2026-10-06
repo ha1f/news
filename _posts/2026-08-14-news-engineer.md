@@ -3,7 +3,18 @@ layout: post
 title: "DeepSeek、開発者向けHarnessを公開（ソフトウェアエンジニア）"
 date: 2026-08-14
 profile: engineer
-tags: [AI, 開発, セキュリティ, ハードウェア]
+tags: [AI, 開発, セキュリティ, 科学, ハードウェア]
+article_tags:
+  - [AI, 開発]
+  - [ハードウェア, セキュリティ]
+  - [開発]
+  - [AI]
+  - [開発]
+  - [開発, AI]
+  - [開発]
+  - [開発]
+  - [AI, 開発]
+  - [科学]
 ---
 
 DeepSeekがモデル提供からツールチェーンへ踏み込む開発者プラットフォーム「Harness」を公開。SvelteKit 3 RCも同日にドロップし、フロントエンドの選択肢がまた動いた一方、systemdの1行ログが49KB超のディスク書き込みを生む問題がissueで炎上中。

@@ -3,7 +3,18 @@ layout: post
 title: "Anthropic2兆ドルIPO、SpaceXは第2宇宙港（起業家）"
 date: 2026-08-26
 profile: entrepreneur
-tags: [AI, ビジネス, セキュリティ, 社会]
+tags: [AI, ビジネス, 社会]
+article_tags:
+  - [ビジネス]
+  - [ビジネス]
+  - [ビジネス]
+  - [ビジネス, AI]
+  - [ビジネス, AI]
+  - [社会, ビジネス]
+  - [ビジネス]
+  - [社会]
+  - [AI, ビジネス]
+  - [社会]
 ---
 
 Anthropicが史上初の2兆ドルIPO最終段階、SpaceXはルイジアナに1,000億ドル規模の第2宇宙港を建設へ。資金調達の規模が桁違いに膨らむ一方、AIヘッジファンドのSEC調査やNitterへの停止通告など、急成長の歪みも表面化している。

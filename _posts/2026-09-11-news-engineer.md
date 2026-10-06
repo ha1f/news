@@ -4,6 +4,17 @@ title: "MicrosoftがRustをTier-1言語に格上げ（ソフトウェアエン�
 date: 2026-09-11
 profile: engineer
 tags: [AI, 開発, セキュリティ]
+article_tags:
+  - [開発]
+  - [開発]
+  - [開発, AI]
+  - [AI]
+  - [AI, 開発]
+  - [AI]
+  - [開発]
+  - [AI]
+  - [AI]
+  - [セキュリティ]
 ---
 
 MicrosoftがRustを社内Tier-1言語に格上げ、ShopifyはReact Nativeを捨ててSwift/Kotlinネイティブに回帰。言語選択のパラダイムが動いた一日に、OpenAI Agents APIのpublic beta公開も重なった。

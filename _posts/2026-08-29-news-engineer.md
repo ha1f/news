@@ -3,7 +3,18 @@ layout: post
 title: "htmx 4.0公開、SourceHutはLLM規約改定（ソフトウェアエンジニア）"
 date: 2026-08-29
 profile: engineer
-tags: [開発, AI, セキュリティ]
+tags: [AI, 開発, セキュリティ, デザイン]
+article_tags:
+  - [開発]
+  - [開発]
+  - [AI]
+  - [開発]
+  - [開発]
+  - [デザイン]
+  - [開発, AI]
+  - [AI, 開発]
+  - [セキュリティ, AI]
+  - [AI, 開発]
 ---
 
 htmx 4.0がリリースされ、Apple Virtualization.frameworkで仮想iPhoneを起動するCLIツールがGitHub Trendingに浮上。SourceHutはLLM利用に関してTOS改定、OSSとAIの関係が改めて問われる一日。

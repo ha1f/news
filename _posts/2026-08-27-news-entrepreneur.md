@@ -3,7 +3,18 @@ layout: post
 title: "NVIDIA売上2倍、Anthropicは450億ドル契約（起業家）"
 date: 2026-08-27
 profile: entrepreneur
-tags: [AI, ビジネス, 経済, 社会]
+tags: [AI, ビジネス, 社会]
+article_tags:
+  - [ビジネス]
+  - [ビジネス]
+  - [ビジネス]
+  - [ビジネス]
+  - [AI]
+  - [社会]
+  - [ビジネス]
+  - [ビジネス]
+  - [ビジネス, AI]
+  - [ビジネス]
 ---
 
 NVIDIAの5〜7月期売上高が前年同期比2倍に達し市場予測を上回った。AmazonのNVIDIAチップ発注3倍増やAnthropicの$45Bインフラ契約が続き、AIへの設備投資競争が過熱している。一方OpenAIでは幹部退職が相次ぎ、MetaとAppleはプラットフォーム戦略の転換を迫られている。

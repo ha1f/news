@@ -4,6 +4,17 @@ title: "LovableとCognition、評価額が急騰（起業家）"
 date: 2026-08-13
 profile: entrepreneur
 tags: [AI, ビジネス, 社会]
+article_tags:
+  - [ビジネス]
+  - [ビジネス]
+  - [社会, ビジネス]
+  - [社会, AI]
+  - [AI, 社会]
+  - [ビジネス]
+  - [ビジネス]
+  - [ビジネス]
+  - [AI]
+  - [ビジネス]
 ---
 
 AIコーディングツールLovableが評価額$13.3B、Cognitionは$40Bでの調達交渉と、AIスタートアップの桁違いのバリュエーションが続く。Anthropicら3社のロビー費がAppleを超え、ホワイトハウスもAI政策の拡大を準備。資金と規制の両面でAI業界の地殻変動が加速している。

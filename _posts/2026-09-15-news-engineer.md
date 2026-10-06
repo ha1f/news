@@ -3,7 +3,18 @@ layout: post
 title: "MCP共同作者が来日、Agent Router始動（ソフトウェアエンジニア）"
 date: 2026-09-15
 profile: engineer
-tags: [AI, 開発, セキュリティ, ハードウェア]
+tags: [AI, 開発, セキュリティ, ビジネス, ハードウェア]
+article_tags:
+  - [AI]
+  - [ビジネス, ハードウェア]
+  - [AI, 開発]
+  - [AI, 開発]
+  - [AI]
+  - [セキュリティ, AI]
+  - [AI, 開発]
+  - [開発]
+  - [開発]
+  - [ハードウェア]
 ---
 
 iOS 27がSiri AIの日本語対応とともに正式配信され、Appleプラットフォームが本格的なAIネイティブ時代に入った。同日、AnthropicはMCPの今後を東京で語り、Linux FoundationがAI API統合プロジェクト「Agent Router」を発足させるなど、AI開発の基盤整備が国際的に加速している。

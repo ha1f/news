@@ -4,6 +4,17 @@ title: "「AIの再帰的自己改善は近くない」（研究者）"
 date: 2026-08-19
 profile: researcher
 tags: [AI, セキュリティ, 科学]
+article_tags:
+  - [AI]
+  - [AI, セキュリティ]
+  - [AI, セキュリティ]
+  - [AI]
+  - [科学]
+  - [科学]
+  - [科学]
+  - [科学]
+  - [科学]
+  - [科学]
 ---
 
 MIT Technology Reviewが「AIの再帰的自己改善は思ったほど近くない」と論じ、Nature Machine Intelligenceはエージェント型AIのサイバーセキュリティを総説。264KBのRAMで拡散モデルを動かす研究や、陽子の内部構造に迫る実験結果も出揃い、基礎から応用まで研究の最前線が動いている。

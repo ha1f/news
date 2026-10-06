@@ -3,7 +3,18 @@ layout: post
 title: "BrewUI登場とM4 MacのGPUドライバー自作（ソフトウェアエンジニア）"
 date: 2026-09-16
 profile: engineer
-tags: [AI, 開発, 科学]
+tags: [AI, 開発, セキュリティ, 科学, ハードウェア]
+article_tags:
+  - [開発]
+  - [開発]
+  - [開発, ハードウェア]
+  - [開発, セキュリティ]
+  - [開発]
+  - [開発]
+  - [AI, 開発]
+  - [AI]
+  - [AI, 開発]
+  - [科学]
 ---
 
 Homebrew公式のSwiftUI GUIアプリ「BrewUI」がGitHub Trendingに登場、iPhoneをMacの外部ディスプレイにするOSS「OpenDisplay」もSwiftで実装されトレンド入り。Apple/Swiftエコシステムの活発さが目立つ一方、M4 Mac MiniのLinux GPUドライバーをわずか1カ月で書き上げた記録やDDDのサブドメイン分割手法など、低レイヤからアーキテクチャまで読み応えのある一日。

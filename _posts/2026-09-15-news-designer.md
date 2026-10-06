@@ -3,7 +3,18 @@ layout: post
 title: "iOS 27配信、Shopifyはネイティブ回帰（デザイナー）"
 date: 2026-09-15
 profile: designer
-tags: [デザイン, 開発, AI, ハードウェア]
+tags: [AI, 開発, 科学, デザイン, ハードウェア]
+article_tags:
+  - [デザイン]
+  - [ハードウェア, デザイン]
+  - [開発]
+  - [デザイン, 開発]
+  - [開発]
+  - [開発]
+  - [AI, デザイン]
+  - [デザイン]
+  - [デザイン]
+  - [科学]
 ---
 
 iOS 27が正式リリースされ、Siri AIの刷新でAppleのUI体験が大きく変わった。Shopifyはモバイルアプリをネイティブに回帰、React 19.3のFragment Refsやneobrutalism.devの新テーマなど、フロントエンドの現場にも新しい道具が揃い始めている。
