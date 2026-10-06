@@ -55,9 +55,9 @@ layout: default
 
   {%- comment -%}絞り込み前に受け取る HTML が記事の蓄積に比例して増え続けないよう、ページに直接描くのは
   直近 initial_months か月分だけにする (#508、アーカイブ #505 と同じ方式)。それより前の月は
-  profiles/{profile}-older.html に描き、「過去の記事も見る」か絞り込みを始めた時点で取得して差し込む。
+  profiles/older/{profile}.html に描き、「過去の記事も見る」か絞り込みを始めた時点で取得して差し込む。
   既定で見せるのは直近 RECENT_DAYS 日だけなので1か月で足りる。月初めにその日数が前月にかかる日は、
-  script が古い月を先に取得する。月数は *-older.html と共有するため _config.yml に置く{%- endcomment -%}
+  script が古い月を先に取得する。月数は profiles/older/*.html と共有するため _config.yml に置く{%- endcomment -%}
   {%- assign initial_months = site.profile_initial_months | default: 1 -%}
   {%- assign older_post_count = 0 -%}
   {%- for group in posts_by_month offset: initial_months -%}
@@ -68,7 +68,7 @@ layout: default
   </div>
 
   {%- if older_post_count > 0 %}
-  <div class="archive-older"><a id="archive-show-older" class="archive-show-more" href="{{ '/profiles/' | append: page.profile | append: '-older.html' | relative_url }}">過去の記事を表示（他{{ older_post_count }}件）</a></div>
+  <div class="archive-older"><a id="archive-show-older" class="archive-show-more" href="{{ '/profiles/older/' | append: page.profile | append: '.html' | relative_url }}">過去の記事を表示（他{{ older_post_count }}件）</a></div>
   {%- else %}
   <button id="archive-show-older" class="archive-show-more" hidden></button>
   {%- endif %}
@@ -81,13 +81,13 @@ layout: default
     var monthsEl = document.getElementById('archive-months');
     var months = monthsEl.querySelectorAll('.archive-month');
     var INITIAL_MONTHS = {{ initial_months }};
-    // ページに入っていない古い月 (profiles/{profile}-older.html) の記事数
+    // ページに入っていない古い月 (profiles/older/{profile}.html) の記事数
     var OLDER_POSTS = {{ older_post_count }};
     var tagButtons = document.querySelectorAll('.archive-tag');
     var activeTag = null;
     var folded = true;
 
-    // 直近 INITIAL_MONTHS か月より前は *-older.html にあり、ページには入っていない
+    // 直近 INITIAL_MONTHS か月より前は profiles/older/{profile}.html にあり、ページには入っていない
     // (#508)。「過去の記事も見る」を押すか絞り込みを始めた時点で取得して差し込む。
     // 取得に失敗したらボタンをリンクのまま残し、読者が自分で開けるようにする
     var olderLoaded = OLDER_POSTS === 0;
@@ -122,15 +122,19 @@ layout: default
         .then(function() {
           olderInFlight = false;
           applyFilters();
-          // 表示されてからでないとフォーカスできないので applyFilters の後
-          var first = olderLoaded && focusFirstOlder && months[INITIAL_MONTHS];
-          var heading = first && first.style.display !== 'none' && first.querySelector('h2');
-          if (heading) {
-            heading.setAttribute('tabindex', '-1');
-            heading.focus();
-          }
+          if (focusFirstOlder) focusOlderHeading();
           focusFirstOlder = false;
         });
+    }
+
+    // 表示されてからでないとフォーカスできないので applyFilters の後に呼ぶ
+    function focusOlderHeading() {
+      var first = olderLoaded && months[INITIAL_MONTHS];
+      var heading = first && first.style.display !== 'none' && first.querySelector('h2');
+      if (heading) {
+        heading.setAttribute('tabindex', '-1');
+        heading.focus();
+      }
     }
 
     // 本文テキストは絞り込みを始めるまで取得しない (#354)。到着するまでは
@@ -204,14 +208,16 @@ layout: default
           // 取得できない環境と、新しいタブで開く操作 (修飾キー) はリンクのまま通す
           if (typeof fetch !== 'function' || typeof DOMParser !== 'function') return;
           if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
-          // 押したボタン自身が消えるので、取得後にフォーカスを先頭の古い月の見出しへ移す
-          focusFirstOlder = true;
         }
         e.preventDefault();
         folded = false;
         olderFailed = false;
+        // 押したボタン自身が消えるので、フォーカスを先頭の古い月の見出しへ移す
+        // (キーボード・読み上げの利用者が位置を見失わないように)。未取得なら取得後に移す
+        focusFirstOlder = !olderLoaded;
         loadOlderMonths();
         applyFilters();
+        if (olderLoaded) focusOlderHeading();
       });
     }
 

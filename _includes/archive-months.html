@@ -1,7 +1,7 @@
 {%- comment -%}アーカイブの月ブロック。archive.md（直近の月）と archive-older.html（それより前）が
 同じ描画を使う (#354)。include.groups は月ごとに group_by_exp した投稿、
 include.offset / include.limit でどの月を描くかを決める。プロファイルページ（profile.html と
-profiles/*-older.html）も同じ描画を使い、include.with_date で直近の日だけを見せる折りたたみ用の
+profiles/older/*.html）も同じ描画を使い、include.with_date で直近の日だけを見せる折りたたみ用の
 data-date を足す{%- endcomment -%}
 {%- assign date_format = site.minima.date_format | default: "%Y年%-m月%-d日" -%}
 {% for group in include.groups offset: include.offset limit: include.limit %}
