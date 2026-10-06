@@ -1,6 +1,8 @@
 {%- comment -%}アーカイブの月ブロック。archive.md（直近の月）と archive-older.html（それより前）が
 同じ描画を使う (#354)。include.groups は月ごとに group_by_exp した投稿、
-include.offset / include.limit でどの月を描くかを決める{%- endcomment -%}
+include.offset / include.limit でどの月を描くかを決める。プロファイルページ（profile.html と
+profiles/*-older.html）も同じ描画を使い、include.with_date で直近の日だけを見せる折りたたみ用の
+data-date を足す{%- endcomment -%}
 {%- assign date_format = site.minima.date_format | default: "%Y年%-m月%-d日" -%}
 {% for group in include.groups offset: include.offset limit: include.limit %}
 <div class="archive-month" data-month="{{ group.name }}">
@@ -16,7 +18,7 @@ include.offset / include.limit でどの月を描くかを決める{%- endcommen
   その日の見出しのうち該当する記事だけを残す (#354)。持たない日は従来どおり日単位で当てる。
   N 本目の見出しに article_tags の N 番目を当てる番号は、#article-N の着地点と同じ
   split: '<li>' の位置番号{%- endcomment -%}
-  <li data-url="{{ post.url | relative_url }}" data-tags="{{ post.tags | join: ',' | escape }}"{% if post.article_tags %} data-article-tags{% endif %}>
+  <li{% if include.with_date %} data-date="{{ post.date | date: '%Y-%m-%d' }}"{% endif %} data-url="{{ post.url | relative_url }}" data-tags="{{ post.tags | join: ',' | escape }}"{% if post.article_tags %} data-article-tags{% endif %}>
     <span class="archive-item-date">{{ post.date | date: date_format }}</span>
     <a href="{{ post.url | relative_url }}">{{ post.title }}</a>
     {% if post.tags.size > 0 %}<span class="archive-item-tags">{{ post.tags | join: " / " }}</span>{% endif %}
