@@ -3,7 +3,18 @@ layout: post
 title: "RustクレートにマルウェアとGitHub障害報告（ソフトウェアエンジニア）"
 date: 2026-08-21
 profile: engineer
-tags: [AI, 開発, セキュリティ]
+tags: [AI, 開発, セキュリティ, ビジネス]
+article_tags:
+  - [セキュリティ]
+  - [セキュリティ, 開発]
+  - [開発]
+  - [開発]
+  - [開発, AI]
+  - [AI, 開発]
+  - [AI, 開発]
+  - [開発]
+  - [開発]
+  - [ビジネス]
 ---
 
 Rustクレートにビルド時マルウェア、AliExpressのWebページはBluetooth接続をハイジャック——開発者が直面する攻撃面が広がっている。GitHubは8月17日障害のポストモーテムを公開し、ツール面ではBun 1.4やLinux 7.2のリリース、ZedのAIコンテキスト共有機能「Delta」が登場した。

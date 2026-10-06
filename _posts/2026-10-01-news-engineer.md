@@ -3,7 +3,18 @@ layout: post
 title: "Gemini 4 Argon登場、EDGのC++もOSS化（ソフトウェアエンジニア）"
 date: 2026-10-01
 profile: engineer
-tags: [AI, 開発, セキュリティ, 社会]
+tags: [AI, 開発, 社会]
+article_tags:
+  - [AI]
+  - [開発, AI]
+  - [開発]
+  - [AI, 開発]
+  - [開発]
+  - [開発]
+  - [開発]
+  - [AI, 開発]
+  - [開発]
+  - [社会]
 ---
 
 Google が新モデル「Gemini 4 Argon」を発表。コーディングとサイバー防御を前面に出した。足元では EDG の C++ フロントエンドが30年を経てオープンソース化され、Vite+ 1.0 や WSL Containers も正式版に到達。一方で Reddit は AI ボット対策として RSS を終了する。

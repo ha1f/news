@@ -3,7 +3,19 @@ layout: post
 title: "AI時代、言語とコード生成の変わり目（ソフトウェアエンジニア）"
 date: 2026-09-27
 profile: engineer
-tags: [AI, 開発, セキュリティ]
+tags: [AI, 開発, セキュリティ, 科学]
+article_tags:
+  - [開発, AI]
+  - [開発, AI]
+  - [開発, AI]
+  - [開発]
+  - [開発]
+  - [開発]
+  - [開発]
+  - [AI, 開発]
+  - [セキュリティ]
+  - [開発]
+  - [AI, 科学]
 ---
 
 GitHub Copilot for XcodeがSwiftトレンド上位に浮上し、YC発のOSS設計ツール「Whiteboard」も410ポイントを集めるなど、AIとコードを書く現場の話題が目立つ一日。ElixirのJosé Valim氏はAIが大半のコードを書く時代に言語コミュニティがどう変わるかを問い、SupabaseではAI生成アプリの設定ミスによるデータ流出も報告された。Swiftの並行処理設計から分散DBの再設計、痛みを感じるAIの研究まで、視点の異なる技術記事が並ぶ。

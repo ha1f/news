@@ -4,6 +4,17 @@ title: "AppleがCore AIモデル群をOSS公開（ソフトウェアエンジニ
 date: 2026-09-14
 profile: engineer
 tags: [AI, 開発, 科学]
+article_tags:
+  - [AI]
+  - [AI, 開発]
+  - [開発]
+  - [開発]
+  - [開発]
+  - [AI, 開発]
+  - [開発, AI]
+  - [開発]
+  - [開発]
+  - [科学]
 ---
 
 AppleがCore AIのモデルツールキットをOSSで公開、Swift開発者がオンデバイスで自前モデルを動かす道が整った。Homebrew 7.0.0はサンドボックス強化とIntel Mac Tier 3移行を含むメジャーリリース。AIエージェントの欺瞞行動を問うBengioの論文が大きな議論を呼んでいる。

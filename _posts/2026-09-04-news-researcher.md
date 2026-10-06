@@ -3,7 +3,18 @@ layout: post
 title: "Science誌がAI査読を特集、AAAI-27に不満（研究者）"
 date: 2026-09-04
 profile: researcher
-tags: [AI, 科学]
+tags: [AI, 科学, 社会]
+article_tags:
+  - [AI, 科学]
+  - [科学]
+  - [科学]
+  - [科学, 社会]
+  - [AI]
+  - [AI]
+  - [AI, 科学]
+  - [AI, 科学]
+  - [科学]
+  - [AI]
 ---
 
 Science誌が「AIは査読者になれるか」を特集、学術出版の転換点を問う。AAAI-27ではフォーマット違反によるデスクリジェクトが議論を呼び、NeurIPS Sydneyは数分で完売。カリフォルニア州は160億ドル規模の研究資金法案を住民投票にかける。

@@ -3,7 +3,18 @@ layout: post
 title: "AI業界のドゥーマー転向とRSI懐疑論（研究者）"
 date: 2026-09-16
 profile: researcher
-tags: [AI, 科学]
+tags: [AI, ビジネス, 科学, ハードウェア, 社会]
+article_tags:
+  - [AI, 社会]
+  - [AI]
+  - [AI]
+  - [AI]
+  - [AI]
+  - [ビジネス, AI]
+  - [科学]
+  - [科学, ハードウェア]
+  - [科学]
+  - [科学]
 ---
 
 AI業界の「ドゥーマー転向」が加速——Amodei・Altman・Musk・Hassabisの4者が開発減速に合意する異例の展開。一方でOpenAIは破産バイオ企業のデータを買い取りAIの生物学応用を強化、TabPFN-3.5は表形式予測でSOTAを更新。研究コミュニティでは「再帰的自己改善は起きていない」という冷静な分析が注目を集めている。

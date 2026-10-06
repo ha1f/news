@@ -3,7 +3,18 @@ layout: post
 title: "RNA偽ノットをAIで設計、血液若返り薬も（研究者）"
 date: 2026-08-28
 profile: researcher
-tags: [AI, 科学]
+tags: [AI, 科学, 社会]
+article_tags:
+  - [科学, AI]
+  - [科学]
+  - [科学]
+  - [科学]
+  - [AI, 社会]
+  - [AI]
+  - [AI]
+  - [AI, 科学]
+  - [AI]
+  - [AI, 社会]
 ---
 
 Science最新号でRNA偽ノットの深層学習設計と自閉症関連タンパク質ネットワークの解明が報告された。Nature Machine Intelligenceは生成AIの「認識的負債」を論じ、MIT Technology Reviewは血液を若返らせるという創薬スタートアップを取り上げている。AI研究とバイオの交差点が今週も熱い。

@@ -3,7 +3,18 @@ layout: post
 title: "AMDがWorld Labs買収、Nvidiaは24兆円の自社株買い（起業家）"
 date: 2026-09-29
 profile: entrepreneur
-tags: [AI, ビジネス, 経済, 社会]
+tags: [AI, ビジネス, 社会]
+article_tags:
+  - [ビジネス, AI]
+  - [ビジネス]
+  - [ビジネス, AI]
+  - [ビジネス, AI]
+  - [AI]
+  - [ビジネス]
+  - [AI, 社会]
+  - [AI, 社会]
+  - [ビジネス]
+  - [ビジネス]
 ---
 
 AMDが Fei-Fei Li 氏の World Labs を82億ドルで買収、Nvidiaは過去最大の1500億ドルの自社株買いを発表した。AI 推論インフラには Modal Labs の急拡大など資金が流れ込み、Shopify は AI エージェントによる決済まで開放する。一方でエージェントの暴走責任や AI ラボの姿勢には厳しい目が向く。国内ではニデックとオムロンが事業の重い決断を迫られている。

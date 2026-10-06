@@ -3,7 +3,18 @@ layout: post
 title: "uBlock Origin消滅、MV2拡張が削除（ソフトウェアエンジニア）"
 date: 2026-09-01
 profile: engineer
-tags: [AI, 開発, セキュリティ, 社会]
+tags: [AI, 開発, セキュリティ]
+article_tags:
+  - [開発]
+  - [開発, AI]
+  - [AI]
+  - [AI, 開発]
+  - [AI, 開発]
+  - [開発]
+  - [開発, AI]
+  - [セキュリティ, AI]
+  - [開発]
+  - [開発]
 ---
 
 GoogleがChrome Web StoreからMV2拡張を削除し、uBlock Originが消滅。DoorDashはクラウドエージェント基盤で月13万タスクを処理し、開発現場のAI統合が加速する一方、LLMの提案品質を疑う研究が315ブクマと大きな反響を呼んでいる。

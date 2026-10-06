@@ -3,7 +3,17 @@ layout: post
 title: "Paramount・WBDが合併完了へ、AI向け融資は値下がり（起業家）"
 date: 2026-10-03
 profile: entrepreneur
-tags: [ビジネス, 経済, AI, セキュリティ, ハードウェア]
+tags: [AI, セキュリティ, ビジネス, ハードウェア]
+article_tags:
+  - [ビジネス]
+  - [ビジネス]
+  - [ビジネス]
+  - [ビジネス, AI]
+  - [AI, ビジネス]
+  - [セキュリティ, AI]
+  - [AI]
+  - [AI]
+  - [ハードウェア]
 ---
 
 Paramount と Warner Bros. Discovery の約1,100億ドルの合併が10月6日に完了し、統合会社は Skydance を名乗る。一方、オラクル主導のAIデータセンターに出した180億ドルの融資は認可の遅れで価格が下がり、AI投資の資金面にほころびが出てきた。Stability AI の音楽への転換や Epic の開発停止など、AIが事業の中身を作り替える話が並ぶ。

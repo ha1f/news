@@ -3,7 +3,18 @@ layout: post
 title: "Opus 5.5公開、運用コスト4割減（ソフトウェアエンジニア）"
 date: 2026-09-23
 profile: engineer
-tags: [AI, 開発, セキュリティ, ハードウェア]
+tags: [AI, 開発, ハードウェア]
+article_tags:
+  - [AI]
+  - [AI]
+  - [開発, AI]
+  - [開発, AI]
+  - [開発]
+  - [AI, 開発]
+  - [開発]
+  - [AI]
+  - [開発]
+  - [ハードウェア]
 ---
 
 Anthropicが「Claude Opus 5.5」を公開し、運用コストを4割抑えつつ最高性能を更新。同じ日、OpenAIの「GPT-6 Astra」は2005年から未解読だった暗号文を独力で解読してみせた。DoorDashやCloudflareの現場ではAIエージェントとインフラ最適化が地道に進み、Swiftの世界にも新顔のツールが相次ぐ一日に。

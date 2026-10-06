@@ -3,7 +3,18 @@ layout: post
 title: "River AI、創業2カ月で11億ドル調達（起業家）"
 date: 2026-08-12
 profile: entrepreneur
-tags: [AI, ビジネス, 経済, 科学, 社会]
+tags: [AI, ビジネス, 科学, デザイン, 社会]
+article_tags:
+  - [ビジネス]
+  - [AI]
+  - [ビジネス]
+  - [ビジネス]
+  - [ビジネス, AI]
+  - [ビジネス]
+  - [ビジネス]
+  - [ビジネス]
+  - [ビジネス, デザイン]
+  - [科学, 社会]
 ---
 
 River AI、創業わずか2カ月で$1.1Bを調達——xAI共同創業者の新会社にGeneral Catalystが賭ける。ChatGPTとGeminiが同時に10億ユーザーを突破し、AI市場はマス消費財の規模に到達。NVIDIAは「AIインフラ銀行」として業界を支える一方、与信集中のリスクも浮上。

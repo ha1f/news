@@ -3,7 +3,18 @@ layout: post
 title: "Next.js 16.3でTurbopackメモリ9割減（ソフトウェアエンジニア）"
 date: 2026-08-26
 profile: engineer
-tags: [AI, 開発, セキュリティ, 科学]
+tags: [AI, 開発, セキュリティ, 科学, ハードウェア, 社会]
+article_tags:
+  - [開発]
+  - [AI, ハードウェア]
+  - [AI]
+  - [開発]
+  - [開発]
+  - [AI, 開発]
+  - [開発, セキュリティ]
+  - [セキュリティ]
+  - [社会]
+  - [科学]
 ---
 
 Next.js 16.3がTurbopackメモリ90%減を達成、OpenAIは自社チップ「Jalapeño」でNVIDIA超えの推論性能を公表。Rustのnever type安定化やFull-Stack Swiftの実践報告など、言語・ランタイムの進化も各所で動きがある。

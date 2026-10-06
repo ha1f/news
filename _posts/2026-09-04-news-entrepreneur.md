@@ -3,7 +3,18 @@ layout: post
 title: "NVIDIA、Hugging Faceを129億ドルで買収（起業家）"
 date: 2026-09-04
 profile: entrepreneur
-tags: [AI, ビジネス, 経済, セキュリティ, ハードウェア, 科学]
+tags: [AI, セキュリティ, ビジネス, 科学, 経済]
+article_tags:
+  - [ビジネス]
+  - [ビジネス]
+  - [AI]
+  - [ビジネス, AI]
+  - [ビジネス, セキュリティ]
+  - [ビジネス]
+  - [ビジネス]
+  - [経済]
+  - [ビジネス]
+  - [科学]
 ---
 
 NVIDIAがHugging Face買収を129億ドルで正式発表、AI基盤を握る争奪戦が新局面に入った。Mira Murati氏のThinking Machinesは$40B評価で$1B調達の観測。為替では円が2日で5円急伸し、起業家のコスト計算にも影響を与えそうだ。

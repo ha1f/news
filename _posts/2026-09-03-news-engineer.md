@@ -4,6 +4,17 @@ title: "Gemini 3.8 Flash発表、moldはRustへ（ソフトウェアエンジニ
 date: 2026-09-03
 profile: engineer
 tags: [AI, 開発]
+article_tags:
+  - [AI]
+  - [AI, 開発]
+  - [開発]
+  - [開発]
+  - [開発]
+  - [開発]
+  - [開発]
+  - [開発]
+  - [開発]
+  - [開発]
 ---
 
 GoogleがGemini 3.8 Flashとサイバーセキュリティ特化の「Flash Cyber」を同時発表、AI基盤モデルの競争が加速。開発基盤では植山類氏がmold linkerのRust書き直しを宣言し、wasmi v2.0がWebAssemblyインタプリタの速度記録を更新するなど、システムレイヤーの刷新が続く。

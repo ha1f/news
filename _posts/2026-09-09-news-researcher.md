@@ -3,7 +3,18 @@ layout: post
 title: "AlphaGenomeが90億のヒトDNA変異を公開（研究者）"
 date: 2026-09-09
 profile: researcher
-tags: [AI, 科学]
+tags: [AI, 科学, ハードウェア]
+article_tags:
+  - [科学, AI]
+  - [AI, 科学]
+  - [AI, 科学]
+  - [科学, AI]
+  - [科学, AI]
+  - [科学]
+  - [科学]
+  - [科学, ハードウェア]
+  - [AI]
+  - [科学]
 ---
 
 Google DeepMindがヒトゲノム90億変異の影響予測マップ「AlphaGenome Atlas」を公開、ゲノム医療の基盤データが一気に拡充。数学の世界ではナビエ–ストークス方程式をめぐりOpenAIとNYU数学者が激突し、テレンス・タオがAIによる未解決問題の「採掘」に警鐘を鳴らしている。

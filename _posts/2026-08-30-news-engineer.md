@@ -3,7 +3,18 @@ layout: post
 title: "Cursor買収でAIエディタ勢力図が一変（ソフトウェアエンジニア）"
 date: 2026-08-30
 profile: engineer
-tags: [AI, 開発]
+tags: [AI, 開発, ビジネス]
+article_tags:
+  - [ビジネス, AI]
+  - [AI, 開発]
+  - [AI, 開発]
+  - [開発]
+  - [開発]
+  - [開発]
+  - [開発]
+  - [開発]
+  - [AI, 開発]
+  - [AI, 開発]
 ---
 
 SpaceXのCursor買収でOpenAIがモデル供給を打ち切り、AIコードエディタの地図が一変。vLLM v0.28やBun 1.4 Rust移植など主要OSSのリリースが相次ぎ、Chrome DevToolsのMCPサーバーがGitHub Trendingに浮上。開発者ツールの進化が止まらない週末。

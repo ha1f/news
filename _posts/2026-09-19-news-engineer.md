@@ -3,7 +3,19 @@ layout: post
 title: "Jev旋風、DoorDashは6万フラグ整理（ソフトウェアエンジニア）"
 date: 2026-09-19
 profile: engineer
-tags: [AI, 開発, セキュリティ, デザイン, 科学]
+tags: [AI, 開発, セキュリティ, 科学]
+article_tags:
+  - [AI]
+  - [AI]
+  - [開発, AI]
+  - [開発, AI]
+  - [セキュリティ]
+  - [開発]
+  - [開発]
+  - [開発]
+  - [開発]
+  - [AI]
+  - [科学]
 ---
 
 TypeSafe AIの新モデル「Jev」が、一晩でエンジニアコミュニティを席巻。Qiita・Zenn・はてブが軒並みJev一色に染まった。一方でDoorDashの本番AIエージェント活用やSwift 6.4のリリースなど、実務寄りの動きも着実に進んだ一日。

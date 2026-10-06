@@ -3,7 +3,18 @@ layout: post
 title: "Scienceに自律研究AI、蛍光タンパク質も設計（研究者）"
 date: 2026-08-21
 profile: researcher
-tags: [AI, 科学, セキュリティ, 社会]
+tags: [AI, 科学, 社会]
+article_tags:
+  - [AI, 科学]
+  - [AI, 社会]
+  - [AI]
+  - [科学]
+  - [科学]
+  - [科学, AI]
+  - [科学]
+  - [科学]
+  - [社会, 科学]
+  - [科学]
 ---
 
 Scienceに「AIエージェントが自律的に生物医学研究を遂行する」論文が掲載——Leskovec、Regev、Snyderら率いるチームの成果。同号ではBakerらが蛍光タンパク質のde novoデザインを報告し、AI能力の評価体制を問うEditorialも。学術出版の信頼性ではペーパーミル論文の広告販売を暴く調査報道が注目を集める。

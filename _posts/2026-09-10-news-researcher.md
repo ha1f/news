@@ -3,7 +3,18 @@ layout: post
 title: "NeurIPSがAI生成疑い論文178本を却下（研究者）"
 date: 2026-09-10
 profile: researcher
-tags: [AI, 科学, 社会]
+tags: [AI, 科学, ハードウェア, 社会]
+article_tags:
+  - [AI, 科学]
+  - [AI, 科学]
+  - [AI]
+  - [AI, 社会]
+  - [AI, 科学]
+  - [AI]
+  - [科学, 社会]
+  - [ハードウェア, 科学]
+  - [AI, 科学]
+  - [科学, 社会]
 ---
 
 NeurIPSがAI生成疑いの論文178本を一括デスクリジェクト、Science誌は「ロボットレビュアー」の可能性と限界を特集。Anthropicの安全性懸念退職は2人が同調し拡大の兆し。学術の信頼基盤とAIの関係が問い直される一日。

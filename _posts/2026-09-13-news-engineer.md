@@ -3,7 +3,18 @@ layout: post
 title: "ANE解析全記録、Spotifyはトークン9割減（ソフトウェアエンジニア）"
 date: 2026-09-13
 profile: engineer
-tags: [開発, AI, セキュリティ, ハードウェア]
+tags: [AI, 開発, セキュリティ, ハードウェア]
+article_tags:
+  - [ハードウェア, 開発]
+  - [AI, 開発]
+  - [開発]
+  - [開発]
+  - [開発]
+  - [開発]
+  - [開発]
+  - [開発]
+  - [開発]
+  - [セキュリティ]
 ---
 
 Apple Neural Engineの非公開アーキテクチャを独力で解析した詳細記事がHacker Newsで217ポイント。SpotifyはClaude Codeのトークン消費を90%削減する手法を公開し、Rustではnever型の安定化がようやく前進——実装の深い話題が揃った。

@@ -4,6 +4,17 @@ title: "OpenRouterの落とし穴とUnity公式プラグイン（ソフトウェ
 date: 2026-09-12
 profile: engineer
 tags: [AI, 開発, 科学, ハードウェア]
+article_tags:
+  - [開発, AI]
+  - [開発, AI]
+  - [AI, 開発]
+  - [開発, AI]
+  - [AI]
+  - [開発]
+  - [AI, ハードウェア]
+  - [開発]
+  - [開発]
+  - [科学]
 ---
 
 OpenRouterの利用ガイドがHacker Newsで690ポイントを集め、AI開発のインフラ選択が熱い議論に。LLM統合ツールからアーキテクチャ、Swiftまで、エンジニアの道具箱が広がる一日。

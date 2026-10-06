@@ -3,7 +3,18 @@ layout: post
 title: "推論モデルの暗黙バイアスと脳信号による操舵（研究者）"
 date: 2026-09-02
 profile: researcher
-tags: [AI, 科学]
+tags: [AI, 科学, ハードウェア]
+article_tags:
+  - [AI]
+  - [AI]
+  - [AI, 科学]
+  - [AI, 科学]
+  - [科学]
+  - [科学, AI]
+  - [科学]
+  - [科学, ハードウェア]
+  - [科学]
+  - [AI]
 ---
 
 Nature Machine Intelligenceが推論モデルに暗黙のバイアスが潜むことを示す新論文を掲載、LLMの公平性をめぐる議論が新たなフェーズに入る。一方HNでは、わずか1.5時間の訓練でARC-AGIベンチマークのLLMを上回る小型Transformerの研究が553ポイントを集め注目。MIT Tech Reviewは遺伝子操作微生物による食料増産の可能性を報じた。

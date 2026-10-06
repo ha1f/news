@@ -3,7 +3,18 @@ layout: post
 title: "Claude CodeのRules不要論とゼロトラスト再設計（ソフトウェアエンジニア）"
 date: 2026-09-06
 profile: engineer
-tags: [AI, 開発, セキュリティ, ハードウェア]
+tags: [AI, 開発, セキュリティ]
+article_tags:
+  - [AI, 開発]
+  - [開発, AI]
+  - [セキュリティ, AI]
+  - [開発, AI]
+  - [開発]
+  - [開発]
+  - [開発]
+  - [開発]
+  - [開発]
+  - [開発]
 ---
 
 「Claude Code の Rules はもう死んでいる」——Rulesファイルの肥大化問題と代替アプローチの検証記事がはてブで244ブックマーク。GoogleはゼロトラストをAIエージェント時代に再設計した「Beyond Zero」を発表し、CERNは2200台超のOSをRHELからDebianに移行中。開発環境と基盤が動いた一日。

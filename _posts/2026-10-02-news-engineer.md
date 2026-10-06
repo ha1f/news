@@ -4,6 +4,17 @@ title: "Cloudflareが判断特化モデルClefをOSS公開（ソフトウェア�
 date: 2026-10-02
 profile: engineer
 tags: [AI, 開発, セキュリティ]
+article_tags:
+  - [AI, 開発]
+  - [開発]
+  - [開発]
+  - [AI, 開発]
+  - [開発]
+  - [開発]
+  - [AI, 開発]
+  - [開発]
+  - [セキュリティ, AI]
+  - [開発]
 ---
 
 Cloudflareが判断特化の「決定モデル」Clefを公開し、Next.jsをVercel外で動かす「Vinext 1.0」も1.0に到達した。Git 3.0のSHA-256既定化への批判、turbopufferの「ベクトルDB」脱却宣言と、基盤の設計をめぐる議論も並ぶ。Claude CodeのAGENTS.md対応やOracle JDK 21のライセンス変更など、足元の運用に効く話題も多い。

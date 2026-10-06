@@ -3,7 +3,19 @@ layout: post
 title: "FTCがAI大手を調査、AIマネーは加速（起業家）"
 date: 2026-10-01
 profile: entrepreneur
-tags: [AI, ビジネス, 経済, 社会]
+tags: [AI, ビジネス, 経済, ハードウェア, 社会]
+article_tags:
+  - [社会, AI]
+  - [ビジネス, ハードウェア]
+  - [ビジネス]
+  - [ビジネス, AI]
+  - [ビジネス]
+  - [ビジネス, AI]
+  - [ビジネス, AI]
+  - [AI]
+  - [ビジネス]
+  - [ビジネス, 経済]
+  - [社会]
 ---
 
 米FTCがOpenAIとAnthropicの安全性を調べていると報じられた。一方でMicronは売上4.5倍の見通し、ElevenLabsは評価額220億ドルと、AIマネーの勢いは止まらない。消費者向けAIの採算、Reddit のAPI閉鎖、VCと投資先の泥仕合まで、起業家には見逃せない話が並ぶ。

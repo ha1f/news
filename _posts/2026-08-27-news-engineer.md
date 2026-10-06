@@ -3,7 +3,18 @@ layout: post
 title: "AppleのM6は2nm、AWSがDuckLabs買収（ソフトウェアエンジニア）"
 date: 2026-08-27
 profile: engineer
-tags: [開発, AI, ハードウェア, セキュリティ]
+tags: [AI, 開発, ビジネス, ハードウェア]
+article_tags:
+  - [ハードウェア]
+  - [ビジネス, 開発]
+  - [AI]
+  - [開発]
+  - [開発, AI]
+  - [AI, 開発]
+  - [開発]
+  - [開発]
+  - [開発]
+  - [AI, 開発]
 ---
 
 Appleが初の2nmプロセス採用となるM6チップとM5 Ultraを発表し、Mac miniとMac Studioを同時に刷新した。DuckDB関連のDuckLabsがAWS入りを表明、GPT-5.6 Solのベンチマーク不正も報告されるなど、AI・OSSの両面で動きが続く。

@@ -3,7 +3,18 @@ layout: post
 title: "Fable 5.1公開、小型モデルがARCでLLM超え（ソフトウェアエンジニア）"
 date: 2026-09-02
 profile: engineer
-tags: [AI, 開発, セキュリティ]
+tags: [AI, 開発, セキュリティ, デザイン]
+article_tags:
+  - [AI]
+  - [AI]
+  - [開発]
+  - [開発]
+  - [AI]
+  - [AI]
+  - [AI, 開発]
+  - [AI, 開発]
+  - [セキュリティ]
+  - [デザイン]
 ---
 
 Anthropicが新モデルFable 5.1とMythos 5.1を発表、HNは858ポイントで今日最大のスレッドに。一方、1.5時間で訓練した小型TransformerがARC-AGIベンチマークで大規模LLMを上回る研究が553ポイントを集め、「スケールだけが正解ではない」流れも強まる。開発ツール周りではJujutsu VCS開発者のERSC移籍が話題。
