@@ -18,6 +18,7 @@
 なら安全装置の変更ではないので protected にせず、protected_version_bumps に列挙する。
 diff レビュー・マージの実行はエージェントが行う。
 """
+import importlib.util
 import json
 import re
 import shutil
@@ -27,10 +28,31 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 TRUSTED = {"OWNER", "MEMBER", "COLLABORATOR"}
-LINK_RE = re.compile(r"(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?|refs?)\s+#(\d+)", re.I)
 # バージョンらしい形だけを伏せる: `@` 直後の digest / v始まり / ドットを含む数値。
 # 裸の整数（quiescence_minutes: 30 等の設定値）は伏せない
 VERSION_TOKEN_RE = re.compile(r"(?<=@)[0-9a-f]{7,64}\b|\bv\d+(?:\.\d+)*\b|\b\d+(?:\.\d+)+\b")
+
+
+def load_pr_links():
+    """PR body から linked issue を取り出す正本 `.claude/scripts/pr_links.py` を読み込む。
+
+    正本を1つにしているのは、同じ正規表現を review 側と develop 側に写した結果、
+    コード引用まで linked issue に数える欠陥が両方に生まれたため (#473)。
+    相対 import にしないのは、このスクリプトがエージェントの Bash から任意の cwd で
+    単体起動されるため（`sys.path` は起動 cwd に依存する）。
+
+    読み込みに失敗したら黙って素の正規表現に戻したりはせず、そのまま落とす。
+    linked_issues は「合格した PR が linked issue を close してよいか」の根拠に
+    なるので、劣化した値を返すと無関係な issue を close しうる。
+    """
+    path = Path(__file__).resolve().parents[3] / "scripts" / "pr_links.py"
+    spec = importlib.util.spec_from_file_location("daily_loop_pr_links", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+extract_linked_issues = load_pr_links().extract_linked_issues
 
 
 def version_bump_only(patch):
@@ -109,8 +131,7 @@ def classify(prs, config, now):
             "title": pr["title"],
             "author": pr.get("author"),
             "author_association": pr.get("author_association"),
-            "linked_issues": sorted({int(m.group(1))
-                                     for m in LINK_RE.finditer(pr.get("body") or "")}),
+            "linked_issues": extract_linked_issues(pr.get("body")),
         }
         if pr["draft"]:
             result["drafts"].append(summary)
