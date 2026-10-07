@@ -33,6 +33,7 @@ issue はドラフト。文面でなく背後の問題と目的を掴む:
 - 分割は [references/task-splitting.md](references/task-splitting.md) の基準で作り、曖昧さは自分で解消して worker には確定した仕様だけ渡す
 - 検証は速い順に回す: 編集ごとの lint・型チェック → 変更近傍のテスト → フルスイートは PR 前と CI。出力は失敗時のみ詳細にし、成功ログでコンテキストを埋めない。結果が疑わしいときは検証器自体の正しさを先に確かめる (間違った検証器は間違った問題を解かせる)
 - PR を作る前に fresh context の subagent に diff をレビューさせる。issue の受け入れ条件と green 条件 (計画を投稿したならそれも) を渡し、正確性と要件の gap だけ指摘させる。実装を壊して検証器が red になるか当てさせる等、書き込みを伴うレビューは scratchpad 内に `git worktree` を作らせて行わせる (作業ブランチは共有 working tree が掴んでいるため `git worktree add <path> <作業ブランチ>` は失敗する。`--detach <sha>` で作らせる)。終わったら `git worktree remove --force` させる (素の `remove` は書き込み後のツリーが汚れているため失敗する。共有 working tree を一時改変させると、自分が並行して回す検証が黙って壊れた実装の結果になる)
+- linked issue の無い PR は body が唯一の正本。ready 化の前と、既存 PR の branch に追加で commit を積む前に `git log origin/main..HEAD` を body の「何を変えたか」と突き合わせ、body に無い commit は body に背景と根拠を足すか branch から外す (別 run が後から無関係な変更を相乗りさせると、その1行が誰にもレビューされず、検証済みの他の commit ごと要修正で落ちる。実測 PR #434)
 - worker の報告は主張として扱い、green 条件のコマンドは自分で再実行して確かめる。ユーザ・issue・PR body への報告は検証済みの事実だけで、PR body は head commit の実物と一致した状態で終える (古いまま残すと成果物と逆の主張になる)
 - state ファイルは持たない。commit を小さく積んで随時 push し、再開は git / GitHub の状態から判断する
 
