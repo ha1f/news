@@ -12,8 +12,10 @@ publish 前の再掲検査（`.claude/scripts/check_repeat_urls.py`）が同じ�
 同じ日の別プロファイルの投稿は「過去」に数えない。プロファイルごとに読者が
 違うので、同じ日に同じ記事を別の面に載せるのは再掲ではない。
 
-URL は表記揺れだけを寄せて比べる（scheme・`www.`・末尾の `/`・フラグメント）。
-クエリは残す（`?p=123` のように記事そのものを指すサイトがある）。
+URL は表記揺れだけを寄せて比べる（scheme・`www.`・ホストの大小・末尾の `/`・
+`utm_*` クエリ）。それ以外のクエリとフラグメントは残す。`?p=123` や
+`changelog#11296`・`releasenotes.html#10.6` のように、同じページの別の記事を
+指すのに使われているため（実在する投稿で確認）。
 """
 
 from __future__ import annotations
@@ -21,7 +23,7 @@ from __future__ import annotations
 import os
 import re
 from datetime import date
-from urllib.parse import urlsplit
+from urllib.parse import parse_qsl, urlencode, urlsplit
 
 _SKILL_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(_SKILL_ROOT)))
@@ -39,8 +41,12 @@ def normalize(url: str) -> str:
         host = host[4:]
     path = s.path.rstrip("/")
     key = host + path
-    if s.query:
-        key += "?" + s.query
+    query = [(k, v) for k, v in parse_qsl(s.query, keep_blank_values=True)
+             if not k.lower().startswith("utm_")]
+    if query:
+        key += "?" + urlencode(query)
+    if s.fragment:
+        key += "#" + s.fragment
     return key
 
 
@@ -61,8 +67,8 @@ def item_urls(text: str) -> list[tuple[int, str]]:
     return found
 
 
-def collect(before: date, posts_dir: str = POSTS_DIR) -> dict[str, tuple[date, str]]:
-    """`before` より前の日付の投稿に載った URL → (初出日, ファイル名)。"""
+def first_appearances(posts_dir: str = POSTS_DIR) -> dict[str, tuple[date, str]]:
+    """全投稿に載った URL → (初出日, ファイル名)。"""
     published: dict[str, tuple[date, str]] = {}
     try:
         names = sorted(os.listdir(posts_dir))
@@ -72,7 +78,7 @@ def collect(before: date, posts_dir: str = POSTS_DIR) -> dict[str, tuple[date, s
         if not name.endswith(".md"):
             continue
         day = date_of(name)
-        if day is None or day >= before:
+        if day is None:
             continue
         try:
             with open(os.path.join(posts_dir, name), encoding="utf-8") as f:
@@ -82,3 +88,8 @@ def collect(before: date, posts_dir: str = POSTS_DIR) -> dict[str, tuple[date, s
         for _, url in item_urls(text):
             published.setdefault(normalize(url), (day, name))
     return published
+
+
+def collect(before: date, posts_dir: str = POSTS_DIR) -> dict[str, tuple[date, str]]:
+    """`before` より前の日付の投稿に載った URL → (初出日, ファイル名)。"""
+    return {k: v for k, v in first_appearances(posts_dir).items() if v[0] < before}

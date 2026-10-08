@@ -30,16 +30,19 @@ import published_urls  # noqa: E402
 JST = timezone(timedelta(hours=9))
 
 
-def repeats_of(post: Path, posts_dir: str):
-    """その投稿の既出 URL を (行番号, URL, 初出日, 初出ファイル) で返す"""
+def repeats_of(post: Path, first: dict):
+    """その投稿の既出 URL を (行番号, URL, 初出日, 初出ファイル) で返す。
+
+    `first` は `published_urls.first_appearances()` の結果。初出日が投稿の日付より
+    前のものだけを既出とする（同じ日の別プロファイルは数えない）。
+    """
     day = published_urls.date_of(post.name)
     if day is None:
         raise ValueError(f"ファイル名から日付が読み取れません（{post.name}）")
-    published = published_urls.collect(day, posts_dir)
     found = []
     for line, url in published_urls.item_urls(post.read_text(encoding="utf-8")):
-        hit = published.get(published_urls.normalize(url))
-        if hit:
+        hit = first.get(published_urls.normalize(url))
+        if hit and hit[0] < day:
             found.append((line, url, hit[0], hit[1]))
     return found
 
@@ -57,25 +60,29 @@ def main(argv):
             print(f"{today} の投稿がありません（_posts/{today}-*.md）", file=sys.stderr)
             return 1
 
-    checked = failures = 0
+    checked = repeats = errors = 0
+    firsts = {}  # 投稿ディレクトリごとに1回だけ読む（--all で投稿ごとに読み直さない）
     for post in posts:
         if not post.is_file():
             print(f"NG {post}: ファイルがありません")
-            failures += 1
+            errors += 1
             continue
+        posts_dir = str(post.parent)
+        if posts_dir not in firsts:
+            firsts[posts_dir] = published_urls.first_appearances(posts_dir)
         try:
-            found = repeats_of(post, str(post.parent))
+            found = repeats_of(post, firsts[posts_dir])
         except ValueError as e:
             print(f"NG {post}: {e}")
-            failures += 1
+            errors += 1
             continue
         checked += 1
         for line, url, first_day, first_name in found:
             print(f"NG {post.name}:{line}: 既出 URL {url}（初出 {first_day.isoformat()} {first_name}）")
-            failures += 1
+            repeats += 1
 
-    print(f"検査 {checked} 件 / 既出 URL {failures} 件")
-    return 1 if failures or checked == 0 else 0
+    print(f"検査 {checked} 件 / 既出 URL {repeats} 件 / 検査できなかった {errors} 件")
+    return 1 if repeats or errors or checked == 0 else 0
 
 
 if __name__ == "__main__":

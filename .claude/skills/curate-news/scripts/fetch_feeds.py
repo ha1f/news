@@ -145,11 +145,11 @@ def print_summary(feeds: list[FeedConfig], published: dict | None = None) -> Non
         for item in items:
             title = (item.get("title") or "")[:50]
             url = item.get("url") or ""
-            published = (item.get("published_at") or "")[:10]
+            pub_date = (item.get("published_at") or "")[:10]
             meta = item.get("meta") or {}
             scores = [f"{k}:{meta[k]}" for k in SCORE_KEYS if k in meta]
             score_str = f" ({', '.join(scores)})" if scores else ""
-            print(f"  {title} | {url} | {published}{score_str}")
+            print(f"  {title} | {url} | {pub_date}{score_str}")
         print()
 
 

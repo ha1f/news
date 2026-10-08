@@ -79,7 +79,7 @@ python3 .claude/skills/curate-news/scripts/recent_urls.py [--profile <プロフ�
 python3 .claude/skills/curate-news/scripts/recent_topics.py [--profile <プロファイル>]
 ```
 
-- URLリストはこのステップ以降の除外対象とする（直近7日の `_posts/` と、同じセッションで書き出した `output/` の分）
+- URLリストはこのステップ以降の除外対象とする（直近7日の `_posts/` と、同じ好みファイルで過去7日に書き出した `output/` の分。当日分は含まない）
 - ヘッドラインはトピック重複チェックに使う（次の絞り込みで参照）
 
 次に、ステップ2で選択したソース・カテゴリを `--show-cache-summary` で一覧表示する:
