@@ -26,6 +26,7 @@ from datetime import datetime, timezone
 from feed_config import FeedConfig, JST, CACHE_DIR
 from feed_parsers import PARSERS, fetch_url
 from feed_sources import collect_feeds
+import published_urls
 
 
 def _is_cache_valid(cache_path: str, ttl_minutes: int) -> bool:
@@ -112,13 +113,19 @@ def fetch_feed(feed: FeedConfig, force: bool = False) -> bool:
         return False
 
 
-def print_summary(feeds: list[FeedConfig]) -> None:
+def print_summary(feeds: list[FeedConfig], published: dict | None = None) -> None:
     """キャッシュ済みフィードの記事サマリーを出力する。
 
     各記事をタイトル・URL・スコア・日時の1行で表示する。
     キュレーション時の候補選定に使う。
+
+    過去の日付の投稿に載せた URL（期間は区切らない。判定は published_urls）は
+    候補から外し、件数だけ見出しに出す (#40)。照合をモデルの注意力に任せると、
+    除外リストに載っていた URL まで素通りしていたため。
     """
     SCORE_KEYS = ("bookmarks", "points", "score", "ups", "votes")
+    if published is None:
+        published = published_urls.collect(datetime.now(JST).date())
 
     for feed in feeds:
         try:
@@ -129,15 +136,20 @@ def print_summary(feeds: list[FeedConfig]) -> None:
             continue
 
         items = data if isinstance(data, list) else data.get("items", [])
-        print(f"[{feed.cache_key}] ({len(items)} items)")
+        fresh = [i for i in items
+                 if published_urls.normalize(i.get("url") or "") not in published]
+        skipped = len(items) - len(fresh)
+        note = f", 既出 {skipped} 件を除外" if skipped else ""
+        print(f"[{feed.cache_key}] ({len(fresh)} items{note})")
+        items = fresh
         for item in items:
             title = (item.get("title") or "")[:50]
             url = item.get("url") or ""
-            published = (item.get("published_at") or "")[:10]
+            pub_date = (item.get("published_at") or "")[:10]
             meta = item.get("meta") or {}
             scores = [f"{k}:{meta[k]}" for k in SCORE_KEYS if k in meta]
             score_str = f" ({', '.join(scores)})" if scores else ""
-            print(f"  {title} | {url} | {published}{score_str}")
+            print(f"  {title} | {url} | {pub_date}{score_str}")
         print()
 
 
