@@ -25,6 +25,12 @@ class TestItemsOf(unittest.TestCase):
             "  読みどころの文\n")
         self.assertEqual(list(items_of(post)), [("見出し", "ソース", "読みどころの文")])
 
+    def test_self_closing_br_is_note_separator(self):
+        post = write_post(
+            "1. [見出し](https://example.com) (ソース)<br/>\n"
+            "  読みどころの文\n")
+        self.assertEqual(list(items_of(post)), [("見出し", "ソース", "読みどころの文")])
+
     def test_note_missing_no_br(self):
         post = write_post("1. [見出し](https://example.com) (ソース)\n")
         self.assertEqual(list(items_of(post)), [("見出し", "ソース", "")])

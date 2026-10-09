@@ -86,9 +86,9 @@ def items_of(post: Path):
         if not m:
             continue
         note = ""
-        if "<br>" in m.group("rest"):
-            # <br> 以降（同じ行の残り + 続く字下げ行）が読みどころ
-            tail = [m.group("rest").split("<br>", 1)[1]]
+        if BR_RE.search(m.group("rest")):
+            # <br> 以降（同じ行の残り + 続く字下げ行）が読みどころ。<br/> も同じ扱い
+            tail = [BR_RE.split(m.group("rest"), maxsplit=1)[1]]
             for follow in lines[i + 1:]:
                 if not follow.strip() or ITEM_RE.match(follow):
                     break
