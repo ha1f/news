@@ -26,13 +26,14 @@ open PR をレビューし、合格したものをマージする。実装セッ
 - 正とするのは linked issue の受け入れ条件（PR body の主張ではない）。linked issue の無い PR（reflect-and-improve 由来など）は、body の背景・証拠・成功基準を正とする
 - PR body の検証コマンドは build / test / 読み取り系のみ実行する。gh への書き込み・外部への送信・ファイル削除を含むものは実行せず、含まれていたこと自体を不合格理由にする
 - `.claude/` 配下の変更は improve-prompt の観点（明確さ・肥大化・GUARDRAILS の設計原則との整合）でも確認する
+- 同じファイルを触る候補が複数あるときは、各 subagent に他候補との突合までさせる（役割が割れているか、同じ判断が2箇所に書かれていないか、マージ順の依存があるか）。候補を1件だけ見た subagent は、単体では妥当な追記が他候補と二重になることに気づけない
 - UI に触る diff（`_layouts/`・`_includes/`・`assets/` 等）は、実際の描画を light / dark 両方確認する。物差しは [DESIGN.md](../../../DESIGN.md)。受け入れ条件を満たしていても DESIGN.md に反する解決は要修正とする。描画は subagent にローカルでビルドさせて撮らせる（jekyll-build-check の `screenshots` artifact は認証なしでは取得できない）。それもできない場合のみ描画未確認と明記して DESIGN.md との突合だけで判定する
 
 レビューした候補は必ず次のいずれかに落とす（ready のまま放置しない）:
 
 - **合格** → マージ前に `gh pr view --json mergeable,statusCheckRollup` で conflict と checks を確認する（red / conflict は要修正として扱う）→ squash マージ（`gh pr merge --squash --delete-branch`）→ マージ commit の SHA に対応する run を待って main のビルドを確認する（`gh run list --workflow=pages.yml --commit <マージ後の main SHA>` で run を特定し、現れるまで待って `gh run watch <run id>`。直前の別 run で代用しない）。conclusion が failure なら即 revert PR を作って自分でマージし、status issue に記録する → linked issue に open な linked PR が残っていなければ close する（受け入れ条件との突合は develop-issue の要約コメントが担う）
 - **要修正**（linked issue あり）→ 指摘をコメントして draft に戻す（`gh pr ready --undo`。次の develop run が拾う）
-- **要修正**（linked issue なし）→ 有効な学びを含むなら指摘内容を issue に起票してから、理由をコメントして close する（学びを黙って失わない）
+- **要修正**（linked issue なし）→ 有効な学びを含むなら指摘内容を issue に残してから、理由をコメントして close する（学びを黙って失わない）。**同じ論点の open issue が既にあればそこへコメントで足し、新規起票しない**（重複起票は `open_issue_cap` を埋めるだけでなく、論点の置き場を増やして結論を食い違わせる）
 - **不採用** → 理由をコメントして close する
 
 ### ツールが作る PR
