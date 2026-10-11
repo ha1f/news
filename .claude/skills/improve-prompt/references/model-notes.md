@@ -2,7 +2,7 @@
 
 モデル世代固有の挙動と API 仕様の変化。対象プロンプトが前提とする世代とのズレを見つけるために使う。時限情報はこのファイルに集約し、世代交代時はここだけ更新する（SKILL.md 本文は世代非依存）。
 
-最終更新: 2026-10-02。現行世代: Claude 5 family (Fable 5.1 / Opus 5.5 / Sonnet 5.5)、Haiku 4.5。Fable 5・Opus 5・Sonnet 5 は Legacy。
+最終更新: 2026-10-11。現行世代: Claude 5 family (Fable 5.1 / Opus 5.5 / Sonnet 5.5 / Haiku 5.5)。Fable 5・Opus 5・Sonnet 5・Haiku 4.5 は Legacy。
 
 ## 世代を貫く傾向（4.5 → 5）
 
@@ -13,7 +13,7 @@
 | 項目 | 旧 | 現行 |
 |---|---|---|
 | prefill（assistant 応答の事前入力） | 使用可 | Opus 4.6 以降で廃止（400 エラー）。structured outputs / system prompt / tool strict mode で代替 |
-| extended thinking | `budget_tokens` 手動指定 | `effort` パラメータ（low / medium / high / xhigh / max。既定はモデル別: Opus 5.5 は medium、Fable 5.1・Sonnet 5.5 は high、Haiku 4.5 は非対応）。Opus 4.8+ で手動 budget は 400 エラー |
+| extended thinking | `budget_tokens` 手動指定 | `effort` パラメータ（low / medium / high / xhigh / max。既定はモデル別: Opus 5.5・Haiku 5.5 は medium、Fable 5.1・Sonnet 5.5 は high）。Opus 4.8+ で手動 budget は 400 エラー |
 | sampling params（temperature / top_p / top_k） | 調整可 | Opus 4.8+ で非デフォルト値は 400 エラー。挙動制御はプロンプトで行う |
 | デフォルトモデル | Opus 5（v2.1.219〜。Pro / Team Standard は Sonnet 5） | Opus 5.5（$4/$20 per MTok、1M context、thinking は常時 on）。Claude Code v2.1.280 以降は Pro / Team を含めデフォルト |
 

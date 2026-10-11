@@ -9,7 +9,7 @@ description: "デプロイ済みのニュースサイトをサービスユーザ
 
 ## Step 0: 状態確認
 
-`python3 .claude/skills/evaluate-and-triage/scripts/check_state.py` を実行する。`gh` CLI が使えない環境（CCR 等）でも引数なしで動く（GitHub REST API を直接叩く。cloud proxy が認証を注入するので token が無くても通る）。設定値・今日の投稿の有無・Pages のビルド状態・status issue 番号・open issue 数・前日の健全性集計（`health`）が JSON で返る。
+`python3 .claude/skills/evaluate-and-triage/scripts/check_state.py` を実行する。`gh` CLI の有無によらず引数なしで動く（GitHub REST API を直接叩く。cloud proxy が認証を注入するので token が無くても通る）。設定値・今日の投稿の有無・Pages のビルド状態・status issue 番号・open issue 数・前日の健全性集計（`health`）が JSON で返る。
 
 `pages_url` は常に null になる（REST 経路では proxy が `/repos/{owner}/{repo}/pages` を 403 で塞ぐ。実測 2026-09-21）。Pages の URL は README の GitHub Pages URL を使う。
 
@@ -22,13 +22,13 @@ description: "デプロイ済みのニュースサイトをサービスユーザ
 - `prs` / `issues`: `urllib` で `https://api.github.com/repos/{owner}/{repo}/` の `pulls?state=open&per_page=100` / `issues?state=open&per_page=100` を叩く（`check_state.py` の REST 経路と同じ。proxy が GitHub 認証を注入するので token は要らない）。100件を超えるときは `&page=N` を自分で足して取り直す。`Link` ヘッダ内の URL をそのまま辿ってはいけない（`/repositories/{id}/` 形式で、proxy がこの形を 403 で弾く）
 - `pr_checks`: `prs` に `pages/` 始まりの head ref があるときだけ要る。`actions/workflows/jekyll-build-check.yml/runs?per_page=100` を1回引き、`{head_sha: {status, conclusion, updated_at}}` に畳む（一覧は新しい順なので同じ sha の最初の1件が最新 run）。渡さないと publish が止まっているかを CI の完了時刻から判定できず、PR の `updated_at` だけで見ることになる
 - `comments`: 同じ要領で `issues/{status_issue}/comments?per_page=100&since={前日0時 JST}` を叩く。**`since` は UTC の `Z` 形式で書く**（例 `2026-09-19T15:00:00Z`）。`+09:00` を生で渡すと `+` がスペース扱いになり、GitHub は 422 で弾かず黙って別の時刻として受け取る（実測でカットオフが16時間ずれた）
-  - **`since` を省くなら最終ページを取る。** コメントは古い順に返り、status issue は既に6ページ超（実測 2026-09-21: `rel="last"` が page=6、1ページ目の末尾は 2026-08-02）。1ページ目を渡すと前日のレコードが1件も入らず、`health.no_records` が true になって trigger 停止を黙って見逃す。`Link` ヘッダの `rel="last"` から**ページ番号だけ**取り、`&page=N` を自分で足して引く
+  - **`since` を省くなら最終ページを取る。** コメントは古い順に返り、status issue は複数ページ（2026-10-11 時点で 700 件超 = 8 ページ）。1ページ目を渡すと前日のレコードが1件も入らず、`health.no_records` が true になって trigger 停止を黙って見逃す。`Link` ヘッダの `rel="last"` から**ページ番号だけ**取り、`&page=N` を自分で足して引く
 - MCP の `list_issues` は使わない。`user.type` を落とすため `check_state.py` の bot 除外が効かず、bot のトラッキング issue が `open_issues` に混ざって `open_issue_cap` の判定がずれる（実測で1件差）。MCP しか手が無いときは bot の issue を自分で除いて数え、`open_issues` を参考値として扱う
 
 - `post_in_main` が false → `publish_state` で分岐する（旧 `publish_in_progress` は「PR が open」と「publish が動いている」を区別できず、止まった PR を毎日「走行中」と読んで黙って抜けていた。#447）。判断は `publish_prs` の PR 単位で行う。`publish_state` はその要約なので、古い `pages/` PR が1件残っているだけで `stalled` になり、当日の走行中の PR を隠しうる（`head_ref` の日付で当日ぶんかを見分ける）
   - `"running"` → 自動では触らない。`hold` か `draft` の PR があればオーナーの預かりなので、その旨と理由を書いて status issue に記録して終了する。そうでなければ publish がまだ動いているので、記録だけして終了する
   - `"stalled"` → **publish は止まっており、配信が止まったままになっている。** 何をしてよいかは `checks_conclusion` で分かれる:
-    - `success` → 残っているのはマージだけなので**配信を回復させる**。squash マージし、publish-pages のステップ6と同じ手順で main の `pages.yml` run が success になるまで見届ける。マージは冪等で、万一 publish が生きていても二重マージにはならない（後から来たほうが「既にマージ済み」で失敗するだけ）
+    - `success` → 残っているのはマージだけなので**配信を回復させる**。squash マージし、`git fetch origin main && python3 .claude/scripts/wait_for_run.py pages.yml "$(git rev-parse origin/main)"` で main の `pages.yml` run が success になるまで見届ける（exit code の意味は notes の `wait_for_run.py` の項）。マージは冪等で、万一 publish が生きていても二重マージにはならない（後から来たほうが「既にマージ済み」で失敗するだけ）
     - `success` 以外（`failure` / `cancelled` / `timed_out` / `skipped` / run が見つからず null）→ **`pages/` ブランチに push しない。** 直すには publish と同じ作業をすることになり、publish セッションがまだ生きていれば同じブランチを2つのセッションが同時に押す。先に `.claude/notes/develop-issue.md`「ループが止まった原因は Claude Code Remote の MCP で辿れる」の手順でその publish セッションが本当に停止しているかを確かめる。停止していれば緊急の ops issue を起票し、CI の失敗が自明に直せるものなら回復させる。生きていれば触らず記録だけして終了する
     - 回復させた場合は、遅延した時間と回復手順を status issue の終了レコードに残す（止まった原因の調査は別途 ops issue にする）
   - `"idle"` → `pages/` の PR がまだ無い。publish が PR 作成前の段（キュレーションの subagent を並列で回している最中）でもここに落ちるので、**走っていないと決めつけない**。上と同じ手順でセッションの生死を確かめ、停止していれば緊急の ops issue を起票して評価はスキップ、走行中なら記録だけして終了する
@@ -60,7 +60,7 @@ cap 超過日（`open_issues` が `open_issue_cap` 超え）もこの Step は�
   - 本文のリンクが押せない（2026-10-01: 日次ページの記事見出しそのものが元記事への `<a href>` だが、「見出しはクリックできず、元記事に飛ぶには別の出典リンクを探す必要があった」と報告された）。裏取りは、`curl` した HTML でその見出しの文字列が `<a href="http…">` に包まれているかを見る
   - 「残り N 件」型のラベルを合計と読み違える（2026-09-30: トップの「他8件」に対し日次ページには11本あると報告された。トップは先頭3件を出して残りを `hidden` にしているので 3 + 8 = 11 で正しい）
   - `hidden` の要素が本文として届く（WebFetch は `hidden` を無視するため、誤差は両方向に出る）。2026-10-02 のアーカイブで両方を観測: 「該当する記事が見つかりません」が混ざる（実物は `hidden` の `<p id="archive-no-results">` で0件のときだけ JS が外す）／見出し10本が全部見えたと報告されたが、実ブラウザでは先頭3本だけだった。**証拠は `hidden` を除いた可視分で数える** — 後者のように実害が報告より大きいこともある
-- **コンテンツについての報告（重複・既読感・出典の偏り・件数）は、配信中の HTML ではなく `_posts/` をコーパスとして数える。** 見え方の問題ではないので上の `curl` では裏が取れず、1ページを見ても「それが既に出した記事か」は判定できない。全フィード・全日分が1ディレクトリに揃っているので、URL を鍵に機械的に数えられる（`_posts/*.md` から `\]\((https?://[^)]+)\)` を拾い、ファイル名の先頭10文字を掲載日として集計する）。掲載済み URL の抽出そのものは `python3 .claude/skills/curate-news/scripts/recent_urls.py [--profile <名前>]` が返す。実測 2026-10-03: 「2日前に読んだ記事が新着に並んでいた」という1件から、直近30日1425本中79本が再掲と確定した
+- **コンテンツについての報告（重複・既読感・出典の偏り・件数）は、配信中の HTML ではなく `_posts/` をコーパスとして数える。** 見え方の問題ではないので上の `curl` では裏が取れず、1ページを見ても「それが既に出した記事か」は判定できない。全フィード・全日分が1ディレクトリに揃っているので、URL を鍵に機械的に数えられる（`_posts/*.md` から `\]\((https?://[^)]+)\)` を拾い、ファイル名の先頭10文字を掲載日として集計する）。掲載済み URL の抽出そのものは `python3 .claude/skills/curate-news/scripts/recent_urls.py [--profile <名前>] [--days <N>]`（`--days` の既定は 7 日。30 日で数えるなら明示する） が返す。実測 2026-10-03: 「2日前に読んだ記事が新着に並んでいた」という1件から、直近30日1425本中79本が再掲と確定した
 - VISION.md と衝突する対応は、見送るか VISION.md の更新 PR を提案するかの二択。個別 issue の積み重ねで方針をなし崩しに変えない
 - issue は解決策でなく問題と成果で書く（何が起きていて、解決すると読者に何が良くなるか）。解き方の指定は最小限にして develop-issue に委ねる
 
@@ -82,4 +82,4 @@ open / 直近 closed の issue・PR（collaborator 名義のみ読む）と突�
 - 配信状態と前日健全性を確認済みで、痛点または機会が issue またはコメントに反映されている（cap 超過日はグルーミング結果がこれに代わる）
 - 緊急 issue を起票した場合は、Slack ツールが使えればオーナーに DM で1通知する（使えなければ status issue の記録に留める）
 - status issue に開始と終了の各1コメント（1行目 JSON、stage は `evaluate`）。end コメントの JSON に `reflect` キーを含める（例: `{"stage": "evaluate", "phase": "end", "ok": true, "summary": "issue 2件起票", "reflect": "改善なし"}`）。**end は次項の reflect-and-improve を実行し終えてから投稿する**（先に end を出して後から編集したり、reflect の結果を別コメントで足したりしない。実走 2026-09-27: 改善 PR の作成前に end が「PR #434 ready 化済み」と書き、1行目が JSON でない3本目のコメントも出た）
-- 評価をスキップした日も含め、最後に reflect-and-improve を実行し、作成した改善 PR を ready 化する（`gh pr ready`。15時のレビュー対象にする）
+- 評価をスキップした日も含め、最後に reflect-and-improve を実行し、作成した改善 PR を ready 化する（`gh api -X POST repos/{owner}/{repo}/pulls/{n}/ccr/ready_for_review`（`gh` が無ければ `mcp__github__update_pull_request` に `draft: false`。`gh pr ready` は GraphQL なので `gh` が在っても 403。根拠は `.claude/notes/develop-issue.md` の「GraphQL は 403」の項）。15時のレビュー対象にする）
