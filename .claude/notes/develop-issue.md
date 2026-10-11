@@ -96,6 +96,7 @@ artifact に写るのは、その branch の `_posts/` をビルドした結果�
   `.claude/scripts` / `.claude/skills/select-and-develop/scripts` /
   `.claude/skills/review-and-merge/scripts` / `.claude/skills/evaluate-and-triage/scripts` /
   `.claude/skills/curate-news/scripts` / `.claude/skills/remove-ai-tells/scripts`
+- 有料読者向けメール本文の生成（#528）: `python3 .claude/scripts/render_email_body.py <curate-news の output/*.md>` → 同じ場所に .html/.txt。入力・出力先は `output` ディレクトリ配下のみ受け付ける。記事の取りこぼし（番号付き行数と件数の不一致）は exit 非0
 - gitignore が効いているか: `git check-ignore -v <path>`
 - 意図しないファイルの混入: `git ls-files | grep <pattern>`
 
