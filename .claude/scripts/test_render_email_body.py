@@ -54,35 +54,63 @@ class RenderTest(unittest.TestCase):
             self.assertTrue((src.parent / "2026-10-11-abc.html").exists())
             self.assertTrue((src.parent / "2026-10-11-abc.txt").exists())
 
-    def test_refuses_public_paths(self):
+    def test_refuses_input_outside_output(self):
         with tempfile.TemporaryDirectory() as t:
             src = Path(t) / "_posts" / "2026-10-11-x.md"
             src.parent.mkdir()
             src.write_text(SAMPLE, encoding="utf-8")
             p = subprocess.run([sys.executable, str(SCRIPT), str(src)], capture_output=True, text=True)
             self.assertNotEqual(p.returncode, 0)
-            self.assertFalse(src.with_suffix(".html").exists())
+            self.assertEqual(sorted(x.name for x in src.parent.iterdir()), [src.name])
 
-    def test_refuses_out_dir_in_public(self):
+    def test_refuses_real_posts_dir(self):
+        posts = sorted((Path(__file__).parents[2] / "_posts").glob("*.md"))
+        if not posts:
+            self.skipTest("no posts")
+        before = sorted(x.name for x in posts[0].parent.iterdir())
+        p = subprocess.run([sys.executable, str(SCRIPT), str(posts[0])], capture_output=True, text=True)
+        self.assertNotEqual(p.returncode, 0)
+        self.assertEqual(before, sorted(x.name for x in posts[0].parent.iterdir()))
+
+    def test_refuses_out_dir_outside_output(self):
         with tempfile.TemporaryDirectory() as t:
-            src = Path(t) / "in.md"
+            src = Path(t) / "output" / "in.md"
+            src.parent.mkdir()
             src.write_text(SAMPLE, encoding="utf-8")
-            p = subprocess.run([sys.executable, str(SCRIPT), str(src), "--out-dir", str(Path(t) / "_site")], capture_output=True, text=True)
+            for d in ("_site", "x"):
+                p = subprocess.run([sys.executable, str(SCRIPT), str(src), "--out-dir", str(Path(t) / d)], capture_output=True, text=True)
+                self.assertNotEqual(p.returncode, 0, d)
+                self.assertFalse((Path(t) / d).exists())
+
+    def test_ancestor_docs_dir_is_fine(self):
+        with tempfile.TemporaryDirectory() as t:
+            src = Path(t) / "docs" / "output" / "a.md"
+            src.parent.mkdir(parents=True)
+            src.write_text(SAMPLE, encoding="utf-8")
+            p = subprocess.run([sys.executable, str(SCRIPT), str(src)], capture_output=True, text=True)
+            self.assertEqual(p.returncode, 0, p.stderr)
+
+    def test_url_with_paren_and_same_line_note(self):
+        d = r.parse("## h\n\nlead\n\n1. [Foo (bar)](https://en.wikipedia.org/wiki/Foo_(bar)) (Wiki)<br>\n   要約A。\n\n2. [S](https://e.com/d) (S)<br>要約D\n")
+        self.assertEqual([i["url"] for i in d["items"]], ["https://en.wikipedia.org/wiki/Foo_(bar)", "https://e.com/d"])
+        self.assertEqual(d["items"][1]["note"], "要約D")
+        self.assertEqual(d["lead"], "lead")
+
+    def test_dropped_item_fails(self):
+        with tempfile.TemporaryDirectory() as t:
+            src = Path(t) / "output" / "in.md"
+            src.parent.mkdir()
+            src.write_text(SAMPLE + "\n3. 壊れた行\n", encoding="utf-8")
+            p = subprocess.run([sys.executable, str(SCRIPT), str(src)], capture_output=True, text=True)
             self.assertNotEqual(p.returncode, 0)
 
     def test_empty_input_fails(self):
         with tempfile.TemporaryDirectory() as t:
-            src = Path(t) / "in.md"
+            src = Path(t) / "output" / "in.md"
+            src.parent.mkdir()
             src.write_text("## x\n\nlead\n", encoding="utf-8")
             p = subprocess.run([sys.executable, str(SCRIPT), str(src)], capture_output=True, text=True)
             self.assertNotEqual(p.returncode, 0)
-
-    def test_real_post_parses(self):
-        posts = sorted((Path(__file__).parents[2] / "_posts").glob("*.md"))
-        if not posts:
-            self.skipTest("no posts")
-        body = posts[-1].read_text(encoding="utf-8").split("---", 2)[-1]
-        self.assertGreater(len(r.parse(body)["items"]), 0)
 
     def test_default_output_dir_is_gitignored(self):
         # 出力（html/txt）が公開 repo に入らないこと: curate-news の output/ は gitignore 対象

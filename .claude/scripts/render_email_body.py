@@ -3,7 +3,7 @@
 
 決定的: 同じ入力から常に同じ出力。記事本文・画像は扱わず、リンクと既存の要約（リード・読みどころ）だけを使う。
 入力・出力とも gitignore 対象の `.claude/skills/curate-news/output/` に置き、公開 repo にコミットしない。
-`_posts/` を入力にしたり、出力を `_posts/` や公開物の下に書いたりすることは拒否する。
+入力・出力先が `output` ディレクトリの下にないと拒否する（`_posts/` や公開物の下に書かない）。
 
 使い方: python3 .claude/scripts/render_email_body.py <output/{日付}-{ハッシュ}.md> [--out-dir DIR]
 出力: <out-dir>/{入力の stem}.html と .txt（既定の out-dir は入力と同じディレクトリ）
@@ -14,9 +14,12 @@ import re
 import sys
 from pathlib import Path
 
-ITEM_RE = re.compile(r"^(\d+)\.\s+\[(?P<title>.+?)\]\((?P<url>https?://[^)\s]+)\)\s*(?:\((?P<source>.*)\))?\s*(?:<br>)?\s*$")
+ITEM_RE = re.compile(
+    r"^\d+\.\s+\[(?P<title>.+?)\]\((?P<url>https?://\S+)\)(?:\s+\((?P<source>[^)]*)\))?\s*(?:<br>\s*(?P<note>.*))?$"
+)
+NUMBERED_RE = re.compile(r"^\d+\.\s")
+ROOT = Path(__file__).resolve().parents[2]
 HEADING_RE = re.compile(r"^##\s+(?P<heading>.+?)\s*$")
-FORBIDDEN_DIRS = ("_posts", "_site", "assets", "docs")
 
 
 def parse(text):
@@ -28,7 +31,7 @@ def parse(text):
         line = raw.rstrip()
         m = ITEM_RE.match(line)
         if m:
-            items.append({"title": m["title"], "url": m["url"], "source": m["source"] or "", "note": ""})
+            items.append({"title": m["title"], "url": m["url"], "source": m["source"] or "", "note": (m["note"] or "").strip()})
             continue
         if items and line.startswith((" ", "\t")) and line.strip():
             note = line.strip()
@@ -83,11 +86,18 @@ def render_html(doc):
 
 
 def check_paths(src, out_dir):
+    """入力・出力先とも、リポジトリ相対（repo 外なら絶対パス）で `output` ディレクトリの下にあること。
+
+    curate-news の output/ は gitignore 対象なので、公開 repo・Pages に出ない。
+    """
     for label, p in (("入力", src), ("出力先", out_dir)):
-        parts = set(p.resolve().parts)
-        bad = parts & set(FORBIDDEN_DIRS)
-        if bad:
-            raise SystemExit(f"{label} {p} は公開される場所（{', '.join(sorted(bad))}）にある。output/ 配下を使う")
+        rp = p.resolve()
+        try:
+            rp = rp.relative_to(ROOT)
+        except ValueError:
+            pass
+        if "output" not in rp.parent.parts if label == "入力" else "output" not in rp.parts:
+            raise SystemExit(f"{label} {p} が output/ 配下にない。公開される場所に書かないため output/ 配下だけ受け付ける")
 
 
 def main(argv=None):
@@ -98,7 +108,11 @@ def main(argv=None):
     src = args.input
     out_dir = args.out_dir or src.parent
     check_paths(src, out_dir)
-    doc = parse(src.read_text(encoding="utf-8"))
+    text = src.read_text(encoding="utf-8")
+    doc = parse(text)
+    numbered = sum(1 for ln in text.splitlines() if NUMBERED_RE.match(ln))
+    if numbered != len(doc["items"]):
+        raise SystemExit(f"番号付き行 {numbered} 件に対し記事を {len(doc['items'])} 件しか読めなかった（記事を取りこぼしている）")
     if not doc["items"]:
         raise SystemExit(f"{src} から記事を1件も読めなかった（形式が curate-news の出力と違う）")
     out_dir.mkdir(parents=True, exist_ok=True)
