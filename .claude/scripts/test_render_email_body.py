@@ -8,6 +8,18 @@ sys.path.insert(0, str(Path(__file__).parent))
 import render_email_body as r
 
 SCRIPT = Path(__file__).parent / "render_email_body.py"
+ROOT = Path(__file__).resolve().parents[2]
+OUT = ROOT / ".claude" / "skills" / "curate-news" / "output"
+
+
+def out_tmp():
+    """gitignore 対象の curate-news/output/ の下に一時ディレクトリを作る（スクリプトはここしか受け付けない）。"""
+    OUT.mkdir(parents=True, exist_ok=True)
+    return tempfile.TemporaryDirectory(dir=OUT)
+
+
+def run(*args):
+    return subprocess.run([sys.executable, str(SCRIPT), *map(str, args)], capture_output=True, text=True)
 SAMPLE = """## ニュース (2026-10-11 07:00 JST)
 
 Aが<b>Bを発表</b>した。要点は2つ。
@@ -45,50 +57,64 @@ class RenderTest(unittest.TestCase):
         self.assertEqual(r.render_text(d), r.render_text(r.parse(SAMPLE)))
 
     def test_cli_writes_next_to_input(self):
-        with tempfile.TemporaryDirectory() as t:
-            src = Path(t) / "output" / "2026-10-11-abc.md"
-            src.parent.mkdir()
+        with out_tmp() as t:
+            src = Path(t) / "2026-10-11-abc.md"
             src.write_text(SAMPLE, encoding="utf-8")
-            p = subprocess.run([sys.executable, str(SCRIPT), str(src)], capture_output=True, text=True)
+            p = run(src)
             self.assertEqual(p.returncode, 0, p.stderr)
-            self.assertTrue((src.parent / "2026-10-11-abc.html").exists())
-            self.assertTrue((src.parent / "2026-10-11-abc.txt").exists())
+            self.assertTrue((Path(t) / "2026-10-11-abc.html").exists())
+            self.assertTrue((Path(t) / "2026-10-11-abc.txt").exists())
 
-    def test_refuses_input_outside_output(self):
-        with tempfile.TemporaryDirectory() as t:
-            src = Path(t) / "_posts" / "2026-10-11-x.md"
-            src.parent.mkdir()
+    def test_cli_accepts_subdir_of_output(self):
+        with out_tmp() as t:
+            src = Path(t) / "in.md"
             src.write_text(SAMPLE, encoding="utf-8")
-            p = subprocess.run([sys.executable, str(SCRIPT), str(src)], capture_output=True, text=True)
-            self.assertNotEqual(p.returncode, 0)
-            self.assertEqual(sorted(x.name for x in src.parent.iterdir()), [src.name])
+            p = run(src, "--out-dir", Path(t) / "mail")
+            self.assertEqual(p.returncode, 0, p.stderr)
+            self.assertTrue((Path(t) / "mail" / "in.html").exists())
+
+    def test_refuses_input_in_dir_merely_named_output(self):
+        # パスのどこかに `output` があるだけ（gitignore されない）では通さない
+        with tempfile.TemporaryDirectory() as t:
+            for d in ("output", "_posts/output", "docs/output"):
+                src = Path(t) / d / "in.md"
+                src.parent.mkdir(parents=True, exist_ok=True)
+                src.write_text(SAMPLE, encoding="utf-8")
+                p = run(src)
+                self.assertNotEqual(p.returncode, 0, d)
+                self.assertEqual(sorted(x.name for x in src.parent.iterdir() if x.is_file()), ["in.md"], d)
 
     def test_refuses_real_posts_dir(self):
-        posts = sorted((Path(__file__).parents[2] / "_posts").glob("*.md"))
+        posts = sorted((ROOT / "_posts").glob("*.md"))
         if not posts:
             self.skipTest("no posts")
         before = sorted(x.name for x in posts[0].parent.iterdir())
-        p = subprocess.run([sys.executable, str(SCRIPT), str(posts[0])], capture_output=True, text=True)
+        p = run(posts[0])
         self.assertNotEqual(p.returncode, 0)
         self.assertEqual(before, sorted(x.name for x in posts[0].parent.iterdir()))
 
-    def test_refuses_out_dir_outside_output(self):
-        with tempfile.TemporaryDirectory() as t:
-            src = Path(t) / "output" / "in.md"
-            src.parent.mkdir()
+    def test_refuses_out_dir_outside_curate_output(self):
+        # review 指摘 (PR #537) の実例: repo 内の `output` という名前の公開されうる場所
+        with out_tmp() as t:
+            src = Path(t) / "in.md"
             src.write_text(SAMPLE, encoding="utf-8")
-            for d in ("_site", "x"):
-                p = subprocess.run([sys.executable, str(SCRIPT), str(src), "--out-dir", str(Path(t) / d)], capture_output=True, text=True)
-                self.assertNotEqual(p.returncode, 0, d)
-                self.assertFalse((Path(t) / d).exists())
+            with tempfile.TemporaryDirectory() as other:
+                targets = [Path(other) / d for d in ("_site", "x", "output")]
+                targets += [ROOT / "_posts" / "output", ROOT / "output", ROOT / "docs" / "output", ROOT / "assets" / "output"]
+                for d in targets:
+                    existed = d.exists()
+                    p = run(src, "--out-dir", d)
+                    self.assertNotEqual(p.returncode, 0, d)
+                    self.assertEqual(d.exists(), existed, d)
+                    self.assertFalse((d / "in.html").exists(), d)
 
-    def test_ancestor_docs_dir_is_fine(self):
-        with tempfile.TemporaryDirectory() as t:
-            src = Path(t) / "docs" / "output" / "a.md"
-            src.parent.mkdir(parents=True)
+    def test_refuses_dotdot_escape(self):
+        with out_tmp() as t:
+            src = Path(t) / "in.md"
             src.write_text(SAMPLE, encoding="utf-8")
-            p = subprocess.run([sys.executable, str(SCRIPT), str(src)], capture_output=True, text=True)
-            self.assertEqual(p.returncode, 0, p.stderr)
+            p = run(src, "--out-dir", OUT / ".." / "output-x")
+            self.assertNotEqual(p.returncode, 0)
+            self.assertFalse((OUT.parent / "output-x").exists())
 
     def test_url_with_paren_and_same_line_note(self):
         d = r.parse("## h\n\nlead\n\n1. [Foo (bar)](https://en.wikipedia.org/wiki/Foo_(bar)) (Wiki)<br>\n   要約A。\n\n2. [S](https://e.com/d) (S)<br>要約D\n")
@@ -97,30 +123,27 @@ class RenderTest(unittest.TestCase):
         self.assertEqual(d["lead"], "lead")
 
     def test_dropped_item_fails(self):
-        with tempfile.TemporaryDirectory() as t:
-            src = Path(t) / "output" / "in.md"
-            src.parent.mkdir()
+        with out_tmp() as t:
+            src = Path(t) / "in.md"
             src.write_text(SAMPLE + "\n3. 壊れた行\n", encoding="utf-8")
-            p = subprocess.run([sys.executable, str(SCRIPT), str(src)], capture_output=True, text=True)
+            p = run(src)
             self.assertNotEqual(p.returncode, 0)
 
     def test_empty_input_fails(self):
-        with tempfile.TemporaryDirectory() as t:
-            src = Path(t) / "output" / "in.md"
-            src.parent.mkdir()
+        with out_tmp() as t:
+            src = Path(t) / "in.md"
             src.write_text("## x\n\nlead\n", encoding="utf-8")
-            p = subprocess.run([sys.executable, str(SCRIPT), str(src)], capture_output=True, text=True)
+            p = run(src)
             self.assertNotEqual(p.returncode, 0)
 
     def test_default_output_dir_is_gitignored(self):
         # 出力（html/txt）が公開 repo に入らないこと: curate-news の output/ は gitignore 対象
-        root = Path(__file__).parents[2]
-        for ext in (".md", ".html", ".txt"):
+        for rel in ("2026-10-11-abc.md", "2026-10-11-abc.html", "2026-10-11-abc.txt", "mail/x.html"):
             p = subprocess.run(
-                ["git", "check-ignore", "-q", f".claude/skills/curate-news/output/2026-10-11-abc{ext}"],
-                cwd=root,
+                ["git", "check-ignore", "-q", f".claude/skills/curate-news/output/{rel}"],
+                cwd=ROOT,
             )
-            self.assertEqual(p.returncode, 0, ext)
+            self.assertEqual(p.returncode, 0, rel)
 
 
 if __name__ == "__main__":

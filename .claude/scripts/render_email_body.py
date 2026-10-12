@@ -3,7 +3,7 @@
 
 決定的: 同じ入力から常に同じ出力。記事本文・画像は扱わず、リンクと既存の要約（リード・読みどころ）だけを使う。
 入力・出力とも gitignore 対象の `.claude/skills/curate-news/output/` に置き、公開 repo にコミットしない。
-入力・出力先が `output` ディレクトリの下にないと拒否する（`_posts/` や公開物の下に書かない）。
+入力・出力先とも、resolve した実体が `.claude/skills/curate-news/output/` の下にないと拒否する（`_posts/` や公開物の下に書かない）。
 
 使い方: python3 .claude/scripts/render_email_body.py <output/{日付}-{ハッシュ}.md> [--out-dir DIR]
 出力: <out-dir>/{入力の stem}.html と .txt（既定の out-dir は入力と同じディレクトリ）
@@ -19,6 +19,7 @@ ITEM_RE = re.compile(
 )
 NUMBERED_RE = re.compile(r"^\d+\.\s")
 ROOT = Path(__file__).resolve().parents[2]
+OUTPUT_DIR = ROOT / ".claude" / "skills" / "curate-news" / "output"
 HEADING_RE = re.compile(r"^##\s+(?P<heading>.+?)\s*$")
 
 
@@ -85,19 +86,20 @@ def render_html(doc):
     return "\n".join(parts) + "\n"
 
 
-def check_paths(src, out_dir):
-    """入力・出力先とも、リポジトリ相対（repo 外なら絶対パス）で `output` ディレクトリの下にあること。
+def _under_output(p):
+    return p.resolve().is_relative_to(OUTPUT_DIR.resolve())
 
-    curate-news の output/ は gitignore 対象なので、公開 repo・Pages に出ない。
+
+def check_paths(src, out_dir):
+    """入力ファイル・出力先とも、curate-news の output/ の下にあること。
+
+    この output/ は gitignore 対象なので、公開 repo・Pages に出ない。名前が `output` なだけの別の
+    ディレクトリ（`_posts/output`、repo ルートの `output` など）は gitignore されないので受け付けない。
     """
-    for label, p in (("入力", src), ("出力先", out_dir)):
-        rp = p.resolve()
-        try:
-            rp = rp.relative_to(ROOT)
-        except ValueError:
-            pass
-        if "output" not in rp.parent.parts if label == "入力" else "output" not in rp.parts:
-            raise SystemExit(f"{label} {p} が output/ 配下にない。公開される場所に書かないため output/ 配下だけ受け付ける")
+    if not _under_output(src.parent):
+        raise SystemExit(f"入力 {src} が {OUTPUT_DIR.relative_to(ROOT)}/ の下にない")
+    if not _under_output(out_dir):
+        raise SystemExit(f"出力先 {out_dir} が {OUTPUT_DIR.relative_to(ROOT)}/ の下にない。公開される場所に書かないため、ここだけ受け付ける")
 
 
 def main(argv=None):
