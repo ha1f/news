@@ -96,7 +96,7 @@ def check_paths(src, out_dir):
     この output/ は gitignore 対象なので、公開 repo・Pages に出ない。名前が `output` なだけの別の
     ディレクトリ（`_posts/output`、repo ルートの `output` など）は gitignore されないので受け付けない。
     """
-    if not _under_output(src.parent):
+    if not _under_output(src):
         raise SystemExit(f"入力 {src} が {OUTPUT_DIR.relative_to(ROOT)}/ の下にない")
     if not _under_output(out_dir):
         raise SystemExit(f"出力先 {out_dir} が {OUTPUT_DIR.relative_to(ROOT)}/ の下にない。公開される場所に書かないため、ここだけ受け付ける")
@@ -117,9 +117,14 @@ def main(argv=None):
         raise SystemExit(f"番号付き行 {numbered} 件に対し記事を {len(doc['items'])} 件しか読めなかった（記事を取りこぼしている）")
     if not doc["items"]:
         raise SystemExit(f"{src} から記事を1件も読めなかった（形式が curate-news の出力と違う）")
+    outs = {out_dir / f"{src.stem}.html": render_html(doc), out_dir / f"{src.stem}.txt": render_text(doc)}
+    for dst in outs:
+        # 出力ファイル自体が output/ の外への symlink でないこと、入力を上書きしないこと
+        if not _under_output(dst) or dst.resolve() == src.resolve():
+            raise SystemExit(f"書き込み先 {dst} が {OUTPUT_DIR.relative_to(ROOT)}/ の外を指すか、入力と同じ")
     out_dir.mkdir(parents=True, exist_ok=True)
-    (out_dir / f"{src.stem}.html").write_text(render_html(doc), encoding="utf-8")
-    (out_dir / f"{src.stem}.txt").write_text(render_text(doc), encoding="utf-8")
+    for dst, body in outs.items():
+        dst.write_text(body, encoding="utf-8")
     print(f"{src.stem}: {len(doc['items'])} 件")
     return 0
 

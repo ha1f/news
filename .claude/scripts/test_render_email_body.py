@@ -1,3 +1,4 @@
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -33,6 +34,11 @@ Aが<b>Bを発表</b>した。要点は2つ。
 
 
 class RenderTest(unittest.TestCase):
+    def cleanup_if_new(self, path):
+        """実装が壊れて repo 内の実パスに書いてしまったとき、テスト前に無かったものだけ消す。"""
+        if not path.exists():
+            self.addCleanup(lambda: shutil.rmtree(path) if path.is_dir() else path.unlink(missing_ok=True))
+
     def test_parse(self):
         d = r.parse(SAMPLE)
         self.assertEqual(len(d["items"]), 2)
@@ -102,6 +108,7 @@ class RenderTest(unittest.TestCase):
                 targets = [Path(other) / d for d in ("_site", "x", "output")]
                 targets += [ROOT / "_posts" / "output", ROOT / "output", ROOT / "docs" / "output", ROOT / "assets" / "output"]
                 for d in targets:
+                    self.cleanup_if_new(d)
                     existed = d.exists()
                     p = run(src, "--out-dir", d)
                     self.assertNotEqual(p.returncode, 0, d)
@@ -112,9 +119,38 @@ class RenderTest(unittest.TestCase):
         with out_tmp() as t:
             src = Path(t) / "in.md"
             src.write_text(SAMPLE, encoding="utf-8")
+            self.cleanup_if_new(OUT.parent / "output-x")
             p = run(src, "--out-dir", OUT / ".." / "output-x")
             self.assertNotEqual(p.returncode, 0)
             self.assertFalse((OUT.parent / "output-x").exists())
+
+    def test_refuses_symlinks_out_of_output(self):
+        # resolve でなく字面で判定すると、output/ 内の symlink 経由で外に書ける・外を読める
+        with out_tmp() as t, tempfile.TemporaryDirectory() as outside:
+            t, outside = Path(t), Path(outside)
+            src = t / "in.md"
+            src.write_text(SAMPLE, encoding="utf-8")
+            (t / "linkdir").symlink_to(outside, target_is_directory=True)
+            p = run(src, "--out-dir", t / "linkdir")
+            self.assertNotEqual(p.returncode, 0)
+            (t / "in.html").symlink_to(outside / "evil.html")
+            p = run(src)
+            self.assertNotEqual(p.returncode, 0)
+            (t / "in.html").unlink()
+            ext = outside / "post.md"
+            ext.write_text(SAMPLE, encoding="utf-8")
+            (t / "post.md").symlink_to(ext)
+            p = run(t / "post.md")
+            self.assertNotEqual(p.returncode, 0)
+            self.assertEqual(sorted(x.name for x in outside.iterdir()), ["post.md"])
+
+    def test_refuses_overwriting_input(self):
+        with out_tmp() as t:
+            src = Path(t) / "x.html"
+            src.write_text(SAMPLE, encoding="utf-8")
+            p = run(src)
+            self.assertNotEqual(p.returncode, 0)
+            self.assertEqual(src.read_text(encoding="utf-8"), SAMPLE)
 
     def test_url_with_paren_and_same_line_note(self):
         d = r.parse("## h\n\nlead\n\n1. [Foo (bar)](https://en.wikipedia.org/wiki/Foo_(bar)) (Wiki)<br>\n   要約A。\n\n2. [S](https://e.com/d) (S)<br>要約D\n")
