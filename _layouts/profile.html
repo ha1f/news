@@ -68,7 +68,7 @@ layout: default
   </div>
 
   {%- if older_post_count > 0 %}
-  <div class="archive-older"><a id="archive-show-older" class="archive-show-more" href="{{ '/profiles/older/' | append: page.profile | append: '.html' | relative_url }}">過去の記事を表示（他{{ older_post_count }}件）</a></div>
+  <div class="archive-older"><a id="archive-show-older" class="archive-show-more" href="{{ '/profiles/older/' | append: page.profile | append: '.html' | relative_url }}">過去の記事を表示（他{{ older_post_count }}日分）</a></div>
   {%- else %}
   <button id="archive-show-older" class="archive-show-more" hidden></button>
   {%- endif %}
@@ -81,7 +81,7 @@ layout: default
     var monthsEl = document.getElementById('archive-months');
     var months = monthsEl.querySelectorAll('.archive-month');
     var INITIAL_MONTHS = {{ initial_months }};
-    // ページに入っていない古い月 (profiles/older/{profile}.html) の記事数
+    // ページに入っていない古い月 (profiles/older/{profile}.html) の日数 (投稿は1日1ファイル)
     var OLDER_POSTS = {{ older_post_count }};
     var tagButtons = document.querySelectorAll('.archive-tag');
     var activeTag = null;
@@ -191,7 +191,8 @@ layout: default
       cutoffDate.setDate(cutoffDate.getDate() - (RECENT_DAYS - 1));
     }
 
-    // まだ見えていない日数。古い月を取得する前は、その月の記事数 (OLDER_POSTS) をまとめて数える。
+    // まだ見えていない日数。古い月を取得する前は、その月の日数 (OLDER_POSTS) をまとめて数える。
+    // ボタンは「日分」で出す。各日の「他N件」(記事数) と同じ「件」にすると単位を取り違える (#551)
     // 展開後 (取得に失敗してリンクが残ったとき) は、ページ内の日はもう見えているので数えない
     function countOlder() {
       var items = monthsEl.querySelectorAll('.archive-list li[data-date]');
@@ -209,7 +210,7 @@ layout: default
     if (OLDER_POSTS > 0 && cutoffDate && earliestInPage > cutoffDate) loadOlderMonths();
 
     if (olderCount > 0 && showOlderBtn) {
-      showOlderBtn.textContent = '過去の記事も見る（' + olderCount + '件）';
+      showOlderBtn.textContent = '過去の記事も見る（' + olderCount + '日分）';
       showOlderBtn.hidden = false;
       showOlderBtn.addEventListener('click', function(e) {
         // 古い月がページの外にあるとき、ボタンは古い月のページへのリンク。新しいタブで開く
@@ -350,7 +351,7 @@ layout: default
       if (showOlderBtn && olderCount > 0) {
         // 件数は折りたたみの解除・古い月の取得で変わる (月初めに先取りした直近の日は数えない)
         olderCount = countOlder();
-        showOlderBtn.textContent = '過去の記事も見る（' + olderCount + '件）';
+        showOlderBtn.textContent = '過去の記事も見る（' + olderCount + '日分）';
         // 古い月を取得できなかったとき (取得中を除く) は、絞り込み中でも展開後でもリンクを残す
         showOlderBtn.hidden = olderLoaded ? (!folded || isFiltering) : olderInFlight;
       }
