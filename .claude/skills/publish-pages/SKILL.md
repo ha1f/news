@@ -179,7 +179,7 @@ git fetch origin main -q && git cat-file -e origin/main:_posts/{YYYY-MM-DD}-news
 
 ### 8. 振り返りと改善
 
-Skill ツールで `reflect-and-improve` を実行する。作成された改善 PR は ready 化する（`gh pr ready` または MCP ツール。次の review-and-merge のレビュー対象になる）。
+Skill ツールで `reflect-and-improve` を実行する。作成された改善 PR は ready 化する（`gh api -X POST repos/{owner}/{repo}/pulls/{n}/ccr/ready_for_review`（`gh` が無ければ `mcp__github__update_pull_request` に `draft: false`。`gh pr ready` は GraphQL なので `gh` が在っても 403。根拠は `.claude/notes/develop-issue.md` の「GraphQL は 403」の項）。次の review-and-merge のレビュー対象になる）。
 
 ## 完了条件
 
