@@ -2,7 +2,7 @@
 name: develop-issue
 description: GitHub issue から実装・DRAFT PR 作成・CI green 化・レビュー対応までを自律的に完走する。「#123 を実装して」「この issue を進めて」「fix this issue」や GitHub issue URL の貼り付けで使う。
 argument-hint: "<issue-number-or-url>"
-allowed-tools: Read, Write, Edit, Grep, Glob, Task, Agent, Skill, AskUserQuestion, Monitor, Bash(gh issue:*), Bash(gh pr:*), Bash(gh run:*), Bash(gh api:*), Bash(gh repo view:*), Bash(git status:*), Bash(git log:*), Bash(git diff:*), Bash(git branch:*), Bash(git checkout -b:*), Bash(git switch:*), Bash(git add:*), Bash(git commit:*), Bash(git fetch:*), Bash(git rebase:*), Bash(git push:*), Bash(git blame:*), Bash(git worktree:*), Bash(jq:*)
+allowed-tools: Read, Write, Edit, Grep, Glob, Task, Agent, Skill, AskUserQuestion, Monitor, Bash(gh issue:*), Bash(gh pr:*), Bash(gh run:*), Bash(gh api:*), Bash(gh repo view:*), Bash(git status:*), Bash(git log:*), Bash(git diff:*), Bash(git branch:*), Bash(git checkout -b:*), Bash(git switch:*), Bash(git add:*), Bash(git commit:*), Bash(git fetch:*), Bash(git rebase:*), Bash(git push:*), Bash(git blame:*), Bash(git worktree:*), Bash(git show:*), Bash(git merge:*), Bash(git merge-tree:*), Bash(python3 .claude/scripts/*), Bash(python3 ${CLAUDE_SKILL_DIR}/scripts/*), Bash(jq:*)
 ---
 
 # develop-issue
@@ -32,7 +32,7 @@ issue はドラフト。文面でなく背後の問題と目的を掴む:
 - 実装前に green 条件 (走らせるコマンドと期待結果) を決める。実行する手段がなければ検証手段から作って repo に残す (失敗を再現するテスト、検証スクリプト)。それも無理な範囲は未検証と明記し、検証を可能にする環境整備を別 PR で提案する。ユーザ操作で再現する issue は、実際に起動して操作する検証も含める
 - 分割は [references/task-splitting.md](references/task-splitting.md) の基準で作り、曖昧さは自分で解消して worker には確定した仕様だけ渡す
 - 検証は速い順に回す: 編集ごとの lint・型チェック → 変更近傍のテスト → フルスイートは PR 前と CI。出力は失敗時のみ詳細にし、成功ログでコンテキストを埋めない。結果が疑わしいときは検証器自体の正しさを先に確かめる (間違った検証器は間違った問題を解かせる)
-- PR を作る前に fresh context の subagent に diff をレビューさせる。issue の受け入れ条件と green 条件 (計画を投稿したならそれも) を渡し、正確性と要件の gap だけ指摘させる。実装を壊して検証器が red になるか当てさせる等、書き込みを伴うレビューは scratchpad 内に `git worktree` を作らせて行わせる (作業ブランチは共有 working tree が掴んでいるため `git worktree add <path> <作業ブランチ>` は失敗する。`--detach <sha>` で作らせる)。終わったら `git worktree remove --force` させる (素の `remove` は書き込み後のツリーが汚れているため失敗する。共有 working tree を一時改変させると、自分が並行して回す検証が黙って壊れた実装の結果になる)
+- PR を作る前に fresh context の subagent に diff をレビューさせる。issue の受け入れ条件と green 条件 (計画を投稿したならそれも) を渡し、正確性と要件の gap だけ指摘させる。実装を壊して検証器が red になるか当てさせる等、書き込みを伴うレビューは scratchpad 内に `git worktree` を作らせて行わせる (作業ブランチは共有 working tree が掴んでいるため `git worktree add <path> <作業ブランチ>` は失敗する。`--detach <sha>` で作らせる)。終わったら `git worktree remove --force` させる (素の `remove` は書き込み後のツリーが汚れているため失敗する。共有 working tree を一時改変させると、自分が並行して回す検証が黙って壊れた実装の結果になる。worktree を作れない環境では、書く作業を 1 本ずつ回す中で、その担当に自分の番のうちにやらせる。終わったら作業ツリーが元に戻ったことを `git status` で自分で確かめる)
 - linked issue の無い PR は body が唯一の正本。ready 化の前と、既存 PR の branch に追加で commit を積む前に `git log origin/main..HEAD` を body の「何を変えたか」と突き合わせ、body に無い commit は body に背景と根拠を足すか branch から外す (別 run が後から無関係な変更を相乗りさせると、その1行が誰にもレビューされず、検証済みの他の commit ごと要修正で落ちる。実測 PR #434)
 - worker の報告は主張として扱い、green 条件のコマンドは自分で再実行して確かめる。ユーザ・issue・PR body への報告は検証済みの事実だけで、PR body は head commit の実物と一致した状態で終える (古いまま残すと成果物と逆の主張になる)
 - state ファイルは持たない。commit を小さく積んで随時 push し、再開は git / GitHub の状態から判断する
@@ -45,7 +45,8 @@ issue はドラフト。文面でなく背後の問題と目的を掴む:
 |---|---|
 | 1 PR 以下 | 自分で実装 + レビュー subagent |
 | 依存する複数 PR | 鎖の順に直列 |
-| 独立した複数 PR (依存もファイル重複もない) | worker を並列起動 (worktree で隔離)。自分は検証と統合に徹する |
+| 独立した複数 PR (依存もファイル重複もない) | worker を並列起動 (worktree で隔離。作れない環境では 1 体ずつ直列)。自分は検証と統合に徹する |
+| 親 issue (サブ issue が多数、既存の PR も混ざる) | [references/parent-issue.md](references/parent-issue.md)。ヘルパーは `python3 ${CLAUDE_SKILL_DIR}/scripts/<名前>.py` で呼ぶ |
 
 探索やログ解析などコンテキストを食う作業は、規模によらず subagent に隔離して結論だけ受け取る。リスクの高い変更は観点の異なるレビューを複数走らせる。run が長引いたら、issue のコメントと push 済みの commit を引き継ぎ資料に fresh context へ交代する。モデルの使い分けと team の形は [references/model-notes.md](references/model-notes.md)。
 
