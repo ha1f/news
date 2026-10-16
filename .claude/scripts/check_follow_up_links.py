@@ -6,7 +6,8 @@
 
 検査すること:
   1. リンクの着地先が実在し、同じフィード（メインならメイン、プロファイルなら同じプロファイル）の日次ページである
-  2. 着地先の日付が表記の M/D と一致し、このページより前で1年以内である（年またぎも正しい年に飛ぶ）
+  2. 着地先の日付が表記の M/D と一致し、このページより前で180日以内の直近の日付である（年またぎも正しい年に飛ぶ。
+     _layouts/post.html が遡るのも180日まで）。リンクが別の <a> の中に入れ子になっていない
   3. リンクの付いていない表記について、同じフィードにその日のページがあるなら NG（付け損ね）。
      無ければ文字のまま残るのが正しいので件数だけ報告する
 
@@ -26,6 +27,9 @@ BARE_RE = re.compile(r'(?<!">)続報（(?P<m>\d{1,2})/(?P<d>\d{1,2})掲載）')
 BODY_RE = re.compile(r'itemprop="articleBody">(.*?)</article>', re.S)
 
 
+MAX_AGE = datetime.timedelta(days=180)
+
+
 def page_key(path):
     """'.../YYYY/MM/DD/news-xxx.html' → (date, フィード名)。日次ページでなければ None"""
     m = PAGE_RE.search(str(path).replace("\\", "/"))
@@ -35,7 +39,7 @@ def page_key(path):
 
 
 def nearest_prior(page_date, month, day):
-    """page_date より前で最も近い month/day の日付"""
+    """page_date より前で最も近い month/day の日付。MAX_AGE より古ければ None"""
     try:
         cand = datetime.date(page_date.year, month, day)
     except ValueError:
@@ -45,7 +49,7 @@ def nearest_prior(page_date, month, day):
             cand = datetime.date(page_date.year - 1, month, day)
         except ValueError:
             return None
-    return cand
+    return cand if page_date - cand <= MAX_AGE else None
 
 
 def check(site):
@@ -73,7 +77,10 @@ def check(site):
             if (t_date.month, t_date.day) != (int(m["m"]), int(m["d"])):
                 errors.append(f"{rel}: 続報（{label}掲載）が別の日を指す: {m['href']}")
             if t_date != nearest_prior(page_date, int(m["m"]), int(m["d"])):
-                errors.append(f"{rel}: 続報（{label}掲載）がこのページより前の直近1年の日付でない: {m['href']}")
+                errors.append(f"{rel}: 続報（{label}掲載）がこのページより前の直近180日の日付でない: {m['href']}")
+            before = text[:m.start()]
+            if before.rfind("<a ") > before.rfind("</a>"):
+                errors.append(f"{rel}: 続報（{label}掲載）のリンクが別の <a> の中に入れ子になっている")
             if target not in pages:
                 errors.append(f"{rel}: 続報（{label}掲載）のリンク先が存在しない: {m['href']}")
         for m in BARE_RE.finditer(text):

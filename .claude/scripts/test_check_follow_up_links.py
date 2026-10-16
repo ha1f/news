@@ -47,7 +47,17 @@ class CheckFollowUpLinksTest(unittest.TestCase):
     def test_link_to_wrong_year_fails(self):
         page(self.site, "2024/12/30/news.html", "")
         page(self.site, "2026/01/02/news.html", link("/news/2024/12/30/news.html", "12/30"))
-        self.assertTrue(any("直近1年" in e for e in self.errors()))
+        self.assertTrue(any("直近180日" in e for e in self.errors()))
+
+    def test_link_to_same_day_a_year_ago_fails(self):
+        # 今年の 12/30 が同じフィードに無いときに前年の 12/30 を拾った状態
+        page(self.site, "2026/12/31/news.html", link("/news/2025/12/30/news.html", "12/30"))
+        self.assertTrue(any("直近180日" in e for e in self.errors()))
+
+    def test_nested_link_fails(self):
+        page(self.site, "2026/01/02/news.html",
+             '<a href="https://example.com/">' + link("/news/2025/12/30/news.html", "12/30") + '見出し</a>')
+        self.assertTrue(any("入れ子" in e for e in self.errors()))
 
     def test_link_to_missing_page_fails(self):
         page(self.site, "2026/01/02/news.html", link("/news/2025/12/28/news.html", "12/28"))

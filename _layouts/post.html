@@ -115,6 +115,7 @@ layout: default
   {%- comment -%}
     読みどころの「続報（M/D掲載）」の掲載日を、同じフィードのその日の日次ページへのリンクにする (#559)。
     M/D には年が無いので、このページより前で最も近い同じ M/D の投稿を採る（年またぎもこれで決まる）。
+    遡るのは180日まで。1年近く遡ると、その年の該当日が同じフィードに無いときに前年の同じ M/D を拾ってしまう。
     同じフィードにその日の投稿が無ければリンクを付けず文字のまま残す（404 に送らない）。
     一度置き換えた表記は「続報（M/D掲載）」の形でなくなるので、より古い同じ M/D には二重に当たらない。
     9月中旬までの投稿には見出しのリンク文字列が「続報（M/D掲載）。」で始まるものがあり、そのまま置き換えると
@@ -128,7 +129,7 @@ layout: default
       {%- assign post_epoch = post.date | date: '%s' | plus: 0 -%}
       {%- if post_epoch >= page_epoch -%}{%- continue -%}{%- endif -%}
       {%- assign post_age = page_epoch | minus: post_epoch -%}
-      {%- if post_age > 31622400 -%}{%- break -%}{%- endif -%}
+      {%- if post_age > 15552000 -%}{%- break -%}{%- endif -%}
       {%- assign follow_up_md = post.date | date: '%-m/%-d' -%}
       {%- assign follow_up_marker = '続報（' | append: follow_up_md | append: '掲載）' -%}
       {%- if post_body contains follow_up_marker -%}
