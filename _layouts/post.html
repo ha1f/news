@@ -106,23 +106,51 @@ layout: default
     {%- endif -%}
   {%- endif -%}
 
+  {%- if page.profile -%}
+    {%- assign nav_siblings = site.posts | where: "profile", page.profile -%}
+  {%- else -%}
+    {%- assign nav_siblings = site.posts | where_exp: "post", "post.profile == nil" -%}
+  {%- endif -%}
+
+  {%- comment -%}
+    読みどころの「続報（M/D掲載）」の掲載日を、同じフィードのその日の日次ページへのリンクにする (#559)。
+    M/D には年が無いので、このページより前で最も近い同じ M/D の投稿を採る（年またぎもこれで決まる）。
+    同じフィードにその日の投稿が無ければリンクを付けず文字のまま残す（404 に送らない）。
+    一度置き換えた表記は「続報（M/D掲載）」の形でなくなるので、より古い同じ M/D には二重に当たらない。
+    9月中旬までの投稿には見出しのリンク文字列が「続報（M/D掲載）。」で始まるものがあり、そのまま置き換えると
+    <a> が入れ子になる。リンク文字列の先頭（`">続報（`）は置き換えの間だけ退避して対象から外す。
+  {%- endcomment -%}
+  {%- assign post_body = content -%}
+  {%- if post_body contains '続報（' -%}
+    {%- assign post_body = post_body | replace: '">続報（', '">FOLLOW_UP_IN_LINK（' -%}
+    {%- assign page_epoch = page.date | date: '%s' | plus: 0 -%}
+    {%- for post in nav_siblings -%}
+      {%- assign post_epoch = post.date | date: '%s' | plus: 0 -%}
+      {%- if post_epoch >= page_epoch -%}{%- continue -%}{%- endif -%}
+      {%- assign post_age = page_epoch | minus: post_epoch -%}
+      {%- if post_age > 31622400 -%}{%- break -%}{%- endif -%}
+      {%- assign follow_up_md = post.date | date: '%-m/%-d' -%}
+      {%- assign follow_up_marker = '続報（' | append: follow_up_md | append: '掲載）' -%}
+      {%- if post_body contains follow_up_marker -%}
+        {%- capture follow_up_linked -%}続報（<a class="follow-up-link" href="{{ post.url | relative_url }}">{{ follow_up_md }}掲載</a>）{%- endcapture -%}
+        {%- assign post_body = post_body | replace: follow_up_marker, follow_up_linked -%}
+      {%- endif -%}
+    {%- endfor -%}
+    {%- assign post_body = post_body | replace: '">FOLLOW_UP_IN_LINK（', '">続報（' -%}
+  {%- endif -%}
+
   <div class="post-content e-content" itemprop="articleBody">
     {%- comment -%}
       記事ごとの着地点（#article-N）を付ける。トップページ・プロファイルページの見出しリンクは
       同じ `split: '<li>'` の位置番号で href を作るため、番号は常に一致する。
     {%- endcomment -%}
-    {%- assign content_parts = content | split: '<li>' -%}
+    {%- assign content_parts = post_body | split: '<li>' -%}
     {{- content_parts.first -}}
     {%- for part in content_parts offset: 1 -%}
       <li id="article-{{ forloop.index }}">{{- part -}}
     {%- endfor -%}
   </div>
 
-  {%- if page.profile -%}
-    {%- assign nav_siblings = site.posts | where: "profile", page.profile -%}
-  {%- else -%}
-    {%- assign nav_siblings = site.posts | where_exp: "post", "post.profile == nil" -%}
-  {%- endif -%}
   {%- assign nav_prev = nil -%}
   {%- assign nav_next = nil -%}
   {%- assign nav_found = false -%}
