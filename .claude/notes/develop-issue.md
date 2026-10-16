@@ -63,6 +63,7 @@ playwright screenshot --browser chromium --full-page \
 - **Node の API で Playwright を `require` するパスは `/opt/node22/lib/node_modules/playwright`**（実測 2026-09-30。`/usr/lib/node_modules/playwright-core` は存在せず `Cannot find module` になる）。`npm root -g` が `/opt/node22/lib/node_modules` を返すので、迷ったらそれを見る
 - **スクリーンショットの一致を「変化なし」の根拠にするなら `fullPage: true` で撮る。** 既定のビューポート撮影は下端から先を写さないので、フッタ付近を変えた PR では*変更箇所がフレームの外*になる。実測 2026-09-30（#390）: 1100px 高で撮った dark 8枚が変更前とバイト一致したが、変えた RSS アイコンは y≈3038 にあり1枚にも写っていなかった。フルページで撮り直すと全ページに差分が出た
 - 配信は `python3 -m http.server <port> --directory <dir>` で。`baseurl: /news` を再現するため `<dir>/news/` に `_site` の中身を置く（CI の workflow と同じやり方）
+  - 止めるときに `pkill -f "http.server <port>"` を他のコマンドと同じ Bash 呼び出しに並べない。パターンがその呼び出し自身の `bash -c` のコマンドラインにも一致して、シェルごと落ちる（実測 2026-10-16: exit 144 で、同じ行の `git commit && git push` が走らなかった）。起動時に `echo $! > <scratchpad>/srv.pid` で PID を残し、`kill "$(cat <scratchpad>/srv.pid)"` で止める
 - Node の API を直接使う場合、dark mode は `browser.newContext({ colorScheme })` か `browser.newPage({ colorScheme })` で。`context.newPage({ colorScheme })` は**黙って無視される**（実測）
 - Node の API で幅を指定するキーは `viewport`。**`viewportSize` は黙って無視され 1280 幅になる**（Python 版のキー名。実測 2026-09-22: `newContext({viewportSize:{width:375,...}})` → `window.innerWidth` 1280 / `newContext({viewport:{width:375,...}})` → 375）。同じ `newContext` で `colorScheme` のほうは効くので、dark だけ合っていて幅が違う絵を撮ってしまう
 
