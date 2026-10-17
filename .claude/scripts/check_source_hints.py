@@ -33,6 +33,7 @@ ALIASES = {
     "はてなブックマーク": "はてブ",
     "Product Hunt": "PH",
     "日経新聞": "日経",
+    "日本経済新聞": "日経",
     "MIT Technology Review": "MIT TR",
     "MIT Tech Review": "MIT TR",
     "Nature Machine Intelligence": "Nature",

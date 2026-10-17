@@ -147,8 +147,57 @@ layout: default
     {%- endcomment -%}
     {%- assign content_parts = post_body | split: '<li>' -%}
     {{- content_parts.first -}}
+    {%- comment -%}
+      ラベルが示す媒体とリンク先が違う項目（はてブ・HN 経由など）にだけ、見出しの直後に遷移先のドメインを出す (#183)。
+      媒体ラベルの項目（TechCrunch → techcrunch.com 等）に足すと二重表示になるので出さない (#294)。
+      ラベルの媒体のドメインは _data/source_domains.json（gen_source_domains.py がソース定義から生成）。
+      表に無いラベル（ソース定義ができる前の過去の投稿に多い）は、まず先頭の語で表を引き直す（Reddit r/ML → Reddit）。
+      それでも無ければ、ラベルの語（3文字以上・blog や news などの汎用語を除く）を英数字にしたものがホストに含まれれば
+      一致とみなす（The Verge → theverge.com、Lobsters → lobste.rs、Cloudflare Blog → blog.cloudflare.com）。
+      それでも一致しなければ遷移先を出す側に倒す（東京新聞など日本語のラベル。遷移先を隠すより冗長のほうが害が小さい）。
+    {%- endcomment -%}
+    {%- assign generic_label_words = "the,and,blog,news,tech,notes,security,japan" | split: ',' -%}
     {%- for part in content_parts offset: 1 -%}
-      <li id="article-{{ forloop.index }}">{{- part -}}
+      {%- assign item_html = part -%}
+      {%- if part contains '</a>' -%}
+        {%- assign item_href = part | split: 'href="' | slice: 1 | first | split: '"' | first -%}
+        {%- if item_href contains '://' -%}
+          {%- assign item_host = item_href | split: '://' | slice: 1 | first | split: '/' | first | split: '?' | first | split: '#' | first | split: ':' | first | downcase -%}
+          {%- assign host_head = item_host | slice: 0, 4 -%}
+          {%- if host_head == 'www.' -%}{%- assign item_host = item_host | remove_first: 'www.' -%}{%- endif -%}
+          {%- assign item_label = part | split: '</a>' | slice: 1 | first | split: '<br' | first | split: '</p>' | first | split: '</li>' | first | split: '(' | last | split: ')' | first | split: '・' | first | strip -%}
+          {%- assign label_domains = site.data.source_domains[item_label] -%}
+          {%- if label_domains == nil -%}
+            {%- assign label_head = item_label | split: ' ' | first -%}
+            {%- assign label_domains = site.data.source_domains[label_head] -%}
+          {%- endif -%}
+          {%- assign host_matches = false -%}
+          {%- for d in label_domains -%}
+            {%- assign d_suffix = '.' | append: d -%}
+            {%- assign d_len = d_suffix.size -%}
+            {%- assign d_neg = 0 | minus: d_len -%}
+            {%- assign host_tail = item_host | slice: d_neg, d_len -%}
+            {%- if item_host == d or host_tail == d_suffix -%}
+              {%- assign host_matches = true -%}
+              {%- break -%}
+            {%- endif -%}
+          {%- endfor -%}
+          {%- if label_domains == nil and host_matches == false -%}
+            {%- assign host_compact = item_host | remove: '.' | remove: '-' -%}
+            {%- assign label_words = item_label | downcase | split: ' ' -%}
+            {%- for w in label_words -%}
+              {%- assign w_compact = w | remove: '.' | remove: '-' | remove: '[' | remove: ']' | remove: '/' | remove: '_' | remove: ':' -%}
+              {%- if w_compact.size < 3 or generic_label_words contains w_compact -%}{%- continue -%}{%- endif -%}
+              {%- if host_compact contains w_compact -%}{%- assign host_matches = true -%}{%- break -%}{%- endif -%}
+            {%- endfor -%}
+          {%- endif -%}
+          {%- if host_matches == false and item_host != '' -%}
+            {%- capture link_domain_html -%}</a><span class="link-domain">{{ item_host }}</span>{%- endcapture -%}
+            {%- assign item_html = part | replace_first: '</a>', link_domain_html -%}
+          {%- endif -%}
+        {%- endif -%}
+      {%- endif -%}
+      <li id="article-{{ forloop.index }}">{{- item_html -}}
     {%- endfor -%}
   </div>
 
