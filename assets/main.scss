@@ -241,6 +241,13 @@ $ui-border-color: #8d8d8d; // 背景 #fdfdfd と 3.26:1
   color: $grey-color;
 }
 
+// アグリゲータ経由の項目の遷移先ドメイン (#183)。媒体ラベルの項目には付かない
+.link-domain {
+  font-size: 0.8125em;
+  color: $grey-color;
+  margin-left: 0.3em;
+}
+
 
 .post-navigation {
   display: flex;
@@ -674,6 +681,10 @@ $ui-border-color: #8d8d8d; // 背景 #fdfdfd と 3.26:1
   }
 
   .external-link::after {
+    color: #8b949e;
+  }
+
+  .link-domain {
     color: #8b949e;
   }
 
