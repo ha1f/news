@@ -21,8 +21,9 @@ from urllib.parse import urlparse
 
 import gen_source_domains
 
-ITEM_RE = re.compile(r'<li id="article-\d+">\s*<p>(?P<head>.*?)(?:<br|</p>)', re.S)
-LINK_RE = re.compile(r'^<a href="(?P<href>[^"]*)"[^>]*>.*?</a>(?P<rest>.*)$', re.S)
+ITEM_RE = re.compile(r'<li id="article-\d+">\s*(?:<p>)?(?P<head>.*?)(?:<br|</p>|</li>)', re.S)
+# Liquid と同じく、項目の中で最初のリンクを見出しとみなす（前に <strong> 等があっても拾う）
+LINK_RE = re.compile(r'<a href="(?P<href>[^"]*)"[^>]*>.*?</a>(?P<rest>.*)$', re.S)
 DOMAIN_RE = re.compile(r'^<span class="link-domain">(?P<host>[^<]*)</span>(?P<rest>.*)$', re.S)
 LABEL_RE = re.compile(r"\((?P<label>[^()]*)\)\s*$")
 
@@ -32,18 +33,28 @@ def host_of(href: str) -> str:
     return host[4:] if host.startswith("www.") else host
 
 
+GENERIC_WORDS = {"the", "and", "blog", "news", "tech", "notes", "security", "japan"}
+
+
 def label_matches(host: str, name: str, table) -> bool:
     domains = table.get(name)
+    if domains is None:
+        domains = table.get(name.split(" ")[0])
     if domains is not None:
         return any(host == d or host.endswith("." + d) for d in domains)
-    # 対応表に無いラベル（ソース定義より前の過去の投稿）は、英数字にしたラベルがホストに含まれるかで見る
-    compact = re.sub(r"[ .\-]", "", name.lower())
-    return len(compact) >= 3 and compact in re.sub(r"[.\-]", "", host)
+    # 対応表に無いラベル（ソース定義より前の過去の投稿）は、汎用語を除いた3文字以上の語が
+    # 英数字にしてホストに含まれるかで見る
+    host_compact = re.sub(r"[.\-]", "", host)
+    for word in name.lower().split(" "):
+        w = re.sub(r"[.\-\[\]/_:]", "", word)
+        if len(w) >= 3 and w not in GENERIC_WORDS and w in host_compact:
+            return True
+    return False
 
 
 def check_item(head: str, table):
     """1項目を検査し、問題があればその説明を返す。検査対象外の項目は None と同じ扱い"""
-    link = LINK_RE.match(head.strip())
+    link = LINK_RE.search(head)
     if not link or "://" not in link.group("href"):
         return None
     host = host_of(link.group("href"))
@@ -86,7 +97,7 @@ def main(argv):
             if 'class="link-domain"' in head:
                 shown += 1
             problem = check_item(head, table)
-            if LINK_RE.match(head.strip()):
+            if LINK_RE.search(head):
                 checked += 1
             if problem:
                 failures += 1

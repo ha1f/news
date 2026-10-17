@@ -41,6 +41,18 @@ class TestLabelMatches(unittest.TestCase):
         self.assertTrue(label_matches("theverge.com", "The Verge", TABLE))
         self.assertTrue(label_matches("lobste.rs", "Lobsters", TABLE))
 
+    def test_label_with_suffix_uses_first_word(self):
+        self.assertTrue(label_matches("reddit.com", "Reddit r/ML", TABLE))
+        self.assertFalse(label_matches("arxiv.org", "Reddit r/ML", {"Reddit": ["reddit.com"]}))
+
+    def test_unknown_label_word_found_in_host(self):
+        self.assertTrue(label_matches("blog.cloudflare.com", "Cloudflare Blog", TABLE))
+        self.assertTrue(label_matches("takoratta.hatenablog.com", "Notes by Takoratta", TABLE))
+        self.assertTrue(label_matches("p2ptk.org", "p2ptk[.]org", TABLE))
+
+    def test_generic_word_alone_is_not_a_match(self):
+        self.assertFalse(label_matches("blog.example.com", "Some Blog", TABLE))
+
     def test_unknown_label_not_in_host(self):
         self.assertFalse(label_matches("swift.org", "Lobsters", TABLE))
         self.assertFalse(label_matches("nikkei.com", "日本食糧新聞", TABLE))
@@ -75,6 +87,15 @@ class TestCheckItem(unittest.TestCase):
     def test_label_after_follow_up_note(self):
         self.assertIsNone(check_item(
             '<a href="https://techcrunch.com/a">見出し</a>（続報）(TechCrunch)', TABLE))
+
+
+class TestItemRe(unittest.TestCase):
+    def test_tight_list_item_is_checked(self):
+        from check_link_domains import ITEM_RE
+        html = '<li id="article-1"><a href="https://arxiv.org/a">H</a> (HN・英語)</li>'
+        m = ITEM_RE.search(html)
+        self.assertIsNotNone(m)
+        self.assertIn("ありません", check_item(m.group("head"), TABLE))
 
 
 class TestGenerated(unittest.TestCase):
