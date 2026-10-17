@@ -215,15 +215,18 @@ layout: default
   {%- endfor -%}
 
   {%- if nav_prev or nav_next -%}
+  {%- comment -%}職種別フィード内の移動では、見出し末尾の「（職種名）」は同じ語の繰り返しになるので外す (#562){%- endcomment -%}
+  {%- assign nav_suffix = '' -%}
+  {%- if page.profile -%}{%- assign nav_profile_page = site.pages | where: "profile", page.profile | where: "layout", "profile" | first -%}{%- assign nav_suffix = '（' | append: nav_profile_page.title | append: '）' -%}{%- endif -%}
   <nav class="post-navigation">
     <div class="post-navigation-prev">
       {%- if nav_prev -%}
-      <a href="{{ nav_prev.url | relative_url }}">&larr; {{ nav_prev.title }}</a>
+      <a href="{{ nav_prev.url | relative_url }}">&larr; {% if nav_suffix != '' %}{{ nav_prev.title | replace: nav_suffix, '' }}{% else %}{{ nav_prev.title }}{% endif %}</a>
       {%- endif -%}
     </div>
     <div class="post-navigation-next">
       {%- if nav_next -%}
-      <a href="{{ nav_next.url | relative_url }}">{{ nav_next.title }} &rarr;</a>
+      <a href="{{ nav_next.url | relative_url }}">{% if nav_suffix != '' %}{{ nav_next.title | replace: nav_suffix, '' }}{% else %}{{ nav_next.title }}{% endif %} &rarr;</a>
       {%- endif -%}
     </div>
   </nav>
