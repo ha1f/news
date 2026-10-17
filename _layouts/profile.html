@@ -64,7 +64,8 @@ layout: default
     {%- assign older_post_count = older_post_count | plus: group.items.size -%}
   {%- endfor -%}
   <div id="archive-months">
-  {% include archive-months.html groups=posts_by_month offset=0 limit=initial_months with_date=true %}
+  {%- assign title_suffix = '（' | append: page.title | append: '）' -%}
+  {% include archive-months.html groups=posts_by_month offset=0 limit=initial_months with_date=true strip_suffix=title_suffix %}
   </div>
 
   {%- if older_post_count > 0 %}

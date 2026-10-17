@@ -128,3 +128,7 @@ artifact に写るのは、その branch の `_posts/` をビルドした結果�
 - **ループが止まった原因は Claude Code Remote の MCP で辿れる。** `list_triggers` の `last_run.status` で失敗した run を特定し、その `session_id` を `get_session` に渡すと `post_turn_summary.status_detail` と `external_metadata.rate_limit_info` に理由が出る（MCP ツール名は `mcp__Claude_Code_Remote__*`）。**利用上限の枯渇は「fire から数秒で FAILED」**という形で現れるが、`rateLimitType` で被害の桁が違うので必ず切り分ける: `seven_day` は復帰まで待てない（実測 2026-09-25: 全ステージが `You've hit your weekly limit · resets 9pm (UTC)` で起動直後に弾かれ、約42時間停止して当日の配信が丸ごと欠落した。#421）、`five_hour` は次の reset で自然復帰する（実測 2026-09-26: `毎日実装` が 7.6 秒で FAILED、`You've hit your session limit · resets 5am (UTC)`）。trigger は `enabled: true` のまま・status issue にもレコードが残らないので、一覧を眺めるだけでは止まったことに気づけない
 - **trigger のモデル指定と実際の実行モデルも同じ MCP で読める**（週次 audit のモデル世代の棚卸し用）。指定は `list_triggers` の `derived_state.model`、実際の実行モデルは `get_session` の `external_metadata.last_served_model` に出る。**指定が空（`""`）の trigger は、docs に書かれた既定モデルと同じとは限らない**（実測 2026-09-27: docs の既定は Opus 5.5 だが、`毎日ニュース` と `夕方実装` は Sonnet 5 で動いていた）ので、指定の欄だけで判定しない。失敗した run を人間が同じセッションで再試行すると、`get_session` には再試行後の状態しか残らず、失敗時の `status_detail` は読めない（実測 2026-09-27 の週次 audit）
 - CCR 環境のトリガーは http_api 経由で作成されたものが多く、agent からは `update_trigger` 不可 (permission denied)。トリガーのプロンプト変更で解くより、スキル側のデフォルト動作を変える方が堅牢
+
+## Liquid の癖
+
+- **`remove_last` / `replace_last` は多バイト文字（全角括弧など）を含む文字列で効かない**（Liquid 4.0.4・Jekyll 3.9.5 で実測 2026-10-17: `"あ（エ）" | remove_last: "（エ）"` が無変更で返る）。末尾の日本語を外すときは `replace: x, ''` を使う（全出現を消すので、末尾以外にも同じ語が出うる文字列には使わない）

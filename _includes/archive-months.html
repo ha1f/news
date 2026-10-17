@@ -2,7 +2,8 @@
 同じ描画を使う (#354)。include.groups は月ごとに group_by_exp した投稿、
 include.offset / include.limit でどの月を描くかを決める。プロファイルページ（profile.html と
 profiles/older/*.html）も同じ描画を使い、include.with_date で直近の日だけを見せる折りたたみ用の
-data-date を足す{%- endcomment -%}
+data-date を足す。include.strip_suffix を渡すと、見出し末尾の「（職種名）」を外す
+(#562。フィードが1つに決まっているプロファイルページでは同じ語の繰り返しになる){%- endcomment -%}
 {%- assign date_format = site.minima.date_format | default: "%Y年%-m月%-d日" -%}
 {% for group in include.groups offset: include.offset limit: include.limit %}
 <div class="archive-month" data-month="{{ group.name }}">
@@ -20,7 +21,7 @@ data-date を足す{%- endcomment -%}
   split: '<li>' の位置番号{%- endcomment -%}
   <li{% if include.with_date %} data-date="{{ post.date | date: '%Y-%m-%d' }}"{% endif %} data-url="{{ post.url | relative_url }}" data-tags="{{ post.tags | join: ',' | escape }}"{% if post.article_tags %} data-article-tags{% endif %}>
     <span class="archive-item-date">{{ post.date | date: date_format }}</span>
-    <a href="{{ post.url | relative_url }}">{{ post.title }}</a>
+    <a href="{{ post.url | relative_url }}">{% if include.strip_suffix %}{{ post.title | replace: include.strip_suffix, '' }}{% else %}{{ post.title }}{% endif %}</a>
     {% if post.tags.size > 0 %}<span class="archive-item-tags">{{ post.tags | join: " / " }}</span>{% endif %}
     {% if post.excerpt %}<p class="archive-excerpt">{{ post.excerpt | strip_html | truncate: 100 }}</p>{% endif %}
     {%- if post.content contains '<li>' -%}
