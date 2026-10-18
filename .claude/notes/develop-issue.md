@@ -131,4 +131,4 @@ artifact に写るのは、その branch の `_posts/` をビルドした結果�
 
 ## Liquid の癖
 
-- **`remove_last` / `replace_last` は多バイト文字（全角括弧など）を含む文字列で効かない**（Liquid 4.0.4・Jekyll 3.9.5 で実測 2026-10-17: `"あ（エ）" | remove_last: "（エ）"` が無変更で返る）。末尾の日本語を外すときは `replace: x, ''` を使う（全出現を消すので、末尾以外にも同じ語が出うる文字列には使わない）
+- **Jekyll 3.9.5 が使う Liquid 4.0.4 には `remove_last` / `replace_last` が無い**（Liquid 5 系で追加されたフィルタ。`remove_first` はある）。**未定義のフィルタはエラーにならず入力をそのまま返す**ので、全角括弧のせいではなく ASCII でも黙って無変更になり気づきにくい（実測 2026-10-18: `Liquid::StandardFilters.method_defined?(:remove_last)` → false、ASCII の `"ab(x)" | remove_last: "(x)"` も `ab(x)` のまま）。末尾の語を外すときは `replace: x, ''` を使う（全出現を消すので、末尾以外にも同じ語が出うる文字列には使わない）
