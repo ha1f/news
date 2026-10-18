@@ -134,10 +134,10 @@ PR タイトル:
 - 1件: `ニュース: {YYYY-MM-DD}`
 - 複数: `ニュース: {YYYY-MM-DD} ({件数}プロファイル)`
 
-PR を作成する。`gh api`（REST）が通らない環境では GitHub MCP ツールで同等の操作を行う（cloud の実行環境にも `gh` は在る。無いのは GraphQL で、`gh pr` / `gh issue` 系が 403 になる。根拠は `.claude/notes/develop-issue.md` の `gh` の項）。
+PR を作成する。`gh api`（REST）が通らない環境では GitHub MCP ツールで同等の操作を行う（cloud の実行環境にも `gh` は在る。無いのは GraphQL で、`gh pr create` を含む `gh pr` / `gh issue` 系が 403 になる。根拠は `.claude/notes/develop-issue.md` の `gh` の項）。
 
 ```bash
-gh pr create --base main --title "{タイトル}" --body "/curate-news の結果を GitHub Pages にデプロイします。"
+gh api -X POST repos/{owner}/{repo}/pulls -f base=main -f head="pages/{ブランチ名}" -f title="{タイトル}" -f body="/curate-news の結果を GitHub Pages にデプロイします。"
 ```
 
 **ここは完了地点ではない。** PR を作った時点では記事はまだ1文字もサイトに出ていない。URL の報告はステップ6を終えてからまとめて行う（実測 2026-09-28: PR 作成の19秒後にセッションが終わり、10時の evaluate が引き取るまで55分間その日の記事がサイトに無かった。#447）。続けてステップ6に入る。
