@@ -133,3 +133,7 @@ artifact に写るのは、その branch の `_posts/` をビルドした結果�
 
 - **Jekyll 3.9.5 が使う Liquid 4.0.4 には `remove_last` / `replace_last` が無い**（Liquid 5 系で追加されたフィルタ。`remove_first` はある）。**未定義のフィルタはエラーにならず入力をそのまま返す**ので、全角括弧のせいではなく ASCII でも黙って無変更になり気づきにくい（実測 2026-10-18: `Liquid::StandardFilters.method_defined?(:remove_last)` → false、ASCII の `"ab(x)" | remove_last: "(x)"` も `ab(x)` のまま）。末尾の語を外すときは `replace: x, ''` を使う（全出現を消すので、末尾以外にも同じ語が出うる文字列には使わない）
 - **フィルタの挙動は `jekyll build` を回さず `ruby -e` で確かめられる**（`gem install --no-document liquid:4.0.4` の後、`require "liquid"; puts Liquid::Template.parse(%q({{ ... }})).render`）。**このコンテナは `LANG` が空で Ruby の既定 encoding が US-ASCII** なので、日本語リテラルを含む `-e` は `invalid multibyte char (US-ASCII)` で落ちる。`LANG=C.UTF-8 ruby -e ...` と同じ行で付ける（実測 2026-10-18）
+
+## 後始末の癖
+
+- `pkill -f "http.server 4000"` は、そのコマンド行自身にも一致して Bash 呼び出しごと落ちる（exit 144、以降のコマンドが走らない）。配信を止めるときは `pkill -f "[h]ttp.server 4000"` と書くか、止めずに放置する（実測 2026-10-18）
