@@ -1,5 +1,6 @@
 ---
 name: publish-pages
+model: opus
 description: "ニュースキュレーションを実行し、GitHub Pagesにデプロイする。daily-loop の 9 時ステージ（trigger `/publish-pages`）と、手動で「今日のニュースを配信して」「Pages にデプロイして」で使う"
 ---
 
