@@ -94,7 +94,7 @@ class SendEmailTest(unittest.TestCase):
         self.assertEqual(sorted(x.name for x in self.dir.iterdir()), [self.src.name])
 
     def test_send_creates_unbroadcast_email_then_sends_to_one(self):
-        opener = FakeOpener({"id": "em_1", "status": "transactional"})
+        opener = FakeOpener({"id": "em_1", "status": "draft"})
         with mock.patch.dict(os.environ, {KEY: "secret"}), redirect_stdout(io.StringIO()):
             rc = s.main([str(self.src), "--subscriber-id", "sub_9", "--send"], opener=opener)
         self.assertEqual(rc, 0)
@@ -104,16 +104,17 @@ class SendEmailTest(unittest.TestCase):
         payload = json.loads(create.data)
         self.assertEqual(payload["subject"], "ニュース & 要点")
         self.assertEqual(payload["body"], BODY)
-        self.assertEqual(payload["status"], "transactional")  # 既定の about_to_send は全購読者への配信
+        self.assertEqual(payload["status"], "draft")  # 既定の about_to_send は全購読者への配信
         self.assertEqual(payload["archival_mode"], "disabled")
-        self.assertEqual(send.full_url, "https://api.buttondown.com/v1/subscribers/sub_9/emails/em_1")
+        self.assertEqual(send.full_url, "https://api.buttondown.com/v1/emails/em_1/send-draft")
         self.assertEqual(send.get_method(), "POST")
+        self.assertEqual(json.loads(send.data), {"subscribers": ["sub_9"]})  # 宛先は購読者 ID だけ
         log = json.loads((self.dir / "2026-10-15-abc.sub_9.sent.json").read_text(encoding="utf-8"))
         self.assertEqual(log, {"provider": "buttondown", "email_id": "em_1", "subscriber_id": "sub_9", "sent": True})
         self.assertNotIn("secret", json.dumps(log))
 
     def test_existing_log_blocks_resend(self):
-        opener = FakeOpener({"id": "em_1", "status": "transactional"})
+        opener = FakeOpener({"id": "em_1", "status": "draft"})
         with mock.patch.dict(os.environ, {KEY: "k"}), redirect_stdout(io.StringIO()):
             s.main([str(self.src), "--subscriber-id", "sub_9", "--send"], opener=opener)
             with self.assertRaises(SystemExit):
@@ -123,7 +124,7 @@ class SendEmailTest(unittest.TestCase):
     def test_failed_send_leaves_unsent_record(self):
         def opener(req, timeout=None):
             if req.full_url.endswith("/emails"):
-                return FakeResponse({"id": "em_1", "status": "transactional"})
+                return FakeResponse({"id": "em_1", "status": "draft"})
             raise OSError("429")
         with mock.patch.dict(os.environ, {KEY: "k"}), self.assertRaises(OSError):
             s.main([str(self.src), "--subscriber-id", "sub_9", "--send"], opener=opener)
@@ -183,7 +184,7 @@ class SendEmailTest(unittest.TestCase):
     def test_send_log_symlink_out_of_output_is_refused(self):
         with tempfile.TemporaryDirectory() as outside:
             (self.dir / "2026-10-15-abc.sub_9.sent.json").symlink_to(Path(outside) / "x.json")
-            opener = FakeOpener({"id": "em_1", "status": "transactional"})
+            opener = FakeOpener({"id": "em_1", "status": "draft"})
             with mock.patch.dict(os.environ, {KEY: "k"}), self.assertRaises(SystemExit):
                 s.main([str(self.src), "--subscriber-id", "sub_9", "--send"], opener=opener)
             self.assertEqual(opener.requests, [])  # 送る前に止まる
