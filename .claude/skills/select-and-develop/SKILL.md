@@ -1,5 +1,6 @@
 ---
 name: select-and-develop
+model: opus
 description: "open issue から今日実装する対象を選定し、develop-issue スキルで実装を完走する。daily-loop の実装ステージ（12時・16時）。"
 ---
 
