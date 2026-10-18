@@ -197,6 +197,16 @@ layout: default
           {%- endif -%}
         {%- endif -%}
       {%- endif -%}
+      {%- comment -%}
+        article_tags（記事単位のトピック, #354）を持つ日は、各記事の見出しの直後にトピックを出す (#567)。
+        リンクにしない: 見出しの <a> を先頭の a[href] として探す下の JS（メインにも掲載）の前提を崩さないため。
+        N 本目の見出しに article_tags の N 番目を当てる番号は #article-N の着地点と同じ。
+      {%- endcomment -%}
+      {%- assign item_topics = page.article_tags[forloop.index0] -%}
+      {%- if item_topics.size > 0 -%}
+        {%- capture item_topics_html -%}<span class="article-topics">{%- for t in item_topics -%}<span class="article-topic">{{ t | escape }}</span>{%- endfor -%}</span><br{%- endcapture -%}
+        {%- assign item_html = item_html | replace_first: '<br', item_topics_html -%}
+      {%- endif -%}
       <li id="article-{{ forloop.index }}">{{- item_html -}}
     {%- endfor -%}
   </div>
