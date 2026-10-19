@@ -26,6 +26,8 @@ ITEM_RE = re.compile(r'<li id="article-\d+">\s*(?:<p>)?(?P<head>.*?)(?:<br|</p>|
 LINK_RE = re.compile(r'<a href="(?P<href>[^"]*)"[^>]*>.*?</a>(?P<rest>.*)$', re.S)
 DOMAIN_RE = re.compile(r'^<span class="link-domain">(?P<host>[^<]*)</span>(?P<rest>.*)$', re.S)
 LABEL_RE = re.compile(r"\((?P<label>[^()]*)\)\s*$")
+# 記事ごとのトピック (#567)。ラベルの直後に入るので、ラベルを取る前に外す
+TOPICS_RE = re.compile(r'<span class="article-topics">(?:<span class="article-topic">[^<]*</span>)*</span>')
 
 
 def host_of(href: str) -> str:
@@ -93,7 +95,7 @@ def main(argv):
         if 'id="article-' not in text:
             continue
         for m in ITEM_RE.finditer(text):
-            head = m.group("head")
+            head = TOPICS_RE.sub("", m.group("head"))
             if 'class="link-domain"' in head:
                 shown += 1
             problem = check_item(head, table)
