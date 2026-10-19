@@ -56,7 +56,7 @@ def label_matches(host: str, name: str, table) -> bool:
 
 def check_item(head: str, table):
     """1項目を検査し、問題があればその説明を返す。検査対象外の項目は None と同じ扱い"""
-    link = LINK_RE.search(head)
+    link = LINK_RE.search(TOPICS_RE.sub("", head))
     if not link or "://" not in link.group("href"):
         return None
     host = host_of(link.group("href"))
@@ -95,7 +95,7 @@ def main(argv):
         if 'id="article-' not in text:
             continue
         for m in ITEM_RE.finditer(text):
-            head = TOPICS_RE.sub("", m.group("head"))
+            head = m.group("head")
             if 'class="link-domain"' in head:
                 shown += 1
             problem = check_item(head, table)
