@@ -25,8 +25,12 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from datetime import datetime, timezone
 from feed_config import FeedConfig, JST, CACHE_DIR
 from feed_parsers import PARSERS, fetch_url
+import commercial_filter
 from feed_sources import collect_feeds
 import published_urls
+
+# --paid で使えるソースが0件のときの終了コード（取得失敗の 1 と区別する）
+PAID_NO_SOURCES = 3
 
 
 def _is_cache_valid(cache_path: str, ttl_minutes: int) -> bool:
@@ -157,6 +161,9 @@ def main():
     parser = argparse.ArgumentParser(description="フィード取得スクリプト")
     parser.add_argument("--source", help="ソースIDでフィルタ")
     parser.add_argument("--category", help="カテゴリでフィルタ")
+    parser.add_argument("--paid", action="store_true",
+                        help="有料 run 用: 商用利用（課金）が「可」のソースだけに絞る。"
+                             "0件なら理由を出して終了コード3で止まる")
     parser.add_argument("--force", action="store_true", help="キャッシュ無視")
     parser.add_argument("--list", action="store_true", dest="list_feeds",
                         help="定義一覧を表示")
@@ -174,6 +181,17 @@ def main():
     if not feeds:
         print("該当するフィードがありません", file=sys.stderr)
         sys.exit(1)
+
+    if args.paid:
+        feeds, excluded = commercial_filter.filter_feeds(feeds)
+        if excluded:
+            detail = ", ".join(f"{sid}={v or '欠落/語彙外'}" for sid, v in sorted(excluded.items()))
+            print(f"有料 run: 商用利用（課金）が「可」でないソースを除外: {detail}", file=sys.stderr)
+        if not feeds:
+            print("有料 run に使えるソースが0件です（商用利用（課金）が「可」のソースが無い）。"
+                  "空のフィードは送らず止まります", file=sys.stderr)
+            sys.exit(PAID_NO_SOURCES)
+
 
     if args.list_feeds:
         for f in feeds:
