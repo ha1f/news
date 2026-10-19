@@ -387,6 +387,19 @@ $ui-border-color: #8d8d8d; // 背景 #fdfdfd と 3.26:1
 // opacity はパレット外の色を実行時に作り、light のリンクを 4.15:1 → 2.81:1 に下げていた。
 // 4.15:1 自体も AA 未達だが、それは基底リンク色の別問題）。
 
+// 記事ごとのトピック (#567)。リンクではなく目印なので、枠線なしの小さな灰色の語にとどめる
+.article-topics {
+  margin-left: 0.5em;
+  font-size: $base-font-size * 0.75;
+  color: $grey-color;
+  white-space: nowrap;
+  word-break: keep-all;
+}
+
+.article-topic + .article-topic::before {
+  content: " / ";
+}
+
 .shared-label {
   font-size: $base-font-size * 0.75;
   color: $grey-color;
@@ -635,7 +648,8 @@ $ui-border-color: #8d8d8d; // 背景 #fdfdfd と 3.26:1
     color: #8b949e;
   }
 
-  .shared-label {
+  .shared-label,
+  .article-topics {
     color: #8b949e;
   }
 

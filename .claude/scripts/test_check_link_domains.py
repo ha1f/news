@@ -89,6 +89,17 @@ class TestCheckItem(unittest.TestCase):
             '<a href="https://techcrunch.com/a">見出し</a>（続報）(TechCrunch)', TABLE))
 
 
+    def test_label_before_article_topics(self):
+        # #567 のトピックはラベルの直後に入る。ラベルの取得を妨げない
+        topics = '<span class="article-topics"><span class="article-topic">AI</span><span class="article-topic">R&amp;D</span></span>'
+        self.assertIsNone(check_item(
+            head("https://techcrunch.com/a", "TechCrunch") + topics, TABLE))
+        self.assertIsNone(check_item(
+            head("https://arxiv.org/abs/1", "HN", "arxiv.org") + topics, TABLE))
+        self.assertIn("ありません", check_item(
+            head("https://arxiv.org/abs/1", "HN") + topics, TABLE))
+
+
 class TestItemRe(unittest.TestCase):
     def test_tight_list_item_is_checked(self):
         from check_link_domains import ITEM_RE

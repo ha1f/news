@@ -26,6 +26,8 @@ ITEM_RE = re.compile(r'<li id="article-\d+">\s*(?:<p>)?(?P<head>.*?)(?:<br|</p>|
 LINK_RE = re.compile(r'<a href="(?P<href>[^"]*)"[^>]*>.*?</a>(?P<rest>.*)$', re.S)
 DOMAIN_RE = re.compile(r'^<span class="link-domain">(?P<host>[^<]*)</span>(?P<rest>.*)$', re.S)
 LABEL_RE = re.compile(r"\((?P<label>[^()]*)\)\s*$")
+# 記事ごとのトピック (#567)。ラベルの直後に入るので、ラベルを取る前に外す
+TOPICS_RE = re.compile(r'<span class="article-topics">(?:<span class="article-topic">[^<]*</span>)*</span>')
 
 
 def host_of(href: str) -> str:
@@ -54,7 +56,7 @@ def label_matches(host: str, name: str, table) -> bool:
 
 def check_item(head: str, table):
     """1項目を検査し、問題があればその説明を返す。検査対象外の項目は None と同じ扱い"""
-    link = LINK_RE.search(head)
+    link = LINK_RE.search(TOPICS_RE.sub("", head))
     if not link or "://" not in link.group("href"):
         return None
     host = host_of(link.group("href"))
