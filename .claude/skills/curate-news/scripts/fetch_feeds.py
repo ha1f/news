@@ -178,6 +178,10 @@ def main():
     if args.category:
         feeds = [f for f in feeds if f.category == args.category]
 
+    if not feeds:
+        print("該当するフィードがありません", file=sys.stderr)
+        sys.exit(1)
+
     if args.paid:
         feeds, excluded = commercial_filter.filter_feeds(feeds)
         if excluded:
@@ -188,9 +192,6 @@ def main():
                   "空のフィードは送らず止まります", file=sys.stderr)
             sys.exit(PAID_NO_SOURCES)
 
-    if not feeds:
-        print("該当するフィードがありません", file=sys.stderr)
-        sys.exit(1)
 
     if args.list_feeds:
         for f in feeds:
