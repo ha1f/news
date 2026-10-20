@@ -109,11 +109,14 @@ article_tags:
 
 ```bash
 python3 .claude/scripts/check_repeat_urls.py _posts/{YYYY-MM-DD}-*.md
+python3 .claude/scripts/check_topic_repeats.py _posts/{YYYY-MM-DD}-*.md
 python3 .claude/scripts/check_article_notes.py _posts/{YYYY-MM-DD}-*.md
 python3 .claude/scripts/check_source_hints.py _posts/{YYYY-MM-DD}-*.md
 python3 .claude/scripts/check_post_titles.py _posts/{YYYY-MM-DD}-*.md
 python3 .claude/scripts/check_article_tags.py _posts/{YYYY-MM-DD}-*.md
 ```
+
+`check_topic_repeats.py` は URL が違っても、同じフィードの直近10日に載せた項目と固有名の重なる組を「要判断」として出す（読みどころが「続報（」で始まる項目は出さない）。モデルが掲載済みヘッドラインを読んで照合するだけでは、前回の掲載が照合範囲に入っていても見落とした（#531）。出た組は今回と前回の読みどころを並べて1組ずつ判断し、curate-news 4a のトピック重複チェックと同じ扱いにする: 同じ出来事で新しい事実が無ければ項目を削る（後始末は既出 URL と同じ）、新しい事実があれば読みどころの冒頭に「続報（M/D掲載）。」を足し、前回と食い違う事実はどちらが正しいか原文で確かめて書く。別の話題なら何もしない（重なった語が一般名詞や同じ会社名だけの組は多い。終了コード 1 が残るのはそのため）。
 
 続けて、デフォルトプロファイルの各項目を**予備知識のない読者として上から読み、「誰が・何を」に口で答える**（#371）。他プロファイルの記事から分かったことは使わず、その面の見出しと読みどころだけで答える。答えられない項目は、curate-news の「各記事の見出し」「読みどころ」節に従って主語か固有名詞の説明を補う（字数は増やさず、詳細を削って入れ替える）。
 
