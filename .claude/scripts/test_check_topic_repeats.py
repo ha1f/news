@@ -24,11 +24,15 @@ def post(*items):
 
 
 # 点数の分母を作る、よくある語だけの項目（「AI」「Claude」は珍しくない語として扱われる）
-FILLER = [(f"AI の話題{n}号", f"Claude と AI についての一般的な話{n}。") for n in range(200)]
+FILLER = [(f"AI の話題{n}号", f"Claude と AI についての一般的な話{n}。") for n in range(1000)]
 
 
 class RealPostsTest(unittest.TestCase):
-    """#531 で見逃した実例が出ること。repo の _posts をそのまま読む。"""
+    """#531 で見逃した実例が出ること。repo の _posts をそのまま読む。
+
+    実例の項目を後から削ったり「続報（」を付けたりすると、検出対象から外れてここが落ちる。
+    そのときは実例を fixture に写してから直す。
+    """
 
     @classmethod
     def setUpClass(cls):
@@ -36,7 +40,7 @@ class RealPostsTest(unittest.TestCase):
 
     def pairs(self, name):
         found = check_topic_repeats.repeats_of(REPO_POSTS / name, self.archive)
-        return {(it["title"], prev_name[:10]) for it, prev_name, *_ in found}
+        return {(it["title"], h[0][:10]) for it, hits in found for h in hits}
 
     def test_2026_10_20_main(self):
         pairs = self.pairs("2026-10-20-news.md")
@@ -89,10 +93,26 @@ class SyntheticTest(unittest.TestCase):
         today = self.write("2026-10-20-news.md", post(self.AGAIN))
         found = self.check(today)
         self.assertEqual(len(found), 1)
-        it, prev_name, prev, score, shared = found[0]
+        it, hits = found[0]
         self.assertEqual(it["title"], self.AGAIN[0])
+        self.assertEqual(len(hits), 1)
+        prev_name, prev, score, shared = hits[0]
         self.assertEqual(prev_name, "2026-10-10-news.md")
         self.assertEqual(set(shared), {"zorblax", "quuxcorp"})
+
+    def test_lists_up_to_three_candidates_by_score(self):
+        # 最高点の組（10/12）に続けて、同点の組を新しい日付から出す（4組目の 10/14 は出さない）
+        self.write("2026-10-12-news.md", post(("Zorblax と Quuxcorp と Vintrel", "Zorblax の話。")))
+        self.write("2026-10-14-news.md", post(("Zorblax が Quuxcorp に", "前の話。")))
+        self.write("2026-10-16-news.md", post(("Zorblax と Quuxcorp", "別の話。")))
+        self.write("2026-10-18-news.md", post(self.PREV))
+        today = self.write("2026-10-20-news.md", post(("Zorblax が Quuxcorp と Vintrel を統合", "続きの話。")))
+        found = self.check(today)
+        self.assertEqual(len(found), 1)
+        names = [h[0] for h in found[0][1]]
+        self.assertEqual(names[0], "2026-10-12-news.md")
+        self.assertEqual(len(names), 3)
+        self.assertEqual(names[1:], ["2026-10-18-news.md", "2026-10-16-news.md"])
 
     def test_match_through_note(self):
         # 見出しどうしは重ならず、前回の読みどころの語でだけ重なる組（ECDSA の型）

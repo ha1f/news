@@ -12,13 +12,20 @@ ECDSA の seed の由来が、印なしで再掲された）。ここで疑わ�
     3字以上の漢字の連なり・「」内の名前）を取り出す。読みどころまで見るのは、
     見出しどうしでは「Claude」しか重ならない組（ECDSA の例）を拾うため
   - 同じフィードの直近 WINDOW_DAYS 日の項目と、共有する語の珍しさ（全フィードの直近
-    IDF_DAYS 日での出現率の逆数の対数）の和を点数にし、MIN_SCORE 以上の最高点の組を出す。
+    IDF_DAYS 日での出現率の逆数の対数）の和を点数にし、MIN_SCORE 以上の組を点数順に
+    MAX_PAIRS 組まで出す（最高点の1組だけだと、無関係な高得点の組に本物の組が隠れ、
+    「続報（M/D掲載）」の M/D に直近でない日付を拾う）。
     「AI」「Claude」のようによく出る語は点数がほとんど付かない
   - 読みどころが「続報（」で始まる項目は、すでに判断済みなので出さない
 
 閾値は 2026-10-01〜10-20 の全フィード（約100投稿）で測った: MIN_SCORE 8 で
 1投稿あたり約1.9組、#531 の4組（Gemini 4 Argon・OpenAI の研究者3人・Deno・ECDSA）は
 いずれも10以上。別の話題の組も混ざるので、判断はモデルに残し、CI には載せない。
+
+拾えないもの: 1語の点数は母集合の大きさで頭打ちになる（約1100項目で log(n) ≒ 7）ため、
+固有名が1語しか重ならない再掲は閾値に届かない。漢字の連なりは丸ごと1語なので粒度が
+違うと一致せず（「安全性研究者」と「安全性」）、表記揺れ（「アンソロピック」と
+「Anthropic」）も一致しない。他フィードとの照合もしない（同じ日に別フィードに載るのは仕様）。
 
 使い方:
   python3 .claude/scripts/check_topic_repeats.py _posts/2026-10-20-*.md
@@ -38,6 +45,7 @@ from pathlib import Path
 WINDOW_DAYS = 10  # recent_topics.py の --own-days の既定と揃える
 IDF_DAYS = 30
 MIN_SCORE = 8.0
+MAX_PAIRS = 3
 
 ITEM_RE = re.compile(
     r"^\d+\.\s+\[(.+?)\]\((https?://[^)\s]+)\)[^\n]*\n((?:[ \t]+\S.*(?:\n|$))*)", re.M
@@ -102,8 +110,11 @@ class Archive:
                     yield name, it
 
 
-def repeats_of(post: Path, archive: Archive) -> list[tuple[dict, str, dict, float, list[str]]]:
-    """印の無い再掲の疑いを (項目, 前回のファイル名, 前回の項目, 点数, 共有語) で返す。"""
+def repeats_of(post: Path, archive: Archive) -> list[tuple[dict, list[tuple[str, dict, float, list[str]]]]]:
+    """印の無い再掲の疑いを (項目, [(前回のファイル名, 前回の項目, 点数, 共有語), ...]) で返す。
+
+    前回の候補は点数の高い順に MAX_PAIRS 件まで。
+    """
     parsed = parse_name(post.name)
     if parsed is None:
         raise ValueError(f"ファイル名が YYYY-MM-DD-news*.md ではありません（{post.name}）")
@@ -117,14 +128,15 @@ def repeats_of(post: Path, archive: Archive) -> list[tuple[dict, str, dict, floa
     for it in items(post.read_text(encoding="utf-8")):
         if it["note"].startswith(FOLLOW_UP_PREFIX):
             continue
-        best = None
+        hits = []
         for name, prev in past:
             shared = [t for t in it["terms"] & prev["terms"] if df[t]]
             score = sum(math.log(n / df[t]) for t in shared)
-            if score >= MIN_SCORE and (best is None or score > best[3]):
-                best = (it, name, prev, score, sorted(shared, key=lambda t: df[t]))
-        if best:
-            found.append(best)
+            if score >= MIN_SCORE:
+                hits.append((name, prev, score, sorted(shared, key=lambda t: df[t])))
+        if hits:
+            hits.sort(key=lambda h: (h[2], h[0]), reverse=True)  # 同点なら新しい日付を先に
+            found.append((it, hits[:MAX_PAIRS]))
     return found
 
 
@@ -147,13 +159,14 @@ def main(argv: list[str]) -> int:
             print(f"NG {post}: {e}")
             errors += 1
             continue
-        for it, prev_name, prev, score, shared in found:
+        for it, hits in found:
             pairs += 1
             print(f"要判断 {post.name}:{it['line']} 「{it['title']}」")
             print(f"  今回: {it['note']}")
-            print(f"  前回 {prev_name[:10]}: 「{prev['title']}」 {prev['note']}")
-            print(f"  共有語: {', '.join(shared[:6])}（点数 {score:.1f}）")
-    print(f"検査 {len(posts) - errors} 件 / 要判断 {pairs} 組 / 検査できなかった {errors} 件")
+            for prev_name, prev, score, shared in hits:
+                print(f"  前回 {prev_name[:10]}: 「{prev['title']}」 {prev['note']}")
+                print(f"    共有語: {', '.join(shared[:6])}（点数 {score:.1f}）")
+    print(f"検査 {len(posts) - errors} 件 / 要判断 {pairs} 項目 / 検査できなかった {errors} 件")
     if errors:
         return 2
     return 1 if pairs else 0
