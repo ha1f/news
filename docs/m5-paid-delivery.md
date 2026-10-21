@@ -81,23 +81,23 @@ A は採らない。日次のニュースで公開を数時間遅らせても読
 
 ## 日次手順
 
-有料フィードの run は、次の順で読者を1人ずつ回す（並列にしない。同じ内容のプロファイルを持つ読者どうしは curate-news の出力ファイル名が同じになる）。決定的な部分は `.claude/scripts/paid_daily.py` が持ち、curate-news（LLM の選定）はその間に挟む。`ROOT_DIR` は private repo を clone した先で、公開 repo の作業ツリーの外に置く（中にあると `paid_daily.py` が拒否する）。
+有料フィードの run は、次の順で読者を1人ずつ回す（並列にしない。同じ内容のプロファイルを持つ読者どうしは curate-news の出力ファイル名が同じになる）。決定的な部分は `.claude/scripts/paid_daily.py` が持ち、curate-news（LLM の選定）はその間に挟む。`ROOT_DIR` は private repo を clone した先で、公開 repo の作業ツリーの外に置く（中にある・作業ツリーを含む、のどちらも `paid_daily.py` が拒否する）。
 
 `ROOT_DIR` の構成:
 
-- `readers.json`: `[{"reader_id": "r-001", "subscriber_id": "<配信サービスの購読者 ID>", "profile": "profiles/r-001.md"}]`。`reader_id` は英数字・`_`・`-`（数字だけは不可）。`profile` は `ROOT_DIR` からの相対パスで、`ROOT_DIR` の外は指せない。メールアドレスは置かない
-- `sent/{reader_id}/{日付}.md`: 送信済みの出力。`finalize --send` が書く
+- `readers.json`: `[{"reader_id": "r-001", "subscriber_id": "<配信サービスの購読者 ID>", "profile": "profiles/r-001.md"}]`。`reader_id` は英数字・`_`・`-`（数字だけは不可）。`profile` は `ROOT_DIR` からの相対パスで、`ROOT_DIR` の外や公開 repo の中は指せない。公開フィードのプロファイル（`preferences.md`・`profiles/*.md`）と同じ内容のものは拒否する（出力ファイル名のハッシュが重なり、公開フィードの重複除外の履歴を書き換えるため）。メールアドレスは置かない
+- `sent/{reader_id}/{日付}.md`: 送信済みの出力。`finalize --send` が書く。`{日付}.sending` は送信中の印で、届いたか分からない失敗（通信の例外）のときに残る。残っている読者には同じ日の分を送らないので、配信サービス側で届いたか確かめてから人が消す
 
 読者ごとに:
 
-1. `python3 .claude/scripts/paid_daily.py prepare --root ROOT_DIR --date YYYY-MM-DD --reader ID` — プロファイルを確かめ、`sent/` の直近14日分を `output/` に戻し（curate-news の重複除外がその読者の履歴で効く）、当日の出力を消す。プロファイルが無い・読めない・空なら非0で終わる。**その読者は curate-news に進めない**（`preference_hash.py` が `default` を返し、汎用フィードを作る経路に入る）
-2. curate-news を、prepare が表示した `--profile <絶対パス>` と日付で回す。手順2・3の `fetch_feeds.py` に `--paid` を付ける。`--paid` が終了コード3（使えるソースが0件）で止まったら、その読者は失敗として次へ進む（2026-10-21 時点では「可」のソースが0件なので、#241 の結論が出るまで必ずここで止まる）
-3. `python3 .claude/scripts/paid_daily.py finalize --root ROOT_DIR --date YYYY-MM-DD --reader ID [--send]` — 当日の出力を `output/paid/{日付}/{読者 ID}.md` に取り分け、本文を生成し、送る。**既定は dry-run**（送る予定を表示するだけ）。`--send` を付けたときだけ実送信し、成功したら出力を `ROOT_DIR/sent/` に保存する。prepare を通っていない・その後にプロファイルが変わった・当日の出力が無い・その日の分を送信済み、のどれかなら送らずに非0で終わる
+1. `python3 .claude/scripts/paid_daily.py prepare --root ROOT_DIR --date YYYY-MM-DD --reader ID` — プロファイルを確かめ、最初の読者のときは run の起点として HEAD を記録し、`sent/` の直近14日分を `output/` に戻し（curate-news の重複除外がその読者の履歴で効く）、当日の出力を消す。プロファイルが無い・読めない・空なら非0で終わる。**その読者は curate-news に進めない**（`preference_hash.py` が `default` を返し、汎用フィードを作る経路に入る）
+2. curate-news を、prepare が表示した `--profile <絶対パス>` と日付で回す。手順2・3の `fetch_feeds.py` に `--paid` を付ける。curate-news の中の `recent_urls.py`・`recent_topics.py` は実行環境の TZ で今日を決めるので、`TZ=Asia/Tokyo` を付けて回す（UTC のまま 0〜9時 JST に回すと、戻した前日分が重複除外の窓から外れる）。`--paid` が終了コード3（使えるソースが0件）で止まったら、その読者は失敗として次へ進む（finalize を回さなければ、check の要約で失敗に数えられる）（2026-10-21 時点では「可」のソースが0件なので、#241 の結論が出るまで必ずここで止まる）
+3. `python3 .claude/scripts/paid_daily.py finalize --root ROOT_DIR --date YYYY-MM-DD --reader ID [--send]` — 当日の出力を `output/paid/{日付}/{読者 ID}.md` に取り分け、本文を生成し、送る。**既定は dry-run**（送る予定を表示するだけ）。`--send` を付けたときだけ実送信し、成功したら出力を `ROOT_DIR/sent/` に保存する。prepare を通っていない・その後にプロファイルが変わった・当日の出力が無い・その日の分を送信済み、のどれかなら送らずに非0で終わる。前回の送信中の印が残っているときも送らない
 
 全員を回したら:
 
-4. `--send` で回したなら、`ROOT_DIR` の `sent/` を private repo に commit・push する（次の run の重複除外と二重送信の防止に使う。push しないと翌日の run から見えない）
-5. `python3 .claude/scripts/paid_daily.py check --root ROOT_DIR --date YYYY-MM-DD --text "<公開 repo に書く予定の文>"` — 公開 repo の作業ツリーが clean か（`_posts/` などに何も増えていないか）を確かめ、公開してよい要約（件数と成否だけ）を表示する。`--text` に渡した文に URL・読者 ID・購読者 ID・プロファイルの行・当日の見出しが入っていれば非0で終わる。非0なら公開 repo に何も書かない
+4. `--send` で回したなら、`ROOT_DIR` の `sent/` を（送信中の印も含めて）private repo に commit・push する（次の run の重複除外と二重送信の防止に使う。push しないと翌日の run から見えない）
+5. `python3 .claude/scripts/paid_daily.py check --root ROOT_DIR --date YYYY-MM-DD --text "<公開 repo に書く予定の文>"` — 公開 repo の作業ツリーが clean か、run の起点から HEAD までに `_posts/` への commit が増えていないかを確かめ（Pages は commit からビルドされるので、ここに増えていなければ Pages にも出ない）、公開してよい要約（件数と成否だけ）を表示する。`--text` は要約の書式と完全一致するときだけ通す。非0なら公開 repo に何も書かない
 
 status issue などの公開 repo に書くのは check が表示した要約だけにする。失敗した読者の ID と理由は端末（と `output/paid/{日付}/run.json`）にしか出さない。この run の後に reflect-and-improve を回すときも、証拠として見出し・URL・プロファイルの内容を引用せず、件数と成否で書く。
 

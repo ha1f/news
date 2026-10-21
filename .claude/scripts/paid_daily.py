@@ -11,7 +11,8 @@ profile は ROOT_DIR からの相対パス。ROOT_DIR の外を指すものは�
 
   prepare  --root ROOT_DIR --date D --reader ID  読者のプロファイルを確かめ、送信済みの出力を output/ に戻し、当日の出力を消す
   finalize --root ROOT_DIR --date D --reader ID [--send]  当日の出力を読者 ID の名前で取り分け、本文生成 → 送信（既定は dry-run）
-  check    --root ROOT_DIR --date D [--text TEXT]  作業ツリーが clean か確かめ、公開してよい要約（件数と成否）を出す
+  check    --root ROOT_DIR --date D [--text TEXT]  作業ツリーが clean で _posts/ に commit も増えていないか確かめ、
+           公開してよい要約（件数と成否）を出す。--text は要約の書式と完全一致するときだけ通す
 
 読者の結果は output/paid/{日付}/run.json に溜まる（output/ は gitignore 対象）。
 """
@@ -34,7 +35,10 @@ from render_email_body import OUTPUT_DIR, ROOT  # noqa: E402
 READER_ID_RE = re.compile(r"^(?![0-9]+$)[A-Za-z0-9_-]{1,64}$")
 # curate-news の recent_topics.py が自分のフィードを遡る日数（--own-days の既定10）を覆う
 RESTORE_DAYS = 14
-URL_RE = re.compile(r"https?://")
+# 公開 repo に書いてよい文はこの書式だけ（読者 ID・関心・見出しが入る余地を残さない）
+SUMMARY_RE = re.compile(r"^有料フィード: 読者 \d+人中 \d+人成功・\d+人失敗（(?:dry-run|送信 \d+人)）$")
+PUBLIC_PROFILES = [ROOT / ".claude" / "skills" / "curate-news" / "preferences.md",
+                   *sorted((ROOT / ".claude" / "skills" / "curate-news" / "profiles").glob("*.md"))]
 
 
 class Fail(Exception):
@@ -43,8 +47,8 @@ class Fail(Exception):
 
 def check_root(root):
     r = root.resolve()
-    if r.is_relative_to(ROOT.resolve()):
-        raise SystemExit(f"--root が公開 repo の作業ツリーの中にある。作業ツリーの外に置く: {root}")
+    if r.is_relative_to(ROOT.resolve()) or ROOT.resolve().is_relative_to(r):
+        raise SystemExit(f"--root が公開 repo の作業ツリーの中にあるか、作業ツリーを含む。作業ツリーの外に置く: {root}")
     if not (r / "readers.json").is_file():
         raise SystemExit(f"{root}/readers.json が無い")
     return r
@@ -82,8 +86,8 @@ def profile_of(root, reader):
     if not rel or not isinstance(rel, str):
         raise Fail("readers.json に profile が無い")
     path = (root / rel).resolve()
-    if not path.is_relative_to(root):
-        raise Fail("profile が --root の外を指す")
+    if not path.is_relative_to(root) or path.is_relative_to(ROOT.resolve()):
+        raise Fail("profile が --root の外か、公開 repo の作業ツリーの中を指す")
     try:
         data = path.read_bytes()
     except OSError:
@@ -91,7 +95,19 @@ def profile_of(root, reader):
     if not data.strip():
         raise Fail("プロファイルが空")
     # preference_hash.compute_suffix と同じ計算（同じファイルなら curate-news の出力名と一致する）
-    return path, hashlib.md5(data).hexdigest()[:8]
+    h = hashlib.md5(data).hexdigest()[:8]
+    # 公開フィードと同じハッシュだと、prepare が公開フィードの output/ の履歴を消して書き換える
+    if any(f.is_file() and hashlib.md5(f.read_bytes()).hexdigest()[:8] == h for f in PUBLIC_PROFILES):
+        raise Fail("プロファイルが公開フィードのプロファイルと同じ内容")
+    return path, h
+
+
+def store_of(root, reader_id):
+    """送信済みの出力の置き場。symlink で --root の外（公開 repo など）に出ていないこと。"""
+    store = root / "sent" / reader_id
+    if not store.resolve().is_relative_to(root):
+        raise Fail("sent/ の置き場が --root の外を指す")
+    return store
 
 
 def run_dir(day):
@@ -115,14 +131,26 @@ def prepare(root, day, reader_id):
         record(day, reader_id, ok=False, stage="prepare", reason=str(e))
         print(f"失敗 {reader_id}: {e}。この読者には送らない", file=sys.stderr)
         return 1
+    try:
+        store = store_of(root, reader_id)
+    except Fail as e:
+        record(day, reader_id, ok=False, stage="prepare", reason=str(e))
+        print(f"失敗 {reader_id}: {e}。この読者には送らない", file=sys.stderr)
+        return 1
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    start = run_dir(day) / "start_head"
+    if not start.exists():
+        # check が「この run の間に _posts/ へ commit が増えていないか」を見る起点
+        head = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "HEAD"], capture_output=True, text=True, check=True)
+        run_dir(day).mkdir(parents=True, exist_ok=True)
+        start.write_text(head.stdout.strip() + "\n", encoding="utf-8")
     today = date.fromisoformat(day)
     restored = 0
     # 同じハッシュの出力は他の読者のものかもしれないので、この読者の送信済み分で置き換える（無い日は消す）
     for i in range(1, RESTORE_DAYS + 1):
         d = (today - timedelta(days=i)).isoformat()
         dst = OUTPUT_DIR / f"{d}-{h}.md"
-        src = root / "sent" / reader_id / f"{d}.md"
+        src = store / f"{d}.md"
         if src.is_file():
             shutil.copyfile(src, dst)
             restored += 1
@@ -148,9 +176,12 @@ def finalize(root, day, reader_id, send):
         src = OUTPUT_DIR / f"{day}-{h}.md"
         if not src.is_file():
             raise Fail("curate-news の当日の出力が無い")
-        store = root / "sent" / reader_id
+        store = store_of(root, reader_id)
+        sending = store / f"{day}.sending"
         if send and (store / f"{day}.md").exists():
             raise Fail("この日の分は送信済み")
+        if send and sending.exists():
+            raise Fail(f"前回の送信の結果が不明（{sending.name} が残っている）。配信サービス側で届いたか確かめてから消す")
         d = run_dir(day)
         md = d / f"{reader_id}.md"
         shutil.copyfile(src, md)
@@ -159,11 +190,20 @@ def finalize(root, day, reader_id, send):
         except SystemExit as e:
             raise Fail(f"本文生成に失敗: {e}")
         args = [str(d / f"{reader_id}.html"), "--subscriber-id", sid, "--send" if send else "--dry-run"]
+        if send:
+            # output/ は run をまたいで残らないので、送信中の印は private repo 側に置く。届いたか分からない
+            # 失敗（通信の例外）ではこれを残し、次の run が同じ読者に二重に送らないようにする
+            store.mkdir(parents=True, exist_ok=True)
+            sending.write_text("", encoding="utf-8")
         try:
             rc = send_email.main(args)
         except SystemExit as e:
+            sending.unlink(missing_ok=True)  # send_email が自分で止めた（送る前、または送信を中止した）
             raise Fail(f"送信に失敗: {e}")
+        except Exception as e:
+            raise Fail(f"送信の結果が不明 ({type(e).__name__})。{sending.name} を残したので再送しない")
         if rc != 0:
+            sending.unlink(missing_ok=True)
             raise Fail(f"送信に失敗 (exit {rc})")
     except Fail as e:
         record(day, reader_id, ok=False, stage="finalize", reason=str(e))
@@ -172,6 +212,7 @@ def finalize(root, day, reader_id, send):
     if send:
         store.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(md, store / f"{day}.md")
+        sending.unlink(missing_ok=True)
         print(f"保存: {store / f'{day}.md'}（private repo に commit・push する）")
     record(day, reader_id, ok=True, stage="finalize", sent=bool(send))
     return 0
@@ -190,51 +231,25 @@ def summary(readers, runs):
     return f"有料フィード: 読者 {len(readers)}人中 {len(ok)}人成功・{failed}人失敗（{mode}）"
 
 
-def sensitive_terms(root, readers, day):
-    """公開 repo に書く文に出てはいけない語: 読者 ID・購読者 ID・プロファイルの行・当日の見出し。"""
-    terms = set()
-    for rid, r in readers.items():
-        terms.add(rid)
-        if isinstance(r.get("subscriber_id"), str):
-            terms.add(r["subscriber_id"])
-        try:
-            path, _ = profile_of(root, r)
-            for line in path.read_text(encoding="utf-8").splitlines():
-                if line.lstrip().startswith("#"):
-                    continue  # 見出しはプロファイルの雛形の共通文言
-                s = line.strip().lstrip("-*> ").strip()
-                if len(s) >= 6:
-                    terms.add(s)
-        except (Fail, UnicodeDecodeError):
-            pass
-        md = run_dir(day) / f"{rid}.md"
-        if md.is_file():
-            for it in render_email_body.parse(md.read_text(encoding="utf-8"))["items"]:
-                terms.add(it["title"])
-    return terms
-
-
-def leaks(text, terms):
-    found = ["URL"] if URL_RE.search(text) else []
-    # 英数字の語は前後が英数字でない位置だけを見る（読者 ID「r1」を「r10」や「2人中1人」の数字に誤爆させない）
-    return found + sorted(t for t in terms if re.search(rf"(?<![A-Za-z0-9_-]){re.escape(t)}(?![A-Za-z0-9_-])", text))
-
-
 def check(root, day, text):
     readers = load_readers(root)
     runs = run_state(day)
     problems = []
-    st = subprocess.run(["git", "-C", str(ROOT), "status", "--porcelain", "--untracked-files=all"],
-                        capture_output=True, text=True, check=True).stdout.splitlines()
+    git = lambda *a: subprocess.run(["git", "-C", str(ROOT), *a], capture_output=True, text=True, check=True).stdout
+    st = git("status", "--porcelain", "--untracked-files=all").splitlines()
     if st:
         posts = sum(1 for ln in st if ln[3:].startswith("_posts/"))
         problems.append(f"公開 repo の作業ツリーが clean でない: {len(st)} 件（うち _posts/ {posts} 件）")
+    start = run_dir(day) / "start_head"
+    if not start.exists():
+        problems.append("prepare を1度も回していない（run の起点の commit が無い）")
+    else:
+        added = git("diff", "--name-only", f"{start.read_text(encoding='utf-8').strip()}..HEAD", "--", "_posts/").split()
+        if added:
+            problems.append(f"run の間に _posts/ への commit が {len(added)} 件増えた")
     line = summary(list(readers), runs)
-    terms = sensitive_terms(root, readers, day)
-    for label, t in (("要約", line), ("--text", text)):
-        if t and leaks(t, terms):
-            # 何が漏れたかは端末にだけ出す（この出力自体は公開しない前提）
-            problems.append(f"{label} に公開してはいけない語がある: {leaks(t, terms)}")
+    if text and not SUMMARY_RE.match(text):
+        problems.append("--text が要約の書式（件数と成否だけ）と一致しない。公開 repo には check が出した要約だけを書く")
     for p in problems:
         print(p, file=sys.stderr)
     print(line)
@@ -253,7 +268,7 @@ def main(argv=None):
         if name == "finalize":
             p.add_argument("--send", action="store_true", help="実際に送る（既定は dry-run）")
         if name == "check":
-            p.add_argument("--text", default="", help="公開 repo に書く予定の文。漏れが無いか確かめる")
+            p.add_argument("--text", default="", help="公開 repo に書く予定の文。要約の書式と完全一致するときだけ通す")
     a = ap.parse_args(argv)
     root = check_root(a.root)
     if a.cmd == "prepare":

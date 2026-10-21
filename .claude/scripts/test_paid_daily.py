@@ -184,6 +184,7 @@ class PaidDailyTest(unittest.TestCase):
                 self.assertEqual(opener.requests[1].full_url.split("/subscribers/")[1], "sub_alice/emails/em_1")
                 stored = self.root / "sent" / "alice" / f"{DAY}.md"
                 self.assertEqual(stored.read_text(encoding="utf-8"), CURATED)
+                self.assertFalse((stored.parent / f"{DAY}.sending").exists())
                 # 同じ日の再送はしない
                 quiet(p.prepare, self.root, DAY, "alice")
                 self.curate("alice")
@@ -212,29 +213,131 @@ class PaidDailyTest(unittest.TestCase):
         quiet(p.prepare, self.root, DAY, "bob")
         self.assertEqual((self.out / f"{prev}-{h}.md").read_text(encoding="utf-8"), "bob の前日分")
 
-    def test_summary_is_counts_only_and_leaks_are_caught(self):
+    def fake_git(self, status="", diff=""):
+        def run(cmd, **k):
+            out = {"status": status, "diff": diff}.get(cmd[3], "")
+            return subprocess.CompletedProcess(cmd, 0, out, "")
+        return mock.patch.object(p.subprocess, "run", run)
+
+    def test_summary_is_counts_only_and_text_must_match_it(self):
         self.readers(self.reader("alice"), self.reader("bob", profile_text=None))
         self.run_reader("alice")
         quiet(p.prepare, self.root, DAY, "bob")
-        with mock.patch.object(p.subprocess, "run", return_value=subprocess.CompletedProcess([], 0, "", "")):
+        with self.fake_git():
             rc, out, err = quiet(p.check, self.root, DAY, "")
             self.assertEqual(rc, 0, err)
-            self.assertEqual(out.strip(), "有料フィード: 読者 2人中 1人成功・1人失敗（dry-run）")
-            for bad in ("alice は成功", "sub_bob に送れず", "打ち上げ会社が初の黒字 を配信", "見る https://example.com/a",
-                        "関心は宇宙開発と半導体の供給網"):
+            line = out.strip()
+            self.assertEqual(line, "有料フィード: 読者 2人中 1人成功・1人失敗（dry-run）")
+            self.assertEqual(quiet(p.check, self.root, DAY, line)[0], 0)
+            # 書式に無い語は、読者の情報かどうかによらず通さない
+            for bad in (line + "。alice は成功", line + "。デザイン系の記事が多め", "見る https://example.com/a",
+                        "有料フィード: 読者 2人中 1人成功・1人失敗（AI規制）", "alice"):
                 rc, _, err = quiet(p.check, self.root, DAY, bad)
                 self.assertEqual(rc, 1, bad)
-                self.assertIn("--text に公開してはいけない語", err)
-            # 部分一致では誤爆しない（alice → malice、件数の数字）
-            self.assertEqual(quiet(p.check, self.root, DAY, "malice は無関係。2人中1人")[0], 0)
+                self.assertIn("要約の書式", err)
+
+    def test_summary_counts_sent(self):
+        runs = {"a": {"ok": True, "sent": True}, "b": {"ok": True, "sent": False}, "c": {"ok": None}}
+        line = p.summary(["a", "b", "c", "d"], runs)
+        self.assertEqual(line, "有料フィード: 読者 4人中 2人成功・2人失敗（送信 1人）")
+        self.assertTrue(p.SUMMARY_RE.match(line))
 
     def test_check_fails_when_worktree_is_dirty(self):
         self.readers(self.reader("alice"))
-        dirty = subprocess.CompletedProcess([], 0, "?? _posts/2026-10-21-news-paid.md\n M index.md\n", "")
-        with mock.patch.object(p.subprocess, "run", return_value=dirty):
+        quiet(p.prepare, self.root, DAY, "alice")
+        with self.fake_git(status="?? _posts/2026-10-21-news-paid.md\n M index.md\n"):
             rc, _, err = quiet(p.check, self.root, DAY, "")
         self.assertEqual(rc, 1)
         self.assertIn("clean でない: 2 件（うち _posts/ 1 件）", err)
+
+    def test_check_fails_when_posts_were_committed_during_run(self):
+        self.readers(self.reader("alice"))
+        quiet(p.prepare, self.root, DAY, "alice")
+        start = (p.run_dir(DAY) / "start_head").read_text(encoding="utf-8").strip()
+        self.assertRegex(start, r"^[0-9a-f]{40}$")
+        with self.fake_git(diff="_posts/2026-10-21-news-paid.md\n"):
+            rc, _, err = quiet(p.check, self.root, DAY, "")
+        self.assertEqual(rc, 1)
+        self.assertIn("_posts/ への commit が 1 件増えた", err)
+        # 本物の git で: 起点から HEAD までに _posts/ の変更が無ければ通る
+        self.assertNotIn("commit", quiet(p.check, self.root, DAY, "")[2])
+
+    def test_start_head_is_kept_from_first_prepare(self):
+        # 読者の間に publish-pages が commit しても、起点は最初の prepare の HEAD のまま
+        self.readers(self.reader("alice"), self.reader("bob", PROFILE + "- 別\n"))
+        quiet(p.prepare, self.root, DAY, "alice")
+        start = p.run_dir(DAY) / "start_head"
+        start.write_text("0" * 40 + "\n", encoding="utf-8")
+        quiet(p.prepare, self.root, DAY, "bob")
+        self.assertEqual(start.read_text(encoding="utf-8").strip(), "0" * 40)
+
+    def test_check_requires_prepare(self):
+        self.readers(self.reader("alice"))
+        with self.fake_git():
+            rc, _, err = quiet(p.check, self.root, DAY, "")
+        self.assertEqual(rc, 1)
+        self.assertIn("prepare を1度も回していない", err)
+
+    def test_root_containing_worktree_and_profile_inside_repo_are_rejected(self):
+        # 公開 repo の作業ツリーを --root の下に置いた形を、ROOT の差し替えで作る
+        pub = self.root / "pub"
+        pub.mkdir()
+        (pub / "p.md").write_text(PROFILE, encoding="utf-8")
+        self.readers({"reader_id": "alice", "subscriber_id": "sub_a", "profile": "pub/p.md"})
+        self.assertEqual(p.check_root(self.root), self.root)
+        with mock.patch.object(p, "ROOT", pub):
+            with self.assertRaises(SystemExit) as cm:
+                p.check_root(self.root)
+            self.assertIn("作業ツリーを含む", str(cm.exception))
+            rc, _, err = quiet(p.prepare, self.root, DAY, "alice")
+        self.assertEqual(rc, 1)
+        self.assertIn("作業ツリーの中を指す", err)
+
+    def test_profile_identical_to_public_preset_is_rejected(self):
+        preset = p.PUBLIC_PROFILES[-1]
+        self.readers(self.reader("alice", profile_text=preset.read_text(encoding="utf-8")))
+        rc, _, err = quiet(p.prepare, self.root, DAY, "alice")
+        self.assertEqual(rc, 1)
+        self.assertIn("公開フィードのプロファイルと同じ内容", err)
+
+    def test_sent_symlink_out_of_root_is_rejected(self):
+        self.readers(self.reader("alice"))
+        with tempfile.TemporaryDirectory() as elsewhere:
+            (self.root / "sent").mkdir()
+            (self.root / "sent" / "alice").symlink_to(elsewhere)
+            rc, _, err = quiet(p.prepare, self.root, DAY, "alice")
+            self.assertEqual(rc, 1)
+            self.assertIn("sent/ の置き場が --root の外", err)
+
+    def test_unknown_send_result_leaves_marker_and_blocks_resend(self):
+        self.readers(self.reader("alice"))
+        quiet(p.prepare, self.root, DAY, "alice")
+        self.curate("alice")
+        boom = mock.Mock(side_effect=TimeoutError("timed out"))
+        with mock.patch.object(send_email, "main", boom):
+            rc, _, err = quiet(p.finalize, self.root, DAY, "alice", True)
+        self.assertEqual(rc, 1)
+        self.assertIn("送信の結果が不明", err)
+        marker = self.root / "sent" / "alice" / f"{DAY}.sending"
+        self.assertTrue(marker.exists())
+        # output/ が消えた次のセッションでも、印が private repo 側にあるので送らない
+        for f in self.out.rglob("*"):
+            f.unlink() if f.is_file() else None
+        quiet(p.prepare, self.root, DAY, "alice")
+        self.curate("alice")
+        called = mock.Mock(return_value=0)
+        with mock.patch.object(send_email, "main", called):
+            rc, _, err = quiet(p.finalize, self.root, DAY, "alice", True)
+        self.assertEqual(rc, 1)
+        self.assertIn("前回の送信の結果が不明", err)
+        called.assert_not_called()
+        # send_email が自分で止めた失敗（キーが無い・送信を中止した）では印を残さない
+        for stop in (mock.Mock(return_value=2), mock.Mock(side_effect=SystemExit("送信を中止"))):
+            marker.unlink(missing_ok=True)
+            with mock.patch.object(send_email, "main", stop):
+                self.assertEqual(quiet(p.finalize, self.root, DAY, "alice", True)[0], 1)
+            stop.assert_called_once()
+            self.assertFalse(marker.exists())
 
     def test_reader_ids_are_validated(self):
         for bad in ("../x", "1", "a b", ""):
