@@ -113,10 +113,15 @@ JS が動かない読者にはそのままリンクとして働く。月数は a
       });
   }
 
-  // その日の職種別フィードの記事のうち、いまの絞り込みに当たるもの
-  function profileMatches(item, query, tag) {
+  // その日の職種別フィードの記事のうち、いまの絞り込みに当たるもの。差し込み先は
+  // メインの日の行なので、メインが無い日の記事は出ない (2026-10 時点で該当日は0)。
+  // 同じ日付の行が2つあるときは先の行にだけ差し込む (usedDates)
+  function profileMatches(item, query, tag, usedDates) {
     var byDate = tag && profileArticles[tag];
-    var list = (byDate && byDate[item.getAttribute('data-date')]) || [];
+    var date = item.getAttribute('data-date');
+    if (!byDate || usedDates[date]) return [];
+    usedDates[date] = true;
+    var list = byDate[date] || [];
     if (!query) return list;
     var result = [];
     for (var i = 0; i < list.length; i++) {
@@ -300,7 +305,7 @@ JS が動かない読者にはそのままリンクとして働く。月数は a
       more.hidden = hiddenCount === 0;
       var link = more.querySelector('a');
       // トピックで絞った日の残りは「同じトピックの続き」ではなく別トピックの記事
-      if (link && hiddenCount > 0) link.textContent = (tagged.length > 0 || (!mainMatched && tag) ? '別トピック' : '他') + hiddenCount + '件';
+      if (link && hiddenCount > 0) link.textContent = (mainMatched && tagged.length > 0 ? '別トピック' : '他') + hiddenCount + '件';
     }
   }
 
@@ -311,6 +316,7 @@ JS が動かない読者にはそのままリンクとして働く。月数は a
     if (isFiltering) loadOlderMonths();
     if (activeTag) loadProfileArticles(activeTag);
     var totalVisible = 0;
+    var usedDates = {};
 
     for (var i = 0; i < months.length; i++) {
       if (!showAll && !isFiltering && i >= INITIAL_MONTHS) {
@@ -347,7 +353,7 @@ JS が動かない読者にはそのままリンクとして働く。月数は a
         }
 
         var mainMatched = matchTag && matchQuery;
-        var extra = profileMatches(items[j], query, activeTag);
+        var extra = profileMatches(items[j], query, activeTag, usedDates);
         renderProfileExtra(items[j], extra);
         var visible = mainMatched || extra.length > 0;
         items[j].style.display = visible ? '' : 'none';
