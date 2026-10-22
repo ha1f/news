@@ -163,6 +163,13 @@ $ui-border-color: #8d8d8d; // 背景 #fdfdfd と 3.26:1
   &[hidden] { display: none; }
 }
 
+// トピックで絞ったときに JS が差し込む、職種別フィードにだけ載った記事 (#585)
+.archive-profile-extra-label {
+  margin: 0 0 0 1.2em;
+  font-size: $base-font-size * 0.75;
+  color: $grey-color;
+}
+
 .archive-excerpt {
   margin: 0.2em 0 0.5em;
   font-size: $base-font-size * 0.875;
@@ -583,6 +590,10 @@ $ui-border-color: #8d8d8d; // 背景 #fdfdfd と 3.26:1
   }
 
   .archive-item-date {
+    color: #8b949e;
+  }
+
+  .archive-profile-extra-label {
     color: #8b949e;
   }
 
