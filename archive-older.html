@@ -12,5 +12,5 @@ offset は archive.md と同じ _config.yml の archive_initial_months{%- endcom
 {%- assign posts_by_month = default_posts | group_by_exp: "post", "post.date | date: '%Y%m'" | sort: "name" | reverse -%}
 <p><a href="{{ '/archive.html' | relative_url }}">&larr; アーカイブに戻る</a>（トピック・キーワードでの絞り込みは全期間が対象です）</p>
 <div id="archive-months">
-{% include archive-months.html groups=posts_by_month offset=initial_months limit=10000 %}
+{% include archive-months.html groups=posts_by_month offset=initial_months limit=10000 with_date=true %}
 </div>

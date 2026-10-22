@@ -1,0 +1,52 @@
+---
+---
+{%- comment -%}トピックの一覧（archive.html?tag=…）に足す、職種別フィードにだけ載った記事 (#585)。
+archive.html はメインフィードの日しか描かないので、職種別フィードの記事はトピックで
+絞り込んだ時点で JS がこの JSON を取得し、同じ日付の行に差し込む。絞り込む前の HTML には
+入れない（職種別4フィード分を描くと記事数が約4倍になる。#354 の C②）。
+トピックごとに分けてあるのは、1本にまとめると1トピックを見たい読者が全トピック分
+（実測で約9倍）を落とすことになるため。
+メインに同じトピックで載った記事と、別の職種フィードで先に出した記事は、遷移先 URL が
+同じなら出さない（一覧で二重に並ばないように）。見出しの番号と article_tags の対応は
+archive-months.html・tag-feed.xml と同じ split: '<li>' の位置番号{%- endcomment -%}
+{%- assign tag = page.tag -%}
+{%- assign seen = "|" -%}
+{%- assign main_posts = site.posts | where_exp: "post", "post.profile == nil" | where_exp: "post", "post.tags contains tag" -%}
+{%- for post in main_posts -%}
+  {%- assign items = post.content | split: '<li>' -%}
+  {%- for item in items offset: 1 -%}
+    {%- if item contains '</a>' -%}
+      {%- if post.article_tags -%}
+        {%- assign item_tags = post.article_tags[forloop.index0] -%}
+        {%- unless item_tags contains tag -%}{%- continue -%}{%- endunless -%}
+      {%- endif -%}
+      {%- assign href = item | split: '</a>' | first | split: 'href="' | last | split: '"' | first -%}
+      {%- assign seen = seen | append: href | append: "|" -%}
+    {%- endif -%}
+  {%- endfor -%}
+{%- endfor -%}
+{%- assign profile_pages = site.pages | where: "layout", "profile" -%}
+{%- assign profile_posts = site.posts | where_exp: "post", "post.profile != nil" | where_exp: "post", "post.tags contains tag" -%}
+{%- assign first = true -%}
+[
+{%- for post in profile_posts -%}
+  {%- unless post.article_tags -%}{%- continue -%}{%- endunless -%}
+  {%- assign profile_page = profile_pages | where: "profile", post.profile | first -%}
+  {%- assign profile_name = profile_page.title | default: post.profile -%}
+  {%- assign items = post.content | split: '<li>' -%}
+  {%- for item in items offset: 1 -%}
+    {%- unless item contains '</a>' -%}{%- continue -%}{%- endunless -%}
+    {%- assign item_tags = post.article_tags[forloop.index0] -%}
+    {%- unless item_tags contains tag -%}{%- continue -%}{%- endunless -%}
+    {%- assign link_html = item | split: '</a>' | first -%}
+    {%- assign link_text = link_html | strip_html | strip -%}
+    {%- if link_text.size <= 1 -%}{%- continue -%}{%- endif -%}
+    {%- assign href = link_html | split: 'href="' | last | split: '"' | first -%}
+    {%- assign key = "|" | append: href | append: "|" -%}
+    {%- if seen contains key -%}{%- continue -%}{%- endif -%}
+    {%- assign seen = seen | append: href | append: "|" -%}
+    {%- unless first -%},{%- endunless -%}{%- assign first = false %}
+{"d":{{ post.date | date: '%Y-%m-%d' | jsonify }},"p":{{ profile_name | jsonify }},"u":{{ post.url | relative_url | append: '#article-' | append: forloop.index | jsonify }},"t":{{ link_text | jsonify }}}
+  {%- endfor -%}
+{%- endfor %}
+]

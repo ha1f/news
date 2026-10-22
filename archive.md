@@ -54,7 +54,7 @@ archive-older.html に描き、「過去の記事を表示」か絞り込みを�
 JS が動かない読者にはそのままリンクとして働く。月数は archive-older.html と共有するため _config.yml に置く{%- endcomment -%}
 {%- assign initial_months = site.archive_initial_months | default: 3 -%}
 <div id="archive-months">
-{% include archive-months.html groups=posts_by_month offset=0 limit=initial_months %}
+{% include archive-months.html groups=posts_by_month offset=0 limit=initial_months with_date=true %}
 </div>
 {%- assign older_months = posts_by_month.size | minus: initial_months -%}
 {%- if older_months > 0 %}
@@ -76,6 +76,87 @@ JS が動かない読者にはそのままリンクとして働く。月数は a
   var tagsBaseUrl = '{{ "/tags/" | relative_url }}';
   var moreBtn = document.getElementById('archive-show-older');
   var showAll = !moreBtn;
+
+  // このページが描くのはメインフィードの日だけなので、トピックで絞ったときは職種別フィードに
+  // だけ載った同じトピックの記事を tags/<トピック>/profile-articles.json から取得し、同じ日付の
+  // 行に差し込む (#585)。メインに同じトピックで載った記事は JSON の側で除いてある。
+  // 絞り込む前は取得しないので、トピックを使わない読者の受け取る量は変わらない
+  var profileArticles = {};   // トピック -> { 'YYYY-MM-DD': [記事, ...] }
+  var profileInFlight = null;
+  var profileFailed = {};
+
+  function decodeEntities(text) {
+    if (typeof DOMParser !== 'function') return text;
+    return new DOMParser().parseFromString(text, 'text/html').documentElement.textContent;
+  }
+
+  function loadProfileArticles(tag) {
+    if (profileArticles[tag] || profileFailed[tag] || profileInFlight === tag) return;
+    if (typeof fetch !== 'function') return;
+    profileInFlight = tag;
+    fetch(tagsBaseUrl + encodeURIComponent(tag) + '/profile-articles.json')
+      .then(function(res) { return res.ok ? res.json() : Promise.reject(res.status); })
+      .then(function(data) {
+        var byDate = {};
+        for (var i = 0; i < data.length; i++) {
+          var a = data[i];
+          a.t = decodeEntities(a.t);
+          (byDate[a.d] = byDate[a.d] || []).push(a);
+        }
+        profileArticles[tag] = byDate;
+      })
+      // 失敗してもメインの絞り込みは止めない。同じトピックを選び直したときに取り直す
+      .catch(function() { profileFailed[tag] = true; })
+      .then(function() {
+        if (profileInFlight === tag) profileInFlight = null;
+        applyFilters();
+      });
+  }
+
+  // その日の職種別フィードの記事のうち、いまの絞り込みに当たるもの。差し込み先は
+  // メインの日の行なので、メインが無い日の記事は出ない (2026-10 時点で該当日は0)。
+  // 同じ日付の行が2つあるときは先の行にだけ差し込む (usedDates)
+  function profileMatches(item, query, tag, usedDates) {
+    var byDate = tag && profileArticles[tag];
+    var date = item.getAttribute('data-date');
+    if (!byDate || usedDates[date]) return [];
+    usedDates[date] = true;
+    var list = byDate[date] || [];
+    if (!query) return list;
+    var result = [];
+    for (var i = 0; i < list.length; i++) {
+      if ((list[i].t + ' ' + list[i].p).toLowerCase().indexOf(query) !== -1) result.push(list[i]);
+    }
+    return result;
+  }
+
+  function renderProfileExtra(item, matches) {
+    var old = item.querySelector('.archive-profile-extra');
+    if (old) old.parentNode.removeChild(old);
+    if (matches.length === 0) return;
+    var box = document.createElement('div');
+    box.className = 'archive-profile-extra';
+    var label = document.createElement('p');
+    label.className = 'archive-profile-extra-label';
+    label.textContent = '職種別フィードから';
+    box.appendChild(label);
+    var ul = document.createElement('ul');
+    ul.className = 'archive-article-titles';
+    for (var i = 0; i < matches.length; i++) {
+      var li = document.createElement('li');
+      var a = document.createElement('a');
+      a.href = matches[i].u;
+      a.textContent = matches[i].t;
+      var feed = document.createElement('span');
+      feed.className = 'archive-item-tags';
+      feed.textContent = matches[i].p;
+      li.appendChild(a);
+      li.appendChild(feed);
+      ul.appendChild(li);
+    }
+    box.appendChild(ul);
+    item.appendChild(box);
+  }
 
   // 直近 INITIAL_MONTHS か月より前は archive-older.html にあり、ページには入っていない
   // (#354)。「過去の記事を表示」を押すか絞り込みを始めた時点で取得して差し込む。
@@ -168,8 +249,11 @@ JS が動かない読者にはそのままリンクとして働く。月数は a
     });
   }
 
+  // メインの見出しだけ。職種別フィードから差し込んだ記事 (#585) は含めない
   function articleTitles(item) {
-    return item.querySelectorAll('.archive-article-titles > li:not(.archive-article-more)');
+    var ul = item.querySelector('ul.archive-article-titles');
+    return ul && !ul.parentNode.classList.contains('archive-profile-extra')
+      ? ul.querySelectorAll(':scope > li:not(.archive-article-more)') : [];
   }
 
   function hasArticleTag(li, tag) {
@@ -192,7 +276,9 @@ JS が動かない読者にはそのままリンクとして働く。月数は a
   // しない日（概況文や本文で一致した日）は既定の3件に戻す。
   // トピックで絞ったときは、記事単位のトピックを持つ日ならそのトピックの記事「だけ」を
   // 残す (#354)。キーワードとの併用では、そのうち見出しが一致したものに絞る
-  function revealMatchingTitles(item, query, tag) {
+  // mainMatched が false の日は、職種別フィードの記事だけで当たった日 (#585)。メインの
+  // 見出しは絞り込みと関係ないので並べず、「他N件」だけ残す
+  function revealMatchingTitles(item, query, tag, mainMatched) {
     var titles = articleTitles(item);
     var more = item.querySelector('.archive-article-more');
     var matched = [];
@@ -208,7 +294,7 @@ JS が動かない読者にはそのままリンクとして働く。月数は a
 
     var hiddenCount = 0;
     for (var j = 0; j < titles.length; j++) {
-      var show = matched.length > 0
+      var show = !mainMatched ? false : matched.length > 0
         ? matched.indexOf(titles[j]) !== -1
         : !titles[j].classList.contains('archive-article-extra');
       titles[j].hidden = !show;
@@ -219,7 +305,7 @@ JS が動かない読者にはそのままリンクとして働く。月数は a
       more.hidden = hiddenCount === 0;
       var link = more.querySelector('a');
       // トピックで絞った日の残りは「同じトピックの続き」ではなく別トピックの記事
-      if (link && hiddenCount > 0) link.textContent = (tagged.length > 0 ? '別トピック' : '他') + hiddenCount + '件';
+      if (link && hiddenCount > 0) link.textContent = (mainMatched && tagged.length > 0 ? '別トピック' : '他') + hiddenCount + '件';
     }
   }
 
@@ -228,7 +314,9 @@ JS が動かない読者にはそのままリンクとして働く。月数は a
     var isFiltering = !!(query || activeTag);
     if (query) loadContentIndex(query);
     if (isFiltering) loadOlderMonths();
+    if (activeTag) loadProfileArticles(activeTag);
     var totalVisible = 0;
+    var usedDates = {};
 
     for (var i = 0; i < months.length; i++) {
       if (!showAll && !isFiltering && i >= INITIAL_MONTHS) {
@@ -264,11 +352,14 @@ JS が動かない読者にはそのままリンクとして働く。月数は a
             || dateText.indexOf(query) !== -1;
         }
 
-        var visible = matchTag && matchQuery;
+        var mainMatched = matchTag && matchQuery;
+        var extra = profileMatches(items[j], query, activeTag, usedDates);
+        renderProfileExtra(items[j], extra);
+        var visible = mainMatched || extra.length > 0;
         items[j].style.display = visible ? '' : 'none';
         if (visible) {
           monthVisible++;
-          revealMatchingTitles(items[j], query, activeTag);
+          revealMatchingTitles(items[j], query, activeTag, mainMatched);
         }
       }
 
@@ -285,7 +376,7 @@ JS が動かない読者にはそのままリンクとして働く。月数は a
     // 古い月を取得できていない間 (取得中・失敗) も同じ理由で出さない。直近の月に無くても
     // 古い月で当たりうる。失敗時は残したリンクが「まだ先がある」ことを示す
     noResults.hidden = totalVisible > 0 || (!query && !activeTag) || (indexInFlight && !!query)
-      || (!olderLoaded && isFiltering);
+      || (!olderLoaded && isFiltering) || (!!activeTag && profileInFlight === activeTag);
     if (tagFeedEl) {
       if (activeTag) {
         tagFeedLink.href = tagsBaseUrl + encodeURIComponent(activeTag) + '/feed.xml';
@@ -303,6 +394,7 @@ JS が動かない読者にはそのままリンクとして働く。月数は a
     tagButtons[k].addEventListener('click', function() {
       var tag = this.getAttribute('data-tag');
       olderFailed = false;
+      profileFailed = {};
       if (activeTag === tag) {
         activeTag = null;
         this.classList.remove('active');
