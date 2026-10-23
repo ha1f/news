@@ -33,7 +33,10 @@ from render_email_body import OUTPUT_DIR, ROOT, _under_output  # noqa: E402
 # 「core workflow / automation が送ったメール」の表示値としてしか説明していない。また subscribers/{id}/emails/{email_id} は
 # 「finalized なメール専用」（docs/api-subscribers-send-email。draft は 2024-06-27 から email_invalid_status で拒否）。
 # 作成応答の status 確認は事後検知で、作成時点で一斉配信の status にされた場合は取り消せない。
-# 初回の実送信は、オーナーだけが購読するテスト用ニュースレターで draft のまま作られ、send-draft が本人にだけ届くことを確かめてから行う。
+# ただし send-draft は公式 docs 上「下書きをレビュー用に送る」機能で、有料読者への本番配信に使えるか
+# （下書き表示が付かないか、配信停止リンクとフッタが付くか、配信記録に残るか）は未確認。
+# 初回の実送信は、オーナーだけが購読するテスト用ニュースレターで draft のまま作られ、send-draft が本人にだけ届き、
+# 下書き表示が無く配信停止リンクが付くことを確かめてから行う。
 PROVIDER = {
     "name": "buttondown",
     "api_key_env": "BUTTONDOWN_API_KEY",
