@@ -144,15 +144,15 @@ gh api -X POST repos/{owner}/{repo}/pulls -f base=main -f head="pages/{ブラン
 
 ### 6. マージと配信の確認
 
-マージ前に PR の conflict と checks を確認する。conflict は `git merge-tree --write-tree origin/main origin/<head>`（exit 0 で clean）、checks は `jekyll-build-check.yml` の runs 一覧（`gh api "repos/{owner}/{repo}/actions/workflows/jekyll-build-check.yml/runs?per_page=100"` の head_sha ごとの conclusion。`gh` が無ければ MCP の `pull_request_read`(get) で mergeable を、(get_check_runs) で checks を見る。`gh pr view --json` は GraphQL なので `gh` が在っても 403。(get_status) は legacy status しか返さず GitHub Actions の checks は空に見えるため使わない）。pending なら `python3 .claude/scripts/wait_for_run.py jekyll-build-check.yml <head の40桁 SHA>` で完了を待つ（ポーリングを手で書かない）。conflict や red があれば直してから次に進む（マージ判定の考え方は review-and-merge スキルのマージ手順を参照）。
+マージ前に PR の conflict と checks を確認する。conflict は `git merge-tree --write-tree origin/main origin/<head>`（exit 0 で clean）、checks は `jekyll-build-check.yml` の runs 一覧（`gh api "repos/{owner}/{repo}/actions/workflows/jekyll-build-check.yml/runs?per_page=100"` の head_sha ごとの conclusion。`gh` が無ければ MCP の `pull_request_read`(get) で mergeable を、(get_check_runs) で checks を見る。(get_status) は legacy status しか返さず GitHub Actions の checks は空に見えるため使わない）。pending なら `python3 .claude/scripts/wait_for_run.py jekyll-build-check.yml <head の40桁 SHA>` で完了を待つ（ポーリングを手で書かない）。conflict や red があれば直してから次に進む（マージ判定の考え方は review-and-merge スキルのマージ手順を参照）。
 
-checks が green になったら、PR を squash マージする（branch の削除は repo 設定が行う）。
+checks が green になったら、PR を squash マージする。
 
 ```bash
 gh api -X PUT repos/{owner}/{repo}/pulls/{n}/merge -f merge_method=squash -f sha=<40桁の head SHA>
 ```
 
-`gh pr merge` は GraphQL なので `gh` が在っても 403 になる。`gh` が無ければ MCP の `merge_pull_request` で squash マージする。マージが 502 で返っても実際には通っていることがある。再実行は `405 Merge already in progress` になるので、PR の state ではなく `git fetch origin main` で main の先頭が進んだかを見る（実測 2026-09-29 PR #460: マージ済みなのに `pull_request_read` が 20分以上 `open` のまま、push 起点の pages.yml run も現れなかった）。run が数分経っても現れなければ `actions_run_trigger`(run_workflow, `pages.yml`, ref `main`) で手動デプロイし、`open` のまま残った PR は閉じる（`publish_state` が `running` から戻らないため）。branch の削除は repo 設定（`delete_branch_on_merge: true`）が行うので手動で消さない。
+`gh` が無ければ MCP の `merge_pull_request` で squash マージする。マージが 502 で返っても実際には通っていることがある。再実行は `405 Merge already in progress` になるので、PR の state ではなく `git fetch origin main` で main の先頭が進んだかを見る（実測 2026-09-29 PR #460: マージ済みなのに `pull_request_read` が 20分以上 `open` のまま、push 起点の pages.yml run も現れなかった）。run が数分経っても現れなければ `actions_run_trigger`(run_workflow, `pages.yml`, ref `main`) で手動デプロイし、`open` のまま残った PR は閉じる（`publish_state` が `running` から戻らないため）。branch の削除は repo 設定（`delete_branch_on_merge: true`）が行うので手動で消さない。
 
 マージ後、対応する main のビルド run の完了を待つ:
 

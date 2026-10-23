@@ -79,7 +79,7 @@ flowchart LR
 
 - **日次ステージ** — その時点の標準的な最新世代を指定する
 - **週次監査だけは最上位モデル** — 監査は最上位モデルで行うオーナー方針
-- 日次ステージのスキル（publish-pages・select-and-develop）は SKILL.md の frontmatter に `model: opus`（alias）を持ち、trigger 側の指定が空でも方針どおりの世代で動く。alias は世代交代に追従するので ID の更新漏れが起きない
+- 日次ステージのスキル（publish-pages・select-and-develop）は SKILL.md の frontmatter に `model: opus`（alias）を持ち、trigger 側の指定が空でも方針どおりの世代で動く見込み（実行モデルの実測で確かめるまでは未確認。#568）。alias は世代交代に追従するので ID の更新漏れが起きない
 
 現行世代が何かは live docs（`https://platform.claude.com/docs/en/models/overview`）で確認する。claude-api スキルの Current Models はキャッシュで1世代遅れうる。コンテキスト長のサフィックス（`[1m]` 等）は、既定で足りるなら付けない — 旧世代の指定が残る原因になる。
 
