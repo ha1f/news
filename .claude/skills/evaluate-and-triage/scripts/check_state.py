@@ -19,7 +19,7 @@
     no_records は前日ぶんが0件かつ、それ以前にも stage レコードが一度も無いときだけ
     true（真の導入直後）。前日0件でも過去に記録があれば異常として missing に出る（#422）
   - pages_build: 最新の pages.yml run（main のビルドが壊れていないかの判定材料）
-  - recent_status_comments: 直近コメントの {created_at, record, body}。record は1行目の
+  - recent_status_comments: 直近コメントの {created_at, record, body}。record は先頭の
     stage レコードを切らずに載せる（後段ステージが前段 run の結論を再利用する経路。#430）。
     body は record 以降の本文を BODY_LIMIT で切ったもの
 起票するかどうかの判断はエージェントが行う。
@@ -203,22 +203,33 @@ def summarize_issues(issues):
     return status_issue, open_count, status_issue_comment_count
 
 
-def parse_status_record(body):
-    """コメント本文の1行目を stage レコードとして読む（純関数）。レコードでなければ None"""
-    lines = (body or "").splitlines()
-    if not lines:
-        return None
+def split_status_record(body):
+    """コメント本文の先頭の stage レコードと残りの本文に分ける（純関数）。
+
+    形式は「1行目が JSON」だが、先頭の JSON オブジェクトが行をまたいでも読む。
+    1行目だけを読むと、キーの間で改行した end コメントが記録として数えられず、
+    前日の health が incomplete（セッション死亡）と誤判定される（実測 2026-10-23:
+    10/22 の evaluate end が `...11/10",` と `"reflect": ...}` の2行に割れていた）。
+    レコードでなければ (None, body)。
+    """
+    body = body or ""
+    start = len(body) - len(body.lstrip())
     try:
-        data = json.loads(lines[0])
+        data, end = json.JSONDecoder().raw_decode(body, start)
     except json.JSONDecodeError:
-        return None
+        return None, body
     if isinstance(data, dict) and data.get("stage") in RECORD_STAGES:
-        return data
-    return None
+        return data, body[end:]
+    return None, body
+
+
+def parse_status_record(body):
+    """コメント本文の先頭を stage レコードとして読む（純関数）。レコードでなければ None"""
+    return split_status_record(body)[0]
 
 
 def parse_status_records(comments):
-    """コメント1行目の JSON を記録として取り出す（純関数）"""
+    """コメント先頭の JSON を記録として取り出す（純関数）"""
     records = []
     for comment in comments:
         data = parse_status_record(comment.get("body") or "")
@@ -239,8 +250,8 @@ def recent_comment_digests(comments):
     digests = []
     for comment in comments[-COMMENT_LIMIT:]:
         body = comment.get("body") or ""
-        record = parse_status_record(body)
-        rest = "\n".join(body.splitlines()[1:]).strip() if record is not None else body
+        record, rest = split_status_record(body)
+        rest = rest.strip() if record is not None else rest
         digest = {"created_at": comment["created_at"]}
         if record is not None:
             digest["record"] = record
