@@ -48,7 +48,7 @@ class FakeOpener:
 
     def __call__(self, req, timeout=None):
         self.requests.append(req)
-        return FakeResponse({"id": "em_1", "status": "transactional"} if req.full_url.endswith("/emails") else None)
+        return FakeResponse({"id": "em_1", "status": "draft"} if req.full_url.endswith("/emails") else None)
 
 
 def quiet(fn, *a, **k):
@@ -181,7 +181,8 @@ class PaidDailyTest(unittest.TestCase):
             with mock.patch.object(send_email, "main", lambda argv: real(argv, opener=opener)):
                 rc = quiet(p.finalize, self.root, DAY, "alice", True)[0]
                 self.assertEqual(rc, 0)
-                self.assertEqual(opener.requests[1].full_url.split("/subscribers/")[1], "sub_alice/emails/em_1")
+                self.assertTrue(opener.requests[1].full_url.endswith("/emails/em_1/send-draft"))
+                self.assertEqual(json.loads(opener.requests[1].data), {"subscribers": ["sub_alice"]})
                 stored = self.root / "sent" / "alice" / f"{DAY}.md"
                 self.assertEqual(stored.read_text(encoding="utf-8"), CURATED)
                 self.assertFalse((stored.parent / f"{DAY}.sending").exists())

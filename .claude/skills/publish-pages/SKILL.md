@@ -1,5 +1,7 @@
 ---
-description: "ニュースキュレーションを実行し、GitHub Pagesにデプロイする"
+name: publish-pages
+model: opus
+description: "ニュースキュレーションを実行し、GitHub Pagesにデプロイする。daily-loop の 9 時ステージ（trigger `/publish-pages`）と、手動で「今日のニュースを配信して」「Pages にデプロイして」で使う"
 ---
 
 # GitHub Pages デプロイ
@@ -132,25 +134,25 @@ PR タイトル:
 - 1件: `ニュース: {YYYY-MM-DD}`
 - 複数: `ニュース: {YYYY-MM-DD} ({件数}プロファイル)`
 
-PR を作成する。`gh` CLI が使えない環境（CCR 等）では GitHub MCP ツールで同等の操作を行う。
+PR を作成する。`gh api`（REST）が通らない環境では GitHub MCP ツールで同等の操作を行う（cloud の実行環境にも `gh` は在る。無いのは GraphQL で、`gh pr create` を含む `gh pr` / `gh issue` 系が 403 になる。根拠は `.claude/notes/develop-issue.md` の `gh` の項）。
 
 ```bash
-gh pr create --base main --title "{タイトル}" --body "/curate-news の結果を GitHub Pages にデプロイします。"
+gh api -X POST repos/{owner}/{repo}/pulls -f base=main -f head="pages/{ブランチ名}" -f title="{タイトル}" -f body="/curate-news の結果を GitHub Pages にデプロイします。"
 ```
 
 **ここは完了地点ではない。** PR を作った時点では記事はまだ1文字もサイトに出ていない。URL の報告はステップ6を終えてからまとめて行う（実測 2026-09-28: PR 作成の19秒後にセッションが終わり、10時の evaluate が引き取るまで55分間その日の記事がサイトに無かった。#447）。続けてステップ6に入る。
 
 ### 6. マージと配信の確認
 
-マージ前に PR の conflict と checks を確認する（`gh pr view --json mergeable,statusCheckRollup`。`gh` が無い環境では MCP の `pull_request_read`(get) で mergeable を、(get_check_runs) で checks を確認する。(get_status) は legacy status しか返さず GitHub Actions の checks は空に見えるため使わない）。pending なら完了を待つ。conflict や red があれば直してから次に進む（マージ判定の考え方は review-and-merge スキルのマージ手順を参照）。
+マージ前に PR の conflict と checks を確認する。conflict は `git merge-tree --write-tree origin/main origin/<head>`（exit 0 で clean）、checks は `jekyll-build-check.yml` の runs 一覧（`gh api "repos/{owner}/{repo}/actions/workflows/jekyll-build-check.yml/runs?per_page=100"` の head_sha ごとの conclusion。`gh` が無ければ MCP の `pull_request_read`(get) で mergeable を、(get_check_runs) で checks を見る。(get_status) は legacy status しか返さず GitHub Actions の checks は空に見えるため使わない）。pending なら `python3 .claude/scripts/wait_for_run.py jekyll-build-check.yml <head の40桁 SHA>` で完了を待つ（ポーリングを手で書かない）。conflict や red があれば直してから次に進む（マージ判定の考え方は review-and-merge スキルのマージ手順を参照）。
 
-checks が green になったら、PR を squash マージしてブランチを削除する。
+checks が green になったら、PR を squash マージする。
 
 ```bash
-gh pr merge --squash --delete-branch
+gh api -X PUT repos/{owner}/{repo}/pulls/{n}/merge -f merge_method=squash -f sha=<40桁の head SHA>
 ```
 
-`gh` が使えなければ MCP ツールで squash マージする（`merge_pull_request` に `--delete-branch` 相当のオプションは無い）。マージが 502 で返っても実際には通っていることがある。再実行は `405 Merge already in progress` になるので、PR の state ではなく `git fetch origin main` で main の先頭が進んだかを見る（実測 2026-09-29 PR #460: マージ済みなのに `pull_request_read` が 20分以上 `open` のまま、push 起点の pages.yml run も現れなかった）。run が数分経っても現れなければ `actions_run_trigger`(run_workflow, `pages.yml`, ref `main`) で手動デプロイし、`open` のまま残った PR は閉じる（`publish_state` が `running` から戻らないため）。リポジトリの「Automatically delete head branches」設定が有効なら、マージ後に GitHub 側でブランチは自動削除される。手動で `git push origin --delete pages/{ブランチ名}` を試みても、既に削除済みなら `remote ref does not exist` で失敗するだけで実害はないため、成功を確認する必要はない。
+`gh` が無ければ MCP の `merge_pull_request` で squash マージする。マージが 502 で返っても実際には通っていることがある。再実行は `405 Merge already in progress` になるので、PR の state ではなく `git fetch origin main` で main の先頭が進んだかを見る（実測 2026-09-29 PR #460: マージ済みなのに `pull_request_read` が 20分以上 `open` のまま、push 起点の pages.yml run も現れなかった）。run が数分経っても現れなければ `actions_run_trigger`(run_workflow, `pages.yml`, ref `main`) で手動デプロイし、`open` のまま残った PR は閉じる（`publish_state` が `running` から戻らないため）。branch の削除は repo 設定（`delete_branch_on_merge: true`）が行うので手動で消さない。
 
 マージ後、対応する main のビルド run の完了を待つ:
 

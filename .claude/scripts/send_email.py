@@ -22,19 +22,26 @@ from render_email_body import OUTPUT_DIR, ROOT, _under_output  # noqa: E402
 
 # 配信サービスに依存する部分はここだけ。サービスが決まったらこのブロックを差し替える。
 # 仮の選定: Buttondown（docs/m5-paid-delivery.md の候補）。公開 OpenAPI
-# https://api.buttondown.com/v1/openapi.json を 2026-10-15 に確認:
+# https://docs.buttondown.com/openapi.json（api.buttondown.com/v1/openapi.json はここへ redirect）を 2026-10-18 に確認:
 #   POST /v1/emails（EmailInput: subject 必須。status の既定は about_to_send = 全購読者への配信）
-#   POST /v1/subscribers/{id_or_email}/emails/{email_id}（Send Email To: 既存の email を購読者1人に送る。body なし）
+#   POST /v1/emails/{id}/send-draft（SendDraftInput: `subscribers` に購読者 ID の配列。"Send a draft email to specific recipients"）
 #   認証は `Authorization: Token <key>`
-# 一斉配信にしないため status は transactional（changelog 2025-04-17: アーカイブにも購読者への配信にも出ない）、
-# アーカイブも disabled にする。読者ごとに本文が違うので、1通ごとに email を作ってその1人に送る。
+# 一斉配信にしないため status は draft で作り、send-draft でその 1 人にだけ送る。draft は配信にもアーカイブにも出ない
+# （archival_mode も disabled にする）。読者ごとに本文が違うので、1通ごとに email を作ってその1人に送る。
+# 以前の案（status を transactional にして POST /v1/subscribers/{id}/emails/{email_id} で送る）は一次情報で裏が取れない:
+# EmailStatus の説明は「status は observability のためだけに公開」で、API changelog 2025-04-17 は transactional を
+# 「core workflow / automation が送ったメール」の表示値としてしか説明していない。また subscribers/{id}/emails/{email_id} は
+# 「finalized なメール専用」（docs/api-subscribers-send-email。draft は 2024-06-27 から email_invalid_status で拒否）。
 # 作成応答の status 確認は事後検知で、作成時点で一斉配信の status にされた場合は取り消せない。
-# 初回の実送信は、オーナーだけが購読するテスト用ニュースレターで transactional のまま作られることを確かめてから行う。
+# ただし send-draft は公式 docs 上「下書きをレビュー用に送る」機能で、有料読者への本番配信に使えるか
+# （下書き表示が付かないか、配信停止リンクとフッタが付くか、配信記録に残るか）は未確認。
+# 初回の実送信は、オーナーだけが購読するテスト用ニュースレターで draft のまま作られ、send-draft が本人にだけ届き、
+# 下書き表示が無く配信停止リンクが付くことを確かめてから行う。
 PROVIDER = {
     "name": "buttondown",
     "api_key_env": "BUTTONDOWN_API_KEY",
     "base_url": "https://api.buttondown.com/v1",
-    "expected_status": "transactional",
+    "expected_status": "draft",
 }
 
 
@@ -53,8 +60,8 @@ def build_create(subject, body):
 
 
 def build_send(email_id, subscriber_id):
-    """作った email を購読者1人に送るリクエスト。"""
-    return {"method": "POST", "path": f"/subscribers/{subscriber_id}/emails/{email_id}", "json": None}
+    """作った draft を購読者1人にだけ送るリクエスト（send-draft。宛先は購読者 ID の配列で渡す）。"""
+    return {"method": "POST", "path": f"/emails/{email_id}/send-draft", "json": {"subscribers": [subscriber_id]}}
 
 
 def auth_headers(api_key):
@@ -139,7 +146,7 @@ def main(argv=None, opener=urllib.request.urlopen):
     # 送信の前に書く。送信の途中で落ちても、再実行が二重送信に進まずログで止まる
     log.write_text(json.dumps({**record, "sent": False}) + "\n", encoding="utf-8")
     if created.get("status") != PROVIDER["expected_status"]:
-        # 一斉配信の status で作られた疑い。購読者1人への送信には進まない
+        # draft 以外（about_to_send 等）で作られた疑い。購読者1人への送信には進まない
         raise SystemExit(f"作成した email {email_id} の status が {created.get('status')!r}（{PROVIDER['expected_status']} でない）。送信を中止")
     request(build_send(email_id, args.subscriber_id), api_key, opener)
     log.write_text(json.dumps({**record, "sent": True}) + "\n", encoding="utf-8")

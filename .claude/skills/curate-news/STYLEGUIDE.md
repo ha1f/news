@@ -100,7 +100,7 @@
 
 - `fetch_feeds.py`: CLI エントリポイント（`--source`, `--category`, `--force`, `--list`, `--show-cache-summary`）
 - `feed_config.py`: データクラス（`FeedConfig`, `MetaRule`）、ユーティリティ関数
-- `feed_parsers.py`: RSS 2.0 / RDF / Atom / HN JSON API の4パーサ
+- `feed_parsers.py`: RSS 2.0 / RDF / Atom の3パーサ（HN のようなソース固有の取得は `feed_sources/*.py` の `custom_fetcher`）
 - `feed_sources/`: ソースごとの宣言的定義（プラグイン方式）
 - `fetch_article_context.py`: 記事ページから読みどころの材料（`meta` と本文冒頭）を取る。description が空のソース用（#342）
 
