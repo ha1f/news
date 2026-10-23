@@ -115,6 +115,23 @@ class HealthTest(unittest.TestCase):
         # 導入直後（全ステージ無記録）は missing を立てない
         self.assertEqual(empty["missing"], [])
 
+    def test_record_split_across_lines_is_counted(self):
+        # 実測 2026-10-23: 10/22 の evaluate end が `...11/10",` と `"reflect": ...}` の
+        # 2行に割れており、1行目だけを読むと incomplete と誤判定された
+        comments = [
+            status_comment("evaluate", "start", "2026-07-10T01:00:00Z"),
+            {"created_at": "2026-07-10T01:20:00Z",
+             "body": '{"stage": "evaluate", "phase": "end", "ok": true, "summary": "x",\n'
+                     ' "reflect": "改善なし"}\n\n---\nfooter'},
+        ]
+        records = parse_status_records(comments)
+        self.assertEqual(records[-1]["reflect"], "改善なし")
+        health = summarize_health(records, "2026-07-11", True)
+        self.assertNotIn("evaluate", health["incomplete"])
+        digest = recent_comment_digests(comments)[-1]
+        self.assertEqual(digest["record"]["phase"], "end")
+        self.assertEqual(digest["body"], "---\nfooter")
+
     def test_ignores_other_days_and_non_json_comments(self):
         comments = [
             status_comment("evaluate", "start", "2026-07-09T01:00:00Z"),  # 前々日
