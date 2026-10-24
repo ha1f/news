@@ -52,8 +52,54 @@ A は採らない。日次のニュースで公開を数時間遅らせても読
 - **有料 run で使うソースは、ソース定義の「商用利用（課金）」の値で機械的に絞る**（値が `可` のソースに限る。語彙は curate-news の STYLEGUIDE.md の `可 / 不可 / 要許諾 / 要連絡 / 要判断 / 規定なし` で、許諾を取得した後の値は未定義。許諾済みのソースを使うなら、先に STYLEGUIDE.md へ語彙を足す）。curate-news は既定で全ソースを読むため、#241 の結論が出ても適用先が無いと、商用不可のソース（2026-10-11 時点で 18 ソース中、不可 5・要許諾 4・要連絡 1）が有料フィードに入る。無料のテスト配信はこの制限を掛けない（実装済み: `fetch_feeds.py --paid`。#575）
 - 購読管理・決済・解約は配信サービスに任せ、ループは決済情報を持たない
 - 有料読者 1 人 = 1 プロファイル。読者 ID・受信先（配信サービスの購読者 ID）・プロファイルのファイルの対応表は private repo に置き、送信スクリプトはこれを入力にする（メールアドレスそのものは配信サービスに持たせ、repo には置かない）。**希望（関心分野）は配信サービスの登録フォームで受け付け、公開の GitHub issue では受け付けない。** 支払った人の GitHub アカウントと関心が公開されるのを避けるため。フォームの内容から private repo のプロファイルを作るのは、読者が増えるまで人間の手作業で足りる
-- 費用は読者数に比例するため、価格は 1 人あたりの日次キュレーション費用と配信・決済の費用を上回るように人間が決める（目安の $1/week は VISION の想定）。キュレーション 1 回あたりの費用はまだ計測していない。M4（計測）とは別に、有料化の前に数日分を実測する
+- 費用は読者数に比例するため、価格は 1 人あたりの日次キュレーション費用と配信・決済の費用を上回るように人間が決める（目安の $1/week は VISION の想定）。キュレーション費用の実測は下の「キュレーション費用の実測」節（#592）
 - 配信本文は公開フィードと同じく見出し・リード・原文リンクに限る。権利ガードレールの範囲を超えない
+
+## キュレーション費用の実測（#592）
+
+提供物 B の最大の費用要因である「読者 1 人ぶんのフィードを 1 日 1 回作る費用」を、公開プリセットの日次 publish（`毎日ニュース` trigger の run）から測る。有料プロファイルの run は測っていない（まだ存在しない）。
+
+### 測り方
+
+`毎日ニュース` の 1 run は、メイン（`preferences.md`）とプロファイル 4 本（`profiles/*.md`）の計 5 フィードを作る。publish-pages はフィードごとに subagent を 1 つ起動して curate-news を回し（取得・選定・日本語化）、オーケストレータが投稿ファイルの作成・検査・PR 作成・振り返りを行う。
+
+- **run 全体の費用は取れる。** Claude Code Remote の `get_session` が返す `external_metadata.usage.cost_usd` を読む。トークン数（`input_tokens`・`output_tokens`・`cache_read_tokens`・`cache_write_tokens`）も同じ場所にある
+- **フィード別・共通処理別の内訳は取れない。** `get_session` はセッション単位の合計しか返さず、subagent ごとの使用量は出ない。subagent の分が `usage` に含まれるかも docs で確かめられていない（下の「未確認の点」）
+- **代わりに使う推定: 1 フィードあたり = run 全体 ÷ 5（上限値）。** フィードの取得はキャッシュで共有されるが、LLM の費用はフィードごとの選定・日本語化と、フィードごとの投稿ファイル作成・検査に掛かり、ほぼフィード数に比例する。共通処理（ブランチ・PR 作成、振り返り）も 5 等分に含めるので、実際の 1 フィードの追加費用はこれより小さい。有料の日次手順は publish-pages を通さず、読者ごとに curate-news と本文生成・送信を回すだけなので、読者 1 人の追加費用は「curate-news 1 回」に近い
+- `cost_usd` は API の従量料金に換算した値。定額プランで回している間は、実際の支払いはプランの料金で、この値は「同じ処理を API で回したときの費用」と読む。有料化で読者が増えると定額プランの上限に当たるので、価格はこの換算値で考える
+
+### 実測値（2026-10-19〜24、各日 5 フィード）
+
+| 日付（run 開始 UTC） | session | 実行モデル（`last_served_model`） | run 全体 `cost_usd` | 1 フィード/日（÷5） | 1 フィード/週（×7） |
+|---|---|---|---|---|---|
+| 10-19 00:01 | session_01UxvLQ5Mhrh2rVsjhxaA6qT | claude-sonnet-5-5 | $1.90 | $0.38 | $2.66 |
+| 10-20 00:01 | session_01Nbask5hbNbrLxwgYRthmV4 | claude-sonnet-5-5 | $1.84 | $0.37 | $2.58 |
+| 10-21 00:01 | session_01H6D64q21DNUafFbpi3yJGF | claude-sonnet-5-5 | $1.90 | $0.38 | $2.66 |
+| 10-22 00:01 | session_0152NartvB4kPboHchGbNTdF | claude-sonnet-5-5 | $1.92 | $0.38 | $2.69 |
+| 10-23 00:01 | session_01APDsdH9QhoD4uePNa4YYwt | claude-sonnet-5-5 | $2.13 | $0.43 | $2.99 |
+| 10-24 00:01 | session_014LoAgYihvG3eA3BrxPMHSe | claude-sonnet-5-5（一部 Opus と推測） | $4.99 | $1.00 | $6.99 |
+
+- **Sonnet 5.5 で回った 5 日の平均は run あたり $1.94、1 フィードあたり $0.39/日、$2.72/週。** 目安の $1/week の約 2.7 倍で、上限値の推定でも配信・決済の費用を足す前に価格を上回る
+- 10-24 は publish-pages に `model: opus` が入った（PR #590）最初の run で、トークン量はほぼ同じまま費用が約 2.5 倍になった。`last_served_model` は Sonnet のままだが、run の一部が Opus 単価で動いたと読める（#568 で追跡中）。日次を Opus で回す方針のままなら、1 フィードあたり約 $1.00/日・$7/週が実勢に近い
+- $1/week に収めるには、1 フィードあたりの費用を Sonnet 運用時の約 1/3、Opus 運用時の約 1/7 にする必要がある。価格を上げるか、有料 run を安いモデルで回すか、費用を下げる工夫（読者どうしで選定を共有するなど）が要る。どれを取るかは人間が決める
+
+### 未確認の点
+
+- **subagent の費用が `usage` に含まれるか。** オーケストレータの context は約 9 万トークンで、subagent を起動しない run（`夕方実装`、10-23）の `cache_read_tokens` が約 83 万なのに対し、publish の run は 380 万〜680 万あり、subagent の分も入っていると見るのが自然だが、docs での裏付けは無い。含まれていなければ実際の費用は表より大きい
+- **フィード別の内訳。** 正確に測るなら、公開プリセット 1 本だけを回すセッション（例: `/curate-news --profile engineer`）を別に立て、その `cost_usd` を読む。そのセッションは push しないので公開 repo に何も残らない
+
+### 再現手順
+
+1. その日の publish の session ID を、main の curation commit の trailer から取る（squash で他の commit の trailer も並ぶので、最初の 1 行を使う）:
+   ```bash
+   git fetch origin main
+   git log origin/main -1 --grep "Add news curation for YYYY-MM-DD" --format=%b | grep -m1 Claude-Session
+   ```
+   当日分なら `list_triggers` の `毎日ニュース` の `last_run.session_id`（`cse_` を `session_` に読み替える）でもよい
+2. Claude Code Remote の MCP で `get_session(session_id)` を呼び、`title` が `⚡ 毎日ニュース`・`created_at` がその日の 00 時台（UTC）であることを確かめてから、`external_metadata.usage.cost_usd` と `external_metadata.last_served_model` を読む
+3. その日のフィード数を数え（`ls _posts/YYYY-MM-DD-news*.md | wc -l`）、run 全体の費用をそれで割り、7 を掛けて週あたりにする
+
+記録に載せるのは公開プリセットの run の session ID と数値だけにする。有料プロファイルの run を測るときは、プロファイルの中身・見出し・URL を書かず、費用と件数だけを書く。
 
 ## 人間にしかできない判断・作業
 
