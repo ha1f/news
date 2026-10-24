@@ -65,28 +65,28 @@ A は採らない。日次のニュースで公開を数時間遅らせても読
 
 - **run 全体の費用は取れる。** Claude Code Remote の `get_session` が返す `external_metadata.usage.cost_usd` を読む。トークン数（`input_tokens`・`output_tokens`・`cache_read_tokens`・`cache_write_tokens`）も同じ場所にある
 - **フィード別・共通処理別の内訳は取れない。** `get_session` はセッション単位の合計しか返さず、subagent ごとの使用量は出ない。subagent の分が `usage` に含まれるかも docs で確かめられていない（下の「未確認の点」）
-- **代わりに使う推定: 1 フィードあたり = run 全体 ÷ 5（上限値）。** フィードの取得はキャッシュで共有されるが、LLM の費用はフィードごとの選定・日本語化と、フィードごとの投稿ファイル作成・検査に掛かり、ほぼフィード数に比例する。共通処理（ブランチ・PR 作成、振り返り）も 5 等分に含めるので、実際の 1 フィードの追加費用はこれより小さい。有料の日次手順は publish-pages を通さず、読者ごとに curate-news と本文生成・送信を回すだけなので、読者 1 人の追加費用は「curate-news 1 回」に近い
+- **代わりに使う推定: 1 フィードあたり = run 全体 ÷ 5。** フィードの取得はキャッシュで共有されるが、LLM の費用はフィードごとの選定・日本語化（subagent）と、フィードごとの投稿ファイル作成・検査（オーケストレータ）に掛かり、ほぼフィード数に比例する。共通処理（ブランチ・PR 作成、振り返り）も 5 等分に含めるので、`usage` が subagent の分を含むなら、これは 1 フィードの追加費用の上限になる（含まないなら上限にならない。下の「未確認の点」）。共通処理の割合は測れていないので、下限は出ていない。有料の日次手順は publish-pages を通さず、読者ごとに curate-news と本文生成・送信を回すだけなので、読者 1 人の追加費用は「curate-news 1 回」に近い
 - `cost_usd` は API の従量料金に換算した値。定額プランで回している間は、実際の支払いはプランの料金で、この値は「同じ処理を API で回したときの費用」と読む。有料化で読者が増えると定額プランの上限に当たるので、価格はこの換算値で考える
 
 ### 実測値（2026-10-19〜24、各日 5 フィード）
 
-| 日付（run 開始 UTC） | session | 実行モデル（`last_served_model`） | run 全体 `cost_usd` | 1 フィード/日（÷5） | 1 フィード/週（×7） |
+| 日付（run 開始 UTC） | session | `last_served_model` | run 全体 `cost_usd` | 1 フィード/日（÷5） | 1 フィード/週（×7） |
 |---|---|---|---|---|---|
 | 10-19 00:01 | session_01UxvLQ5Mhrh2rVsjhxaA6qT | claude-sonnet-5-5 | $1.90 | $0.38 | $2.66 |
 | 10-20 00:01 | session_01Nbask5hbNbrLxwgYRthmV4 | claude-sonnet-5-5 | $1.84 | $0.37 | $2.58 |
 | 10-21 00:01 | session_01H6D64q21DNUafFbpi3yJGF | claude-sonnet-5-5 | $1.90 | $0.38 | $2.66 |
 | 10-22 00:01 | session_0152NartvB4kPboHchGbNTdF | claude-sonnet-5-5 | $1.92 | $0.38 | $2.69 |
 | 10-23 00:01 | session_01APDsdH9QhoD4uePNa4YYwt | claude-sonnet-5-5 | $2.13 | $0.43 | $2.99 |
-| 10-24 00:01 | session_014LoAgYihvG3eA3BrxPMHSe | claude-sonnet-5-5（一部 Opus と推測） | $4.99 | $1.00 | $6.99 |
+| 10-24 00:01 | session_014LoAgYihvG3eA3BrxPMHSe | claude-sonnet-5-5 | $4.99 | $1.00 | $6.99 |
 
-- **Sonnet 5.5 で回った 5 日の平均は run あたり $1.94、1 フィードあたり $0.39/日、$2.72/週。** 目安の $1/week の約 2.7 倍で、上限値の推定でも配信・決済の費用を足す前に価格を上回る
-- 10-24 は publish-pages に `model: opus` が入った（PR #590）最初の run で、トークン量はほぼ同じまま費用が約 2.5 倍になった。`last_served_model` は Sonnet のままだが、run の一部が Opus 単価で動いたと読める（#568 で追跡中）。日次を Opus で回す方針のままなら、1 フィードあたり約 $1.00/日・$7/週が実勢に近い
+- **Sonnet 5.5 で回った 5 日の平均は run あたり $1.94、1 フィードあたり $0.39/日、$2.72/週。** 目安の $1/week の約 2.7 倍。÷5 は上限の推定なので、実際の 1 フィードの追加費用が $1/week を超えるとまでは言えない。ただし $1/week 以下に収まるには、run 全体の約 6 割以上が共通処理でなければならず、フィードごとの選定・日本語化が主な処理である構成からは考えにくい
+- 10-24 は publish-pages に `model: opus` が入った（PR #590）最初の run。前日（10-23）と比べると費用は $2.13 → $4.99（約 2.3 倍）に対し、`cache_read_tokens` は 576 万 → 678 万（約 1.2 倍）、`output_tokens` は 3.9 万 → 5.5 万（約 1.4 倍）で、トークンの増え方では費用の増え方を説明しきれない。`last_served_model` は Sonnet のままなので、run の一部が Opus 単価で動いたと推定している（ターンごとのモデルは確かめていない。#568 で追跡中）。日次を Opus で回す方針のままなら、1 フィードあたり約 $1.00/日・$7/週（上限の推定）が実勢に近い
 - $1/week に収めるには、1 フィードあたりの費用を Sonnet 運用時の約 1/3、Opus 運用時の約 1/7 にする必要がある。価格を上げるか、有料 run を安いモデルで回すか、費用を下げる工夫（読者どうしで選定を共有するなど）が要る。どれを取るかは人間が決める
 
 ### 未確認の点
 
-- **subagent の費用が `usage` に含まれるか。** オーケストレータの context は約 9 万トークンで、subagent を起動しない run（`夕方実装`、10-23）の `cache_read_tokens` が約 83 万なのに対し、publish の run は 380 万〜680 万あり、subagent の分も入っていると見るのが自然だが、docs での裏付けは無い。含まれていなければ実際の費用は表より大きい
-- **フィード別の内訳。** 正確に測るなら、公開プリセット 1 本だけを回すセッション（例: `/curate-news --profile engineer`）を別に立て、その `cost_usd` を読む。そのセッションは push しないので公開 repo に何も残らない
+- **subagent の費用が `usage` に含まれるか。** publish の run の `context_usage.used_tokens`（オーケストレータの context）は約 9 万〜10 万で、subagent を起動しない run（`夕方実装`、10-23）も約 9 万とほぼ同じなのに、`cache_read_tokens` は夕方実装の約 83 万に対して publish は 383 万〜678 万ある。subagent の分も入っていると見るのが自然だが、docs での裏付けは無い。含まれていなければ実際の費用は表より大きく、÷5 は上限にならない
+- **フィード別・共通処理別の内訳（次に取る測り方）。** 公開プリセット 1 本だけを回すセッション（例: `/curate-news --profile engineer`）を別に立て、その `cost_usd` を読む。これが読者 1 人の追加費用に最も近い値（curate-news 1 回）で、run 全体からその 5 倍を引いた残りが共通処理の目安になる。そのセッションは push しないので公開 repo に何も残らない
 
 ### 再現手順
 
@@ -97,7 +97,7 @@ A は採らない。日次のニュースで公開を数時間遅らせても読
    ```
    当日分なら `list_triggers` の `毎日ニュース` の `last_run.session_id`（`cse_` を `session_` に読み替える）でもよい
 2. Claude Code Remote の MCP で `get_session(session_id)` を呼び、`title` が `⚡ 毎日ニュース`・`created_at` がその日の 00 時台（UTC）であることを確かめてから、`external_metadata.usage.cost_usd` と `external_metadata.last_served_model` を読む
-3. その日のフィード数を数え（`ls _posts/YYYY-MM-DD-news*.md | wc -l`）、run 全体の費用をそれで割り、7 を掛けて週あたりにする
+3. その日のフィード数を数え（`git ls-tree --name-only origin/main _posts/ | grep -c 'YYYY-MM-DD-news'`）、run 全体の費用をそれで割り、7 を掛けて週あたりにする
 
 記録に載せるのは公開プリセットの run の session ID と数値だけにする。有料プロファイルの run を測るときは、プロファイルの中身・見出し・URL を書かず、費用と件数だけを書く。
 
