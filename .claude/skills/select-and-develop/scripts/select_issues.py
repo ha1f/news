@@ -185,7 +185,7 @@ def merged_prs_linking(events, issue_number):
     """issue の timeline から、その issue を本文でリンクしているマージ済み PR を返す（純関数）。
 
     素の cross-reference は「番号に触れただけ」の PR も拾う（#354 で4件中1件、#362 で8件中1件が
-    正解）ので、open PR の判定（build_candidates）と同じ LINK_RE を本文に当てて絞る。
+    正解）ので、open PR の判定（build_candidates）と同じ `extract_linked_issues`（`.claude/scripts/pr_links.py`）を本文に当てて絞る。
     `source.issue.pull_request` を持たない（PR でない）参照と、マージされていない PR は落ちる。"""
     found = {}
     for event in events:
@@ -195,7 +195,7 @@ def merged_prs_linking(events, issue_number):
         merged_at = (source.get("pull_request") or {}).get("merged_at")
         if not merged_at:
             continue
-        linked = {int(m.group(1)) for m in LINK_RE.finditer(source.get("body") or "")}
+        linked = set(extract_linked_issues(source.get("body")))
         if issue_number in linked:
             found[source["number"]] = {"number": source["number"],
                                        "title": source.get("title", ""),
