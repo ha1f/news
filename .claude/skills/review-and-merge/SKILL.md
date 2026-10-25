@@ -11,7 +11,7 @@ open PR をレビューし、合格したものをマージする。実装セッ
 
 ## 手順
 
-1. `python3 .claude/skills/review-and-merge/scripts/classify_prs.py` を実行する。`gh` が使えない、または `--paginate` が 403 で止まるときは、notes「分類スクリプトへの入力」の形で JSON を組んで `--stdin` で渡す（`--stdin` を明示する。パイプだけでは stdin モードに入らない）。draft / hold / 作者の信頼 / quiescence / 保護パスは機械判定済みで、`merge_candidates` / `protected` / `not_ready` / `drafts` / `hold` / `external` に分類された JSON が返る
+1. `python3 .claude/skills/review-and-merge/scripts/classify_prs.py` を実行する（`gh` が無ければ REST 直叩きに自動で落ちる。#396）。`gh` 経路の `--paginate` が 403 で止まるときは、notes「分類スクリプトへの入力」の形で JSON を組んで `--stdin` で渡す（`--stdin` を明示する。パイプだけでは stdin モードに入らない）。draft / hold / 作者の信頼 / quiescence / 保護パスは機械判定済みで、`merge_candidates` / `protected` / `not_ready` / `drafts` / `hold` / `external` に分類された JSON が返る
 2. 全カテゴリが空なら status issue の end コメントに「対象なし」を記録し、reflect-and-improve を実行して終了する（レビューの subagent は起動しない）
 3. `drafts` / `hold` / `not_ready` には触れない（作業中の可能性がある。次の run が拾う）
 4. `external`（この repo に書き込めない名義の ready PR）はレビューコメントのみ。同一 head SHA に既にこのループのコメントがあれば何もしない。マージはしない
