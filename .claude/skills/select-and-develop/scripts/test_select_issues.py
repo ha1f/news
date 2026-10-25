@@ -103,6 +103,28 @@ class BuildCandidatesTest(unittest.TestCase):
         self.assertEqual(in_progress, [])
         self.assertEqual([e["number"] for e in backlog], [1])
 
+    def test_quoted_link_keywords_do_not_link(self):
+        """コードとして引用したリンクキーワードは linked PR を作らない (#473)。
+
+        偽リンクが付くと、その issue は in_progress に振られて backlog から外れ、
+        実装 run に拾われなくなる。実測 (PR #471): 正規表現の挙動表と他 PR の
+        引用だけで #408 / #421 にリンクが付いていた
+        """
+        body = ("~~~\n'Refs #1' -> ['1']\n~~~\n"
+                "散文での引用も同じ: `Closes #2`\n")
+        _, in_progress, backlog = build_candidates(
+            [issue(1), issue(2)], [pr(10, body=body, branch="improve/no-number")])
+        self.assertEqual(in_progress, [])
+        self.assertEqual([e["number"] for e in backlog], [1, 2])
+
+    def test_prose_link_survives_code_stripping(self):
+        """コードを落とす処理が、実際に進める `Closes #N` を巻き添えにしない"""
+        body = "```\nCloses #1\n```\n\n実際に進めるのはこちら。Closes #2\n"
+        _, in_progress, backlog = build_candidates(
+            [issue(1), issue(2)], [pr(10, body=body, branch="improve/no-number")])
+        self.assertEqual([e["number"] for e in in_progress], [2])
+        self.assertEqual([e["number"] for e in backlog], [1])
+
     def test_branch_name_links(self):
         for branch in ("feat/1-something", "1-something", "fix/1_something"):
             with self.subTest(branch=branch):

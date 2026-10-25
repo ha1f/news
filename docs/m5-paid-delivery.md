@@ -66,7 +66,7 @@ A は採らない。日次のニュースで公開を数時間遅らせても読
 - **run 全体の費用は取れる。** Claude Code Remote の `get_session` が返す `external_metadata.usage.cost_usd` を読む。トークン数（`input_tokens`・`output_tokens`・`cache_read_tokens`・`cache_write_tokens`）も同じ場所にある
 - **フィード別・共通処理別の内訳は取れない。** `get_session` はセッション単位の合計しか返さず、subagent ごとの使用量は出ない。subagent の分が `usage` に含まれるかも docs で確かめられていない（下の「未確認の点」）
 - **代わりに使う推定: 1 フィードあたり = run 全体 ÷ 5。** フィードの取得はキャッシュで共有されるが、LLM の費用はフィードごとの選定・日本語化（subagent）と、フィードごとの投稿ファイル作成・検査（オーケストレータ）に掛かり、ほぼフィード数に比例する。共通処理（ブランチ・PR 作成、振り返り）も 5 等分に含めるので、`usage` が subagent の分を含むなら、これは 1 フィードの追加費用の上限になる（含まないなら上限にならない。下の「未確認の点」）。共通処理の割合は測れていないので、下限は出ていない。有料の日次手順は publish-pages を通さず、読者ごとに curate-news と本文生成・送信を回すだけなので、読者 1 人の追加費用は「curate-news 1 回」に近い
-- `cost_usd` は API の従量料金に換算した値。定額プランで回している間は、実際の支払いはプランの料金で、この値は「同じ処理を API で回したときの費用」と読む。有料化で読者が増えると定額プランの上限に当たるので、価格はこの換算値で考える
+- `cost_usd` は API の従量料金に換算した値。定額プランで回している間は、実際の支払いはプランの料金で、この値は「同じ処理を API で回したときの費用」と読む。有料化で読者が増えると定額プランの上限に当たるので、価格はこの換算値で考える。有料 run をどの契約（Consumer / Commercial）で回すかは「人間にしかできない判断・作業」10 の論点
 
 ### 実測値（2026-10-19〜24、各日 5 フィード）
 
@@ -114,6 +114,7 @@ A は採らない。日次のニュースで公開を数時間遅らせても読
 7. 事業者としての届出・税務
 8. API キーの発行と secrets への登録
 9. 有料フィードに、公開サイトに載った記事を入れるかどうか（前提の重複除外の項。既定は入れない）
+10. **日次ループと有料 run が動く LLM の契約の確認（#241 2026-10-11 の新規論点 2）。** 上の費用の実測は定額プランで回している前提で、`cost_usd` は換算値。Anthropic の Consumer Terms（発効 2025-10-08、2026-10-25 確認）は Claude.ai / Claude Pro の利用を対象にし、商用利用を禁じる条項は無いが「resell the Services」を禁じ、API キーの利用は Commercial Terms が規律すると定める。Commercial Terms（発効 2025-06-17）は「power products and services Customer makes available to its own customers and end users」を明示的に許し、「resell the Services except as expressly approved by Anthropic」を禁じる。読者ごとのキュレーション出力を対価で提供する有料 run が、どちらの契約のどの条項に当たるか（再販に当たらないか）は、配信サービスの契約と同じく人間が確かめる。API（Commercial Terms）側で回すなら、費用は上の換算値がそのまま掛かる
 
 ## AI ループだけで実装できる部分（切り出し予定）
 
