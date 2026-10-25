@@ -85,7 +85,7 @@ artifact に写るのは、その branch の `_posts/` をビルドした結果�
 
 ## 検証コマンド
 
-- 保護パス判定: `python3 .claude/scripts/check_protected_paths.py --diff origin/main`（`ui_changes` が出たら `.claude/rules/ui-changes.md` に従う）
+- 保護パス判定: `python3 .claude/scripts/check_protected_paths.py --diff origin/main`（`ui_changes` が出たら `.claude/rules/ui-changes.md` に従う。先に `git fetch origin main` する。セッション開始時の作業 branch は clone 時の `origin/main` より先の main を含むことがあり、fetch 前だと既にマージ済みの他 PR の変更まで diff に入って `protected: true` と誤判定する。実測 2026-10-25: fetch 前は review-and-merge と workflow の4ファイルで true、fetch 後は false）
   - **判定前に `origin/main` を取り込む。** `--diff` は2点 diff なので、branch が main より遅れていると *main 側で進んだ* ファイルまで自分の変更として並ぶ。実測 2026-09-21: branch が #369（Renovate の playwright 更新）の分だけ遅れていて `.github/workflows/jekyll-build-check.yml` が `protected: true` で出たが、`git diff --name-only origin/main...HEAD -- .github/workflows/` は 0 件。main をマージしたら `protected: false` になった
 - 見出しリンクの着地点: `python3 .claude/scripts/check_article_anchors.py <_site>`
 - 遷移先ドメインの表示（ラベルと遷移先が違う項目だけに付くか）: `python3 .claude/scripts/check_link_domains.py <_site>`（#183。`_data/source_domains.json` がソース定義と一致しているかも見る。書き直しは `python3 .claude/scripts/gen_source_domains.py`）。CI には未配線
