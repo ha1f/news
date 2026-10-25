@@ -7,6 +7,7 @@
 対応表とプロファイルは、公開 repo の作業ツリーの外に置いたディレクトリ（private repo を想定。以下 ROOT_DIR）に置く:
   ROOT_DIR/readers.json  [{"reader_id": "r1", "subscriber_id": "sub_abc", "profile": "profiles/r1.md"}, ...]
   ROOT_DIR/sent/{reader_id}/{日付}.md  送信済みの出力（finalize --send が保存し、prepare が output/ に戻す）
+  ROOT_DIR/footer.json  本文末尾の送信者名と配信停止の案内（形式は render_email_body.py。無い・不正なら --send は送らない）
 profile は ROOT_DIR からの相対パス。ROOT_DIR の外を指すものは受け付けない。
 
   prepare  --root ROOT_DIR --date D --reader ID  読者のプロファイルを確かめ、送信済みの出力を output/ に戻し、当日の出力を消す
@@ -110,6 +111,15 @@ def store_of(root, reader_id):
     return store
 
 
+def footer_of(root):
+    """footer.json のパス。読めて形式が正しいことを確かめる。不備は ValueError（理由つき）。"""
+    path = root / "footer.json"
+    if not path.resolve().is_relative_to(root):
+        raise ValueError("footer.json が --root の外を指す")
+    render_email_body.load_footer(path)
+    return path
+
+
 def run_dir(day):
     return OUTPUT_DIR / "paid" / day
 
@@ -173,6 +183,14 @@ def finalize(root, day, reader_id, send):
             raise Fail("subscriber_id が無いか不正")
         if run_state(day).get(reader_id, {}).get("hash") != h:
             raise Fail("prepare を通していないか、その後にプロファイルが変わった")
+        try:
+            footer = footer_of(root)
+        except ValueError as e:
+            # 送信者名と配信停止の案内（特定電子メール法 4 条の表示）を欠いたメールは送らない
+            if send:
+                raise Fail(f"フッタ（送信者名・配信停止の案内）が未設定: {e}。送らない")
+            print(f"警告 {reader_id}: フッタ（送信者名・配信停止の案内）が未設定: {e}。--send では送らない", file=sys.stderr)
+            footer = None
         src = OUTPUT_DIR / f"{day}-{h}.md"
         if not src.is_file():
             raise Fail("curate-news の当日の出力が無い")
@@ -186,7 +204,7 @@ def finalize(root, day, reader_id, send):
         md = d / f"{reader_id}.md"
         shutil.copyfile(src, md)
         try:
-            render_email_body.main([str(md)])
+            render_email_body.main([str(md), *(["--footer", str(footer)] if footer else [])])
         except SystemExit as e:
             raise Fail(f"本文生成に失敗: {e}")
         args = [str(d / f"{reader_id}.html"), "--subscriber-id", sid, "--send" if send else "--dry-run"]

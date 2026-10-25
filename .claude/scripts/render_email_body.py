@@ -5,11 +5,17 @@
 入力・出力とも gitignore 対象の `.claude/skills/curate-news/output/` に置き、公開 repo にコミットしない。
 入力・出力先とも、resolve した実体が `.claude/skills/curate-news/output/` の下にないと拒否する（`_posts/` や公開物の下に書かない）。
 
-使い方: python3 .claude/scripts/render_email_body.py <output/{日付}-{ハッシュ}.md> [--out-dir DIR]
+使い方: python3 .claude/scripts/render_email_body.py <output/{日付}-{ハッシュ}.md> [--out-dir DIR] [--footer FOOTER.json]
 出力: <out-dir>/{入力の stem}.html と .txt（既定の out-dir は入力と同じディレクトリ）
+
+--footer を渡すと、本文の末尾に送信者の名称と配信停止の案内を入れる（特定電子メール法 4 条の表示。#595）。
+文面は公開 repo に置かず、有料 run の ROOT_DIR（private repo）の footer.json から渡す:
+  {"sender": "送信者の氏名又は名称", "unsubscribe_url": "{{ unsubscribe_url }}", "lines": ["住所: ...", "問い合わせ: ..."]}
+unsubscribe_url は https の URL か、配信サービスが購読者ごとに差し込むテンプレート変数（`{{ 名前 }}`）。lines は任意。
 """
 import argparse
 import html
+import json
 import re
 import sys
 from pathlib import Path
@@ -21,6 +27,42 @@ NUMBERED_RE = re.compile(r"^\d+\.\s")
 ROOT = Path(__file__).resolve().parents[2]
 OUTPUT_DIR = ROOT / ".claude" / "skills" / "curate-news" / "output"
 HEADING_RE = re.compile(r"^##\s+(?P<heading>.+?)\s*$")
+# 配信停止の案内先: https の URL か、配信サービスのテンプレート変数（Buttondown なら {{ unsubscribe_url }}）
+UNSUBSCRIBE_RE = re.compile(r"^(?:https://\S+|\{\{\s*[A-Za-z_][A-Za-z0-9_.]*\s*\}\})$")
+
+
+def load_footer(path):
+    """footer.json を読み、{sender, unsubscribe_url, lines} を返す。未設定・空・不正なら ValueError。"""
+    try:
+        data = json.loads(Path(path).read_text(encoding="utf-8"))
+    except OSError:
+        raise ValueError(f"{Path(path).name} が無いか読めない")
+    except ValueError as e:
+        raise ValueError(f"{Path(path).name} が JSON でない: {e}")
+    if not isinstance(data, dict):
+        raise ValueError("フッタは {\"sender\": ..., \"unsubscribe_url\": ...} の形にする")
+
+    def one_line(v):
+        return isinstance(v, str) and v.strip() and "\n" not in v and "\r" not in v
+
+    sender = data.get("sender")
+    if not one_line(sender):
+        raise ValueError("sender（送信者の氏名又は名称）が無いか空")
+    url = data.get("unsubscribe_url")
+    if not isinstance(url, str) or not UNSUBSCRIBE_RE.match(url.strip()):
+        raise ValueError("unsubscribe_url（配信停止の案内先）が無いか、https の URL・テンプレート変数のどちらでもない")
+    lines = data.get("lines", [])
+    if not isinstance(lines, list) or not all(one_line(x) for x in lines):
+        raise ValueError("lines は空でない1行の文字列の配列にする")
+    return {"sender": sender.strip(), "unsubscribe_url": url.strip(), "lines": [x.strip() for x in lines]}
+
+
+def footer_text_lines(footer):
+    return [
+        f"このメールは {footer['sender']} がお送りしています。",
+        f"配信を停止する（今後受け取らない）場合: {footer['unsubscribe_url']}",
+        *footer["lines"],
+    ]
 
 
 def parse(text):
@@ -47,7 +89,7 @@ def parse(text):
     return {"heading": heading, "lead": " ".join(lead), "items": items}
 
 
-def render_text(doc):
+def render_text(doc, footer=None):
     out = []
     if doc["heading"]:
         out += [doc["heading"], ""]
@@ -59,10 +101,12 @@ def render_text(doc):
         if it["note"]:
             out.append(f"   {it['note']}")
         out += [f"   {it['url']}", ""]
+    if footer:
+        out += ["--", *footer_text_lines(footer)]
     return "\n".join(out).rstrip() + "\n"
 
 
-def render_html(doc):
+def render_html(doc, footer=None):
     e = html.escape
     parts = [
         '<!DOCTYPE html>',
@@ -82,7 +126,18 @@ def render_html(doc):
         parts.append(
             f'<li style="margin:0 0 14px;"><a href="{e(it["url"], quote=True)}">{e(it["title"])}</a>{src}{note}</li>'
         )
-    parts += ["</ol>", "</div>", "</body></html>"]
+    parts.append("</ol>")
+    if footer:
+        url = e(footer["unsubscribe_url"], quote=True)
+        parts += [
+            '<hr style="border:none;border-top:1px solid #ddd;margin:24px 0 12px;">',
+            '<p style="margin:0;font-size:12px;color:#666;">',
+            f"このメールは {e(footer['sender'])} がお送りしています。<br>",
+            f'配信を停止する（今後受け取らない）場合: <a href="{url}">配信停止</a>',
+            *(f"<br>{e(x)}" for x in footer["lines"]),
+            "</p>",
+        ]
+    parts += ["</div>", "</body></html>"]
     return "\n".join(parts) + "\n"
 
 
@@ -106,10 +161,17 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("input", type=Path)
     ap.add_argument("--out-dir", type=Path)
+    ap.add_argument("--footer", type=Path, help="送信者の名称と配信停止の案内（footer.json）")
     args = ap.parse_args(argv)
     src = args.input
     out_dir = args.out_dir or src.parent
     check_paths(src, out_dir)
+    footer = None
+    if args.footer:
+        try:
+            footer = load_footer(args.footer)
+        except ValueError as e:
+            raise SystemExit(f"フッタを読めない: {e}")
     text = src.read_text(encoding="utf-8")
     doc = parse(text)
     numbered = sum(1 for ln in text.splitlines() if NUMBERED_RE.match(ln))
@@ -117,7 +179,7 @@ def main(argv=None):
         raise SystemExit(f"番号付き行 {numbered} 件に対し記事を {len(doc['items'])} 件しか読めなかった（記事を取りこぼしている）")
     if not doc["items"]:
         raise SystemExit(f"{src} から記事を1件も読めなかった（形式が curate-news の出力と違う）")
-    outs = {out_dir / f"{src.stem}.html": render_html(doc), out_dir / f"{src.stem}.txt": render_text(doc)}
+    outs = {out_dir / f"{src.stem}.html": render_html(doc, footer), out_dir / f"{src.stem}.txt": render_text(doc, footer)}
     for dst in outs:
         # 出力ファイル自体が output/ の外への symlink でないこと、入力を上書きしないこと
         if not _under_output(dst) or dst.resolve() == src.resolve():
