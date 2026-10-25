@@ -233,5 +233,18 @@ class TestMain(unittest.TestCase):
         self.assertEqual(c.main(["--al"]), 2)
 
 
+
+class TestSource(unittest.TestCase):
+    def test_compiles_without_warnings(self):
+        """docstring の `\\<` が invalid escape だと CI ログに SyntaxWarning が出て、
+        将来の Python では SyntaxError で検査 step ごと落ちる（#408）"""
+        import warnings
+
+        src = Path(c.__file__).read_text(encoding="utf-8")
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            compile(src, c.__file__, "exec")
+
+
 if __name__ == "__main__":
     unittest.main()
