@@ -3,6 +3,7 @@
 
 既定は dry-run でネットワークに出ない。送る予定（宛先の購読者 ID・件名・本文のサイズ）を表示するだけ。
 実送信は `--send` を明示し、API キーを環境変数に入れたときだけ行う。キーが無ければ何も送らずに非0で終わる。
+本文に送信者名と配信停止の案内（render_email_body.py の --footer）が無いときも、--send は送らずに非0で終わる。
 入力・ログとも、resolve した実体が `.claude/skills/curate-news/output/`（gitignore 対象）の下にないと拒否する。
 宛先は配信サービス側の購読者 ID だけを受け付け、メールアドレスは受け付けない（repo・引数・ログに置かないため）。
 
@@ -18,7 +19,7 @@ import urllib.request
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from render_email_body import OUTPUT_DIR, ROOT, _under_output  # noqa: E402
+from render_email_body import FOOTER_MARK, OUTPUT_DIR, ROOT, _under_output  # noqa: E402
 
 # 配信サービスに依存する部分はここだけ。サービスが決まったらこのブロックを差し替える。
 # 仮の選定: Buttondown（docs/m5-paid-delivery.md の候補）。公開 OpenAPI
@@ -124,9 +125,17 @@ def main(argv=None, opener=urllib.request.urlopen):
     subject = subject_of(body, args.subject)
     plan = f"宛先 {args.subscriber_id} / 件名 {subject} / 本文 {len(body.encode('utf-8'))} bytes ({PROVIDER['name']})"
 
+    footer_missing = FOOTER_MARK not in body
     if not args.send:
         print(f"[dry-run] {plan}")
+        if footer_missing:
+            print("警告: 本文に送信者名と配信停止の案内（render_email_body.py --footer）が無い。--send では送らない", file=sys.stderr)
         return 0
+
+    if footer_missing:
+        # 特定電子メール法 4 条の表示（送信者名・配信停止の案内）を欠いたメールは送らない (#595)
+        print("本文に送信者名と配信停止の案内（render_email_body.py --footer）が無いので送らない", file=sys.stderr)
+        return 2
 
     api_key = os.environ.get(PROVIDER["api_key_env"], "").strip()
     if not api_key:

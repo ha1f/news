@@ -117,7 +117,7 @@ def footer_of(root):
     if not path.resolve().is_relative_to(root):
         raise ValueError("footer.json が --root の外を指す")
     render_email_body.load_footer(path)
-    return path
+    return path.resolve()
 
 
 def run_dir(day):

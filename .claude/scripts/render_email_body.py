@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """curate-news の出力（output/ 配下の .md）から、有料読者向けメール本文（HTML/テキスト）を作る (#528)。
 
-決定的: 同じ入力から常に同じ出力。記事本文・画像は扱わず、リンクと既存の要約（リード・読みどころ）だけを使う。
+決定的: 同じ入力から常に同じ出力。記事本文・画像は扱わず、リンクと既存の要約（リード・読みどころ）と、--footer で渡したフッタだけを使う。
 入力・出力とも gitignore 対象の `.claude/skills/curate-news/output/` に置き、公開 repo にコミットしない。
 入力・出力先とも、resolve した実体が `.claude/skills/curate-news/output/` の下にないと拒否する（`_posts/` や公開物の下に書かない）。
 
@@ -11,7 +11,7 @@
 --footer を渡すと、本文の末尾に送信者の名称と配信停止の案内を入れる（特定電子メール法 4 条の表示。#595）。
 文面は公開 repo に置かず、有料 run の ROOT_DIR（private repo）の footer.json から渡す:
   {"sender": "送信者の氏名又は名称", "unsubscribe_url": "{{ unsubscribe_url }}", "lines": ["住所: ...", "問い合わせ: ..."]}
-unsubscribe_url は https の URL か、配信サービスが購読者ごとに差し込むテンプレート変数（`{{ 名前 }}`）。lines は任意。
+unsubscribe_url は https の URL か、配信サービスが購読者ごとに差し込む配信停止リンクの変数（`{{ unsubscribe_url }}`）。lines は任意。
 """
 import argparse
 import html
@@ -27,8 +27,12 @@ NUMBERED_RE = re.compile(r"^\d+\.\s")
 ROOT = Path(__file__).resolve().parents[2]
 OUTPUT_DIR = ROOT / ".claude" / "skills" / "curate-news" / "output"
 HEADING_RE = re.compile(r"^##\s+(?P<heading>.+?)\s*$")
-# 配信停止の案内先: https の URL か、配信サービスのテンプレート変数（Buttondown なら {{ unsubscribe_url }}）
-UNSUBSCRIBE_RE = re.compile(r"^(?:https://\S+|\{\{\s*[A-Za-z_][A-Za-z0-9_.]*\s*\}\})$")
+# 配信停止の案内先: https の URL か、配信サービスが購読者ごとに差し込む配信停止リンクの変数（Buttondown の
+# {{ unsubscribe_url }}）。別の変数（{{ subscriber.email }} 等）の書き間違いを通さないよう、変数名はこれだけにする。
+# 配信サービスを変えたら send_email.py の PROVIDER と一緒にここを差し替える
+UNSUBSCRIBE_RE = re.compile(r"^(?:https://\S+|\{\{\s*unsubscribe_url\s*\}\})$")
+# フッタを入れた HTML の印。send_email.py --send はこれの無い本文を送らない（記事由来の文字列はエスケープされるので偽造されない）
+FOOTER_MARK = "<!-- footer: sender, unsubscribe -->"
 
 
 def load_footer(path):
@@ -130,6 +134,7 @@ def render_html(doc, footer=None):
     if footer:
         url = e(footer["unsubscribe_url"], quote=True)
         parts += [
+            FOOTER_MARK,
             '<hr style="border:none;border-top:1px solid #ddd;margin:24px 0 12px;">',
             '<p style="margin:0;font-size:12px;color:#666;">',
             f"このメールは {e(footer['sender'])} がお送りしています。<br>",

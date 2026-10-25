@@ -54,6 +54,7 @@ class FooterTest(unittest.TestCase):
         self.assertIn("このメールは 運営&lt;者&gt; がお送りしています。", h)
         self.assertIn('配信を停止する（今後受け取らない）場合: <a href="{{ unsubscribe_url }}">', h)
         self.assertIn("問い合わせ: info@example.com", h)
+        self.assertIn(r.FOOTER_MARK, h)
         self.assertLess(h.index("C社の決算"), h.index("がお送りしています"))
         self.assertIn("このメールは 運営<者> がお送りしています。", txt)
         self.assertIn("配信を停止する（今後受け取らない）場合: {{ unsubscribe_url }}", txt)
@@ -68,6 +69,9 @@ class FooterTest(unittest.TestCase):
 
     def test_without_footer_nothing_is_added(self):
         self.assertNotIn("お送りしています", r.render_html(r.parse(SAMPLE)))
+        # 印は記事由来の文字列からは作れない（エスケープされる）
+        forged = SAMPLE.replace("Aが", r.FOOTER_MARK + "Aが")
+        self.assertNotIn(r.FOOTER_MARK, r.render_html(r.parse(forged)))
         self.assertNotIn("お送りしています", r.render_text(r.parse(SAMPLE)))
 
     def test_missing_or_invalid_footer_fails(self):
@@ -81,6 +85,7 @@ class FooterTest(unittest.TestCase):
             {"sender": "運営者", "unsubscribe_url": "  "},
             {"sender": "運営者", "unsubscribe_url": "http://example.com/u"},
             {"sender": "運営者", "unsubscribe_url": "javascript:alert(1)"},
+            {"sender": "運営者", "unsubscribe_url": "{{ subscriber.email }}"},
             {"sender": "運営者", "unsubscribe_url": "{{ unsubscribe_url }}\" onclick=\"x"},
             {"sender": "運営者", "unsubscribe_url": "{{ unsubscribe_url }}", "lines": [""]},
             {"sender": "運営者", "unsubscribe_url": "{{ unsubscribe_url }}", "lines": "住所"},
