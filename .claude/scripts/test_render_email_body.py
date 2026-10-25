@@ -1,3 +1,4 @@
+import json
 import shutil
 import subprocess
 import sys
@@ -31,6 +32,77 @@ Aが<b>Bを発表</b>した。要点は2つ。
 2. [C社の決算](https://example.com/c) (日経・会員限定)<br>
    売上の内訳。
 """
+
+
+FOOTER = {"sender": "運営<者>", "unsubscribe_url": "{{ unsubscribe_url }}", "lines": ["問い合わせ: info@example.com"]}
+
+
+class FooterTest(unittest.TestCase):
+    def write(self, d, data):
+        f = Path(d) / "footer.json"
+        f.write_text(data if isinstance(data, str) else json.dumps(data, ensure_ascii=False), encoding="utf-8")
+        return f
+
+    def test_cli_puts_sender_and_unsubscribe_in_both_html_and_text(self):
+        with out_tmp() as t, tempfile.TemporaryDirectory() as priv:  # フッタは output/ の外（private repo 側）に置ける
+            src = Path(t) / "2026-10-11-abc.md"
+            src.write_text(SAMPLE, encoding="utf-8")
+            p = run(src, "--footer", self.write(priv, FOOTER))
+            self.assertEqual(p.returncode, 0, p.stderr)
+            h = (Path(t) / "2026-10-11-abc.html").read_text(encoding="utf-8")
+            txt = (Path(t) / "2026-10-11-abc.txt").read_text(encoding="utf-8")
+        self.assertIn("このメールは 運営&lt;者&gt; がお送りしています。", h)
+        self.assertIn('配信を停止する（今後受け取らない）場合: <a href="{{ unsubscribe_url }}">', h)
+        self.assertIn("問い合わせ: info@example.com", h)
+        self.assertIn(r.FOOTER_MARK, h)
+        self.assertLess(h.index("C社の決算"), h.index("がお送りしています"))
+        self.assertIn("このメールは 運営<者> がお送りしています。", txt)
+        self.assertIn("配信を停止する（今後受け取らない）場合: {{ unsubscribe_url }}", txt)
+        self.assertIn("問い合わせ: info@example.com", txt)
+        self.assertTrue(txt.rstrip().endswith("問い合わせ: info@example.com"))
+
+    def test_https_url_is_accepted(self):
+        with tempfile.TemporaryDirectory() as d:
+            f = r.load_footer(self.write(d, {"sender": "運営者", "unsubscribe_url": "https://example.com/u?id=1&x=2"}))
+        self.assertEqual(f["lines"], [])
+        self.assertIn('href="https://example.com/u?id=1&amp;x=2"', r.render_html(r.parse(SAMPLE), f))
+
+    def test_without_footer_nothing_is_added(self):
+        self.assertNotIn("お送りしています", r.render_html(r.parse(SAMPLE)))
+        # 印は記事由来の文字列からは作れない（エスケープされる）
+        forged = SAMPLE.replace("Aが", r.FOOTER_MARK + "Aが")
+        self.assertNotIn(r.FOOTER_MARK, r.render_html(r.parse(forged)))
+        self.assertNotIn("お送りしています", r.render_text(r.parse(SAMPLE)))
+
+    def test_missing_or_invalid_footer_fails(self):
+        bad = [
+            "{",
+            [],
+            {"unsubscribe_url": "{{ unsubscribe_url }}"},
+            {"sender": "", "unsubscribe_url": "{{ unsubscribe_url }}"},
+            {"sender": "a\nb", "unsubscribe_url": "{{ unsubscribe_url }}"},
+            {"sender": "運営者"},
+            {"sender": "運営者", "unsubscribe_url": "  "},
+            {"sender": "運営者", "unsubscribe_url": "http://example.com/u"},
+            {"sender": "運営者", "unsubscribe_url": "javascript:alert(1)"},
+            {"sender": "運営者", "unsubscribe_url": "{{ subscriber.email }}"},
+            {"sender": "運営者", "unsubscribe_url": "{{ unsubscribe_url }}\" onclick=\"x"},
+            {"sender": "運営者", "unsubscribe_url": "{{ unsubscribe_url }}", "lines": [""]},
+            {"sender": "運営者", "unsubscribe_url": "{{ unsubscribe_url }}", "lines": "住所"},
+        ]
+        with tempfile.TemporaryDirectory() as d:
+            for data in bad:
+                with self.assertRaises(ValueError, msg=data):
+                    r.load_footer(self.write(d, data))
+            with self.assertRaises(ValueError):
+                r.load_footer(Path(d) / "none.json")
+        with out_tmp() as t:
+            src = Path(t) / "2026-10-11-abc.md"
+            src.write_text(SAMPLE, encoding="utf-8")
+            p = run(src, "--footer", Path(t) / "none.json")
+            self.assertNotEqual(p.returncode, 0)
+            self.assertIn("フッタを読めない", p.stderr)
+            self.assertFalse((Path(t) / "2026-10-11-abc.html").exists())
 
 
 class RenderTest(unittest.TestCase):

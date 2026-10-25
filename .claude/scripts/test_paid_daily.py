@@ -26,6 +26,7 @@ CURATED = """## ニュース (2026-10-21 07:00 JST)
    売上の半分を設備貸しが占め、前年は赤字だった。
 """
 KEY = send_email.PROVIDER["api_key_env"]
+FOOTER = {"sender": "テスト運営者", "unsubscribe_url": "{{ unsubscribe_url }}"}
 
 
 class FakeResponse:
@@ -72,6 +73,14 @@ class PaidDailyTest(unittest.TestCase):
             patcher = mock.patch.object(mod, "OUTPUT_DIR", self.out)
             patcher.start()
             self.addCleanup(patcher.stop)
+        self.footer(FOOTER)
+
+    def footer(self, data):
+        f = self.root / "footer.json"
+        if data is None:
+            f.unlink(missing_ok=True)
+        else:
+            f.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
 
     def readers(self, *rows):
         (self.root / "readers.json").write_text(json.dumps(list(rows)), encoding="utf-8")
@@ -339,6 +348,56 @@ class PaidDailyTest(unittest.TestCase):
                 self.assertEqual(quiet(p.finalize, self.root, DAY, "alice", True)[0], 1)
             stop.assert_called_once()
             self.assertFalse(marker.exists())
+
+    def test_send_requires_footer(self):
+        self.readers(self.reader("alice"))
+        quiet(p.prepare, self.root, DAY, "alice")
+        self.curate("alice")
+        html_path = p.run_dir(DAY) / "alice.html"
+        for bad in (None, {}, {"sender": " ", "unsubscribe_url": "{{ unsubscribe_url }}"},
+                    {"sender": "運営者", "unsubscribe_url": ""}, {"sender": "運営者", "unsubscribe_url": "http://x.example/u"}):
+            self.footer(bad)
+            called = mock.Mock(return_value=0)
+            with mock.patch.object(send_email, "main", called):
+                rc, _, err = quiet(p.finalize, self.root, DAY, "alice", True)
+            self.assertEqual(rc, 1, bad)
+            self.assertIn("フッタ（送信者名・配信停止の案内）が未設定", err)
+            called.assert_not_called()
+            self.assertFalse((self.root / "sent" / "alice").exists(), bad)
+            self.assertIs(p.run_state(DAY)["alice"]["ok"], False)
+            # dry-run は警告を出して続ける（フッタの無い本文が作られる）
+            rc, _, err = quiet(p.finalize, self.root, DAY, "alice", False)
+            self.assertEqual(rc, 0, bad)
+            self.assertIn("警告 alice", err)
+            self.assertNotIn("配信を停止", html_path.read_text(encoding="utf-8"))
+        # 設定すると従来どおり送り、送る本文の末尾に送信者名と配信停止のリンクが入る
+        self.footer(FOOTER)
+        called = mock.Mock(return_value=0)
+        with mock.patch.object(send_email, "main", called):
+            rc, _, err = quiet(p.finalize, self.root, DAY, "alice", True)
+        self.assertEqual(rc, 0, err)
+        called.assert_called_once()
+        self.assertEqual(called.call_args[0][0][:4], [str(html_path), "--subscriber-id", "sub_alice", "--send"])
+        body = html_path.read_text(encoding="utf-8")
+        self.assertIn("テスト運営者", body)
+        self.assertIn('<a href="{{ unsubscribe_url }}">', body)
+        self.assertIn("テスト運営者", (p.run_dir(DAY) / "alice.txt").read_text(encoding="utf-8"))
+
+    def test_footer_symlink_out_of_root_is_rejected(self):
+        outside = tempfile.TemporaryDirectory()
+        self.addCleanup(outside.cleanup)
+        target = Path(outside.name) / "footer.json"
+        target.write_text(json.dumps(FOOTER), encoding="utf-8")
+        self.footer(None)
+        (self.root / "footer.json").symlink_to(target)
+        self.readers(self.reader("alice"))
+        quiet(p.prepare, self.root, DAY, "alice")
+        self.curate("alice")
+        with mock.patch.object(send_email, "main", mock.Mock(return_value=0)) as called:
+            rc, _, err = quiet(p.finalize, self.root, DAY, "alice", True)
+        self.assertEqual(rc, 1)
+        self.assertIn("--root の外", err)
+        called.assert_not_called()
 
     def test_reader_ids_are_validated(self):
         for bad in ("../x", "1", "a b", ""):

@@ -6,7 +6,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from unittest import mock
 
@@ -16,7 +16,7 @@ import send_email as s
 SCRIPT = Path(__file__).parent / "send_email.py"
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / ".claude" / "skills" / "curate-news" / "output"
-BODY = '<!DOCTYPE html>\n<html lang="ja"><head><title>ニュース &amp; 要点</title></head><body><ol><li>a</li></ol></body></html>\n'
+BODY = '<!DOCTYPE html>\n<html lang="ja"><head><title>ニュース &amp; 要点</title></head><body><ol><li>a</li></ol>' + s.FOOTER_MARK + '</body></html>\n'
 KEY = s.PROVIDER["api_key_env"]
 
 
@@ -91,6 +91,17 @@ class SendEmailTest(unittest.TestCase):
         p = run(self.src, "--subscriber-id", "sub_1", "--send")
         self.assertNotEqual(p.returncode, 0)
         self.assertIn(KEY, p.stderr)
+        self.assertEqual(sorted(x.name for x in self.dir.iterdir()), [self.src.name])
+
+    def test_send_refuses_body_without_footer(self):
+        # 送信者名と配信停止の案内の無い本文（render_email_body.py を --footer 無しで回したもの）は送らない
+        self.src.write_text(BODY.replace(s.FOOTER_MARK, ""), encoding="utf-8")
+        err = io.StringIO()
+        with mock.patch.dict(os.environ, {KEY: "k"}), redirect_stdout(io.StringIO()), redirect_stderr(err):
+            self.assertEqual(s.main([str(self.src), "--subscriber-id", "sub_1", "--send"], opener=no_network), 2)
+            self.assertIn("送信者名と配信停止の案内", err.getvalue())
+            self.assertEqual(s.main([str(self.src), "--subscriber-id", "sub_1"], opener=no_network), 0)
+        self.assertIn("警告", err.getvalue())
         self.assertEqual(sorted(x.name for x in self.dir.iterdir()), [self.src.name])
 
     def test_send_creates_unbroadcast_email_then_sends_to_one(self):
