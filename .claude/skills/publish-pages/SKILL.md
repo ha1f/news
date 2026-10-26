@@ -116,7 +116,10 @@ python3 .claude/scripts/check_article_notes.py _posts/{YYYY-MM-DD}-*.md
 python3 .claude/scripts/check_source_hints.py _posts/{YYYY-MM-DD}-*.md
 python3 .claude/scripts/check_post_titles.py _posts/{YYYY-MM-DD}-*.md
 python3 .claude/scripts/check_article_tags.py _posts/{YYYY-MM-DD}-*.md
+python3 .claude/scripts/check_tool_artifacts.py _posts/{YYYY-MM-DD}-*.md
 ```
+
+`check_tool_artifacts.py` が「ツール呼び出し構文が残っています」の `NG` 行を出したら（終了コード 1）、その行の `</content>` 等を本文から消し、0件になるまで走らせ直す（同じ日の全プロファイルにまとめて出るので、1本直して終わりにならない。CI の "Check article quality" も全投稿に当てて止める）。
 
 `check_topic_repeats.py` は URL が違っても、同じフィードの直近10日に載せた項目のうち固有名の重なるもの（1項目につき点数順に3件まで）を「要判断」として出す（読みどころが「続報（」で始まる項目は出さない）。モデルが掲載済みヘッドラインを読んで照合するだけでは、前回の掲載が照合範囲に入っていても見落とした（#531）。出た組は今回と前回の読みどころを並べて1組ずつ判断し、curate-news 4a のトピック重複チェックと同じ扱いにする: 同じ出来事で重要な新事実や進展が無ければ項目を削る（後始末は既出 URL と同じ）、あれば読みどころの冒頭に「続報（M/D掲載）。」を足し（M/D は同じ出来事を載せた前回のうち直近の日付）、前回と食い違う事実はどちらが正しいか原文で確かめて書く。別の話題なら何もしない（重なった語が一般名詞や同じ会社名だけの組は多い。終了コード 1 が残るのはそのため）。
 
