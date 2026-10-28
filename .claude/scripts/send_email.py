@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""render_email_body.py が作ったメール本文を、配信サービスの API で購読者1人に送る (#555)。
+"""render_email_body.py が作ったメール本文を、配信サービスの API で購読者1人（#555）か、1つのタグを持つ購読者全員（#613）に送る。
 
 既定は dry-run でネットワークに出ない。送る予定（宛先の購読者 ID・件名・本文のサイズ）を表示するだけ。
 実送信は `--send` を明示し、API キーを環境変数に入れたときだけ行う。キーが無ければ何も送らずに非0で終わる。
 本文に送信者名と配信停止の案内（render_email_body.py の --footer）が無いときも、--send は送らずに非0で終わる。
 入力・ログとも、resolve した実体が `.claude/skills/curate-news/output/`（gitignore 対象）の下にないと拒否する。
-宛先は配信サービス側の購読者 ID だけを受け付け、メールアドレスは受け付けない（repo・引数・ログに置かないため）。
+宛先は配信サービス側の購読者 ID かタグ ID だけを受け付け、メールアドレスは受け付けない（repo・引数・ログに置かないため）。
 
-使い方: python3 .claude/scripts/send_email.py <output/.../{stem}.html> --subscriber-id ID [--subject S] [--send]
+使い方: python3 .claude/scripts/send_email.py <output/.../{stem}.html> (--subscriber-id ID | --tag-id ID) [--subject S] [--send]
 """
 import argparse
 import html
@@ -34,6 +34,15 @@ from render_email_body import FOOTER_MARK, OUTPUT_DIR, ROOT, _under_output  # no
 # 「core workflow / automation が送ったメール」の表示値としてしか説明していない。また subscribers/{id}/emails/{email_id} は
 # 「finalized なメール専用」（docs/api-subscribers-send-email。draft は 2024-06-27 から email_invalid_status で拒否）。
 # 作成応答の status 確認は事後検知で、作成時点で一斉配信の status にされた場合は取り消せない。
+#
+# タグへの一斉配信（プレミアムフィード。#613）も同じ OpenAPI（2026-10-28 に確認）で組む:
+#   EmailInput.filters（EmailFilterGroup: "Tag-based filter rules determining which subscribers receive this email."）に
+#   {"field": "subscriber.tags", "operator": "contains", "value": <タグ ID>} を1つだけ入れる（Filter の説明:
+#   "Tag filters require the tag's ID (either a UUID or TypeID), not its name."）
+#   POST /v1/emails/{id}/publish（"Publishes and sends an email." 本文は EmailUpdateInput で、渡したフィールドだけを
+#   更新してから送る。docs/api-emails-publish）
+# こちらも draft で作り、作成応答の status と filters が送ったものと一致したときだけ publish する（filters が落ちて
+# 全購読者への配信になるのを publish の前に止める）。publish の本文は空にして、filters を書き換えない。
 # ただし send-draft は公式 docs 上「下書きをレビュー用に送る」機能で、有料読者への本番配信に使えるか
 # （下書き表示が付かないか、配信停止リンクとフッタが付くか、配信記録に残るか）は未確認。
 # 初回の実送信は、オーナーだけが購読するテスト用ニュースレターで draft のまま作られ、send-draft が本人にだけ届き、
@@ -65,12 +74,32 @@ def build_send(email_id, subscriber_id):
     return {"method": "POST", "path": f"/emails/{email_id}/send-draft", "json": {"subscribers": [subscriber_id]}}
 
 
+def tag_filters(tag_id):
+    """そのタグを持つ購読者だけに絞る audience（EmailFilterGroup）。"""
+    return {"filters": [{"field": "subscriber.tags", "operator": "contains", "value": tag_id}], "groups": [], "predicate": "and"}
+
+
+def build_create_for_tag(subject, body, tag_id):
+    """タグの購読者に送る email を draft で作るリクエスト（作った時点ではまだ誰にも送らない）。"""
+    spec = build_create(subject, body)
+    spec["json"]["filters"] = tag_filters(tag_id)
+    return spec
+
+
+def build_publish(email_id):
+    """draft を filters の audience に送るリクエスト。本文を空にして、作成時の filters をそのまま使う。"""
+    return {"method": "POST", "path": f"/emails/{email_id}/publish", "json": {}}
+
+
 def auth_headers(api_key):
     return {"Authorization": f"Token {api_key}", "Content-Type": "application/json"}
 
 
 # 購読者 ID は英数字・_・- だけ（`@` を含むメールアドレスや、パスを壊す `/` を受け付けない）
 SUBSCRIBER_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,100}$")
+# タグ ID は OpenAPI の ID の pattern（UUID か TypeID）のうち sub_tag_ の形だけ。タグ名は受け付けない
+_UUID = r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
+TAG_ID_RE = re.compile(rf"^(?:{_UUID}|sub_tag_(?:[0-7][0-9abcdefghjkmnpqrstvwxyz]{{25}}|{_UUID}))$")
 TITLE_RE = re.compile(r"<title>(.*?)</title>", re.S)
 
 
@@ -104,7 +133,9 @@ def subject_of(body, override):
 def main(argv=None, opener=urllib.request.urlopen):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("input", type=Path, help="render_email_body.py が出力した .html")
-    ap.add_argument("--subscriber-id", required=True, help="配信サービス側の購読者 ID（メールアドレスは不可）")
+    to = ap.add_mutually_exclusive_group(required=True)
+    to.add_argument("--subscriber-id", help="配信サービス側の購読者 ID（メールアドレスは不可）。その1人にだけ送る")
+    to.add_argument("--tag-id", help="配信サービス側のタグ ID（名前は不可）。そのタグを持つ購読者全員に同じ本文を送る")
     ap.add_argument("--subject")
     ap.add_argument("--log-dir", type=Path, help="実送信の記録の置き場（既定は入力と同じディレクトリ）")
     mode = ap.add_mutually_exclusive_group()
@@ -117,13 +148,19 @@ def main(argv=None, opener=urllib.request.urlopen):
     check_paths(src, log_dir)
     if src.suffix != ".html":
         raise SystemExit(f"入力は render_email_body.py が出力した .html だけを受け付ける: {src.name}")
-    if not SUBSCRIBER_ID_RE.match(args.subscriber_id):
-        raise SystemExit("--subscriber-id は配信サービスの購読者 ID（英数字・_・-）だけを受け付ける。メールアドレスは渡さない")
+    if args.tag_id is not None:
+        if not TAG_ID_RE.match(args.tag_id):
+            raise SystemExit("--tag-id は配信サービスのタグ ID（sub_tag_… か UUID）だけを受け付ける。タグ名は渡さない")
+        dest, to_label = args.tag_id, f"タグ {args.tag_id} の購読者全員"
+    else:
+        if not SUBSCRIBER_ID_RE.match(args.subscriber_id):
+            raise SystemExit("--subscriber-id は配信サービスの購読者 ID（英数字・_・-）だけを受け付ける。メールアドレスは渡さない")
+        dest, to_label = args.subscriber_id, args.subscriber_id
     body = src.read_text(encoding="utf-8")
     if not body.strip():
         raise SystemExit(f"{src} が空")
     subject = subject_of(body, args.subject)
-    plan = f"宛先 {args.subscriber_id} / 件名 {subject} / 本文 {len(body.encode('utf-8'))} bytes ({PROVIDER['name']})"
+    plan = f"宛先 {to_label} / 件名 {subject} / 本文 {len(body.encode('utf-8'))} bytes ({PROVIDER['name']})"
 
     footer_missing = FOOTER_MARK not in body
     if not args.send:
@@ -141,23 +178,33 @@ def main(argv=None, opener=urllib.request.urlopen):
     if not api_key:
         print(f"{PROVIDER['api_key_env']} が無いので送らない", file=sys.stderr)
         return 2
-    log = log_dir / f"{src.stem}.{args.subscriber_id}.sent.json"
+    log = log_dir / f"{src.stem}.{dest}.sent.json"
     if not _under_output(log):
         raise SystemExit(f"ログ {log} が {OUTPUT_DIR.relative_to(ROOT)}/ の外を指す")
     if log.exists():
-        raise SystemExit(f"{log.name} があるので送らない（同じ読者に同じ本文を二重に送らないため）")
-    created = request(build_create(subject, body), api_key, opener)
+        raise SystemExit(f"{log.name} があるので送らない（同じ宛先に同じ本文を二重に送らないため）")
+    if args.tag_id is not None:
+        create, to = build_create_for_tag(subject, body, args.tag_id), {"tag_id": args.tag_id}
+    else:
+        create, to = build_create(subject, body), {"subscriber_id": args.subscriber_id}
+    created = request(create, api_key, opener)
     email_id = created.get("id")
     if not email_id:
         raise SystemExit("email の作成に失敗した（応答に id が無い）")
-    record = {"provider": PROVIDER["name"], "email_id": email_id, "subscriber_id": args.subscriber_id}
+    record = {"provider": PROVIDER["name"], "email_id": email_id, **to}
     log_dir.mkdir(parents=True, exist_ok=True)
     # 送信の前に書く。送信の途中で落ちても、再実行が二重送信に進まずログで止まる
     log.write_text(json.dumps({**record, "sent": False}) + "\n", encoding="utf-8")
     if created.get("status") != PROVIDER["expected_status"]:
         # draft 以外（about_to_send 等）で作られた疑い。購読者1人への送信には進まない
         raise SystemExit(f"作成した email {email_id} の status が {created.get('status')!r}（{PROVIDER['expected_status']} でない）。送信を中止")
-    request(build_send(email_id, args.subscriber_id), api_key, opener)
+    if args.tag_id is not None:
+        if created.get("filters") != create["json"]["filters"]:
+            # 絞り込みが落ちた・変わった draft を publish すると、タグの外の購読者にも届く
+            raise SystemExit(f"作成した email {email_id} の filters が送ったものと一致しない。送信を中止（draft のまま残る）")
+        request(build_publish(email_id), api_key, opener)
+    else:
+        request(build_send(email_id, args.subscriber_id), api_key, opener)
     log.write_text(json.dumps({**record, "sent": True}) + "\n", encoding="utf-8")
     print(f"送信: {plan} / email {email_id}")
     return 0
