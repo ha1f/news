@@ -18,6 +18,7 @@ ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / ".claude" / "skills" / "curate-news" / "output"
 BODY = '<!DOCTYPE html>\n<html lang="ja"><head><title>ニュース &amp; 要点</title></head><body><ol><li>a</li></ol>' + s.FOOTER_MARK + '</body></html>\n'
 KEY = s.PROVIDER["api_key_env"]
+TAG = "sub_tag_0j6hb7h40j6hb7h40j6hb7h40j"  # OpenAPI の Filter の説明にある例
 
 
 def out_tmp():
@@ -153,6 +154,50 @@ class SendEmailTest(unittest.TestCase):
         with mock.patch.dict(os.environ, {KEY: "k"}), self.assertRaises(SystemExit):
             s.main([str(self.src), "--subscriber-id", "sub_9", "--send"], opener=opener)
         self.assertEqual(len(opener.requests), 1)
+
+    def test_tag_send_creates_filtered_draft_then_publishes(self):
+        expected = {"filters": [{"field": "subscriber.tags", "operator": "contains", "value": TAG}], "groups": [], "predicate": "and"}
+        opener = FakeOpener({"id": "em_1", "status": "draft", "filters": expected})
+        with mock.patch.dict(os.environ, {KEY: "secret"}), redirect_stdout(io.StringIO()) as out:
+            rc = s.main([str(self.src), "--tag-id", TAG, "--send"], opener=opener)
+        self.assertEqual(rc, 0)
+        self.assertIn(f"宛先 タグ {TAG} の購読者全員", out.getvalue())
+        create, publish = opener.requests
+        self.assertEqual(create.full_url, "https://api.buttondown.com/v1/emails")
+        payload = json.loads(create.data)
+        self.assertEqual(payload["status"], "draft")  # 作った時点では誰にも送らない
+        self.assertEqual(payload["archival_mode"], "disabled")
+        self.assertEqual(payload["filters"], expected)
+        self.assertEqual(publish.full_url, "https://api.buttondown.com/v1/emails/em_1/publish")
+        self.assertEqual(publish.get_method(), "POST")
+        self.assertEqual(json.loads(publish.data), {})  # filters を書き換えない
+        log = json.loads((self.dir / f"2026-10-15-abc.{TAG}.sent.json").read_text(encoding="utf-8"))
+        self.assertEqual(log, {"provider": "buttondown", "email_id": "em_1", "tag_id": TAG, "sent": True})
+
+    def test_tag_send_stops_when_filters_are_not_kept(self):
+        # 応答の filters が空・別のタグ・欠落なら、publish は全購読者かタグの外に届きうるので送らない
+        other = {"filters": [{"field": "subscriber.tags", "operator": "contains", "value": TAG[:-1] + "k"}], "groups": [], "predicate": "and"}
+        for created in ({"id": "em_1", "status": "draft"},
+                        {"id": "em_1", "status": "draft", "filters": {"filters": [], "groups": [], "predicate": "and"}},
+                        {"id": "em_1", "status": "draft", "filters": other}):
+            opener = FakeOpener(created)
+            for f in self.dir.glob("*.sent.json"):
+                f.unlink()
+            with mock.patch.dict(os.environ, {KEY: "k"}), self.assertRaises(SystemExit) as cm:
+                s.main([str(self.src), "--tag-id", TAG, "--send"], opener=opener)
+            self.assertIn("filters", str(cm.exception))
+            self.assertEqual(len(opener.requests), 1, created)
+            log = json.loads((self.dir / f"2026-10-15-abc.{TAG}.sent.json").read_text(encoding="utf-8"))
+            self.assertIs(log["sent"], False)
+
+    def test_tag_id_must_be_an_id_not_a_name(self):
+        for bad in ("paid-space", "宇宙", "sub_123", "sub_tag_x", "someone@example.com", ""):
+            p = run(self.src, "--tag-id", bad)
+            self.assertNotEqual(p.returncode, 0, bad)
+        self.assertEqual(run(self.src, "--tag-id", "0b0c6f2e-3a0e-4c5e-9d1a-2f3b4c5d6e7f").returncode, 0)
+        # 宛先は購読者 ID かタグ ID のどちらか1つ
+        self.assertEqual(run(self.src, "--tag-id", TAG, "--subscriber-id", "sub_1").returncode, 2)
+        self.assertEqual(run(self.src).returncode, 2)
 
     def test_rejects_email_address_and_bad_ids(self):
         for bad in ("someone@example.com", "a/b", "../x", ""):
