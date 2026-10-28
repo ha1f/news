@@ -74,6 +74,10 @@ def build_send(email_id, subscriber_id):
     return {"method": "POST", "path": f"/emails/{email_id}/send-draft", "json": {"subscribers": [subscriber_id]}}
 
 
+class MaybeSent(SystemExit):
+    """email を作った後の中止のうち、配信がもう始まっているかもしれないもの（呼び出し側は再送しない）。"""
+
+
 def tag_filters(tag_id):
     """そのタグを持つ購読者だけに絞る audience（EmailFilterGroup）。"""
     return {"filters": [{"field": "subscriber.tags", "operator": "contains", "value": tag_id}], "groups": [], "predicate": "and"}
@@ -197,7 +201,7 @@ def main(argv=None, opener=urllib.request.urlopen):
     log.write_text(json.dumps({**record, "sent": False}) + "\n", encoding="utf-8")
     if created.get("status") != PROVIDER["expected_status"]:
         # draft 以外（about_to_send 等）で作られた疑い。購読者1人への送信には進まない
-        raise SystemExit(f"作成した email {email_id} の status が {created.get('status')!r}（{PROVIDER['expected_status']} でない）。送信を中止")
+        raise MaybeSent(f"作成した email {email_id} の status が {created.get('status')!r}（{PROVIDER['expected_status']} でない）。送信を中止")
     if args.tag_id is not None:
         if created.get("filters") != create["json"]["filters"]:
             # 絞り込みが落ちた・変わった draft を publish すると、タグの外の購読者にも届く
