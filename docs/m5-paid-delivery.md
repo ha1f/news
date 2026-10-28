@@ -102,9 +102,40 @@ A は採らない。日次のニュースで公開を数時間遅らせても読
 - **subagent の費用は `cost_usd` に含まれる。** B は curate-news を subagent に任せたのでオーケストレータの context（`used_tokens`）が A の 6 割しかないのに、`cost_usd`（$1.14）と `cache_read_tokens`（135 万）は A と同じ水準にある。含まれていなければ B は起動と受け取りの数ターン分（数セント）にしかならない。Agent SDK の docs（[Track cost and usage](https://code.claude.com/docs/en/agent-sdk/cost-tracking)）も、結果の `total_cost_usd` は subagent の分を含み、`usage` は最上位のループだけと書いている。`get_session` の `usage.cost_usd` がこの `total_cost_usd` に当たることは docs に無く、上の実測で確かめた。B の `cache_read_tokens` も A と同じ水準なので、`get_session` の `usage` はトークン数も subagent を含んでいる（SDK の結果メッセージの `usage` とは範囲が違う）。委譲の分だけ B は A より 1 割ほど高い
 - **Sonnet は直接回すと途中で止まる（2 回中 2 回）。** ソース選択を終えたところでターンを終え（セッションの状態表示は「次は取得」のまま）、取得以降を行わない。指示を足しても同じだった。publish のように subagent に委譲すると最後まで走る（D と 10-19〜23 の publish）。有料 run を Sonnet で回すなら、委譲の形を取るか、curate-news の進捗表示の指示（「各ステップの開始時に…進捗を伝える」）を無人実行向けに見直す必要がある
 
+### Opus と Sonnet の品質比較（2026-10-28、#609）
+
+公開プリセット `engineer` の curate-news を、同じ取得結果から Opus と Sonnet でそれぞれ 1 回、委譲の形（形 B・D と同じく subagent 1 つに curate-news を任せる）で回し、出力を比べた。
+
+**揃えた条件。** 全ソースを 1 回だけ取得し（reddit-swift と reddit-MachineLearning は HTTP 429 で取得できず、両方とも欠けたまま）、そのキャッシュを main から切った 2 つの git worktree に複写して、各 worktree で subagent を 1 つずつ同時に起動した。取得目的の `fetch_feeds.py` を禁じ（キャッシュの無いソースは fallback せずスキップ）、終了後にキャッシュが両方とも取得時と一致する（sha256）ことを確かめた。日付は両方 2026-10-28、push・`_posts/` への書き込みはしていない。記事ページの取得（`fetch_article_context.py`）は手順どおり許した。
+
+**別セッションでなく 1 セッション内の subagent にした理由と、モデルの確かめ方。** `create_session` の別セッションはコンテナが別で、キャッシュも出力も共有できない（同じ取得結果から回せず、出力を手元に戻す経路も無い）。そこで 1 セッション（session_015HFLzbJqrvTkqg7BumJKh7、`get_session` の `last_served_model` は `claude-opus-5-5`。これはオーケストレータのモデル）の中で、Agent ツールの `model` 指定で 2 つの subagent を起動した。subagent のモデルは `get_session` では見えないので、セッションの subagent transcript（`~/.claude/projects/<project>/<session>/subagents/agent-*.jsonl`）の assistant メッセージの `model` をターンごとに数えた。
+
+| | Opus | Sonnet |
+|---|---|---|
+| transcript のモデル | 全 28 メッセージが `claude-opus-5-5` | 全 20 メッセージが `claude-sonnet-5-5` |
+| 完走 | ○（11 件・16 ソース/カテゴリを選択、所要 167 秒） | ○（10 件・15 ソース/カテゴリを選択、所要 83 秒） |
+| API 呼び出し / cache read / 出力トークン | 14 回 / 114 万 / 13,258 | 12 回 / 76 万 / 6,363 |
+| `check_article_notes.py`・`check_source_hints.py` | 違反 0・不一致 0 | 違反 0・不一致 0 |
+
+観点ごとの結果（違反の判定は、どちらがどのモデルかを伏せた fresh context の subagent（Opus）に、curate-news の SKILL.md 手順5と GUARDRAILS.md のコンテンツの権利ガードレールで両方を検査させ、根拠をキャッシュと記事本文で確かめさせた。トピック重複だけは、検査役に掲載履歴を渡していないので別に `recent_topics.py` で確かめた）:
+
+| 観点 | 結果 |
+|---|---|
+| 選定の重なり | 同じ URL は 4 本（Ghostty 1.4・CPython JIT 撤去・Bun の `bun fmt`・Anthropic の Scion）。同じ話題を別 URL で取ったものが 1 本（CI 短縮の記事。Opus は Reddit の投稿、Sonnet はリンク先のブログ）。残りは Opus 6 本・Sonnet 5 本が別 |
+| プロファイルの関心から外れた記事 | 両方 1 本で、どちらもセレンディピティ枠として置いたもの（Opus: MIT TR の半導体変圧器、Sonnet: DeepMind の Genie 4）。「読みたくない記事」に当たるものは両方 0 本 |
+| トピック重複 | Sonnet 1 本: DuckDB 2.0 LTS（Publickey）は 10-22 の `engineer` に同じリリースが載っており、新しい事実は乏しいのに続報表記も無い。Opus は同じ記事を重複として外したと報告している |
+| 事実でない記述 | Opus 0。Sonnet 2（リードの「大きく動いた一日」は 10-21・22 の発表を当日の出来事として書いている。Zenn の記事を「Ship / Show / Ask の考え方から整理」と書いたが、記事は先行例として挙げるだけで主旨は組織の合意）。どちらも「Scion は自社製・独自」を書いたが、取得できた本文の範囲では確かめられなかった（未確認） |
+| 原文の構成をなぞった要約 | Opus 2 本（Light Touch・半導体変圧器）、Sonnet 5 本（Ghostty・Bun・Scion・Zig・Genie 4。Genie 4 は本文 2 文のほぼ直訳）。境界のものは Opus 4 本・Sonnet 3 本 |
+| 英語の残り | Opus 0。Sonnet 1（「fuzzer」） |
+| 読みどころの長さ（50 字超） | Opus 5/11（最大 66 字）、Sonnet 8/10（最大 78 字）。Sonnet は 2 文に分けた項目が 3 本あり、1 文の決まりにも反する |
+| 初出の固有名の説明不足・主語の欠落 | Opus 2（Bun の説明なし、半導体変圧器の項に主語なし）、Sonnet 4（Bun・DuckDB・DuckLabs・Zig の説明なし） |
+
+- **Sonnet は完走し、機械検査も通るが、読みどころの書き方で差が出た。** 選定は 4 本が同じ URL、関心外は両方 1 本で、選定の幅に大きな差は無い。差が大きいのは日本語化で、description や本文の文をなぞる要約（GUARDRAILS の「原文の構成・修辞をなぞる詳細要約」）が Opus の 2.5 倍、50 字超の読みどころが 1.6 倍あった。事実の誤りも Sonnet だけに 2 件、続報表記の無いトピック重複も Sonnet だけに 1 件あった。いまの CI の検査（`check_article_notes.py`・`check_source_hints.py`）はどれも捕まえない種類の違反なので、Sonnet で回すなら、ここを検査で止めるか、品質が落ちるのを受け入れるかの判断が要る
+- **限界。** 各モデル 1 回、1 日、`engineer` 1 本の比較で、ばらつきは測っていない。検査役は Opus で、どちらがどのモデルかは伏せたが、Opus の書き癖に寄った判定になる可能性は残る。「なぞり」と「境界」の線引きは検査役の判断
+
 ### 未確認の点
 
-- **Sonnet にしたときの品質。** 出力は push していないので比べていない。選定・日本語化がどれだけ落ちるかは別に確かめる
+- **Sonnet にしたときの品質のばらつき。** 上の比較は各モデル 1 回ずつ。日やプロファイルを変えても同じ差が出るかは確かめていない
 - **プロファイルによる差と測定のばらつき。** 各形 1 回ずつ、`engineer` だけで測った。ソース数・件数の多いプロファイルでは上がりうる
 - **`--paid` で絞ったときの費用。** 有料 run は `fetch_feeds.py --paid` で商用利用が `可` のソースだけを読む（下の「日次手順」）。公開の `engineer`（13 ソース）とは読むソースの数が変わるので、費用も変わりうる
 - **`get_session` の `usage.cost_usd` の定義。** docs に記載が無く、subagent を含むことは上の A と B の比較で確かめた。Agent SDK の `total_cost_usd` と同じ性質（クライアント側の見積もりで、請求額そのものではない）と見られる
@@ -116,7 +147,7 @@ A は採らない。日次のニュースで公開を数時間遅らせても読
 | 手段 | 1 人・1 週の見込み | $1/week との比 | 読者が失うもの・残る懸念 |
 |---|---|---|---|
 | 現状のまま Opus で回す | 約 $7.3（直接、A）〜8.0（委譲、B） | 7〜8 倍 | なし（公開フィードと同じ品質） |
-| Sonnet で回す（subagent に委譲） | 約 $3.4 | 3.4 倍 | 選定・日本語化の品質（未比較）。直接回すと途中で止まるので委譲が前提 |
+| Sonnet で回す（subagent に委譲） | 約 $3.4 | 3.4 倍 | 日本語化の品質。1 回ずつの比較（上の「Opus と Sonnet の品質比較」）で、選定の幅は同程度（同じ URL 4 本・関心外は両方 1 本）だったが、原文をなぞる要約が Opus の 2 本に対し 5 本、50 字超の読みどころが 5/11 に対し 8/10、事実の誤り 2 件・続報表記の無いトピック重複 1 件が Sonnet だけに出た。どれも今の CI の検査では止まらない。直接回すと途中で止まるので委譲が前提 |
 | 同じ関心の読者 N 人で選定を共有（Opus） | 約 $7.3〜8.0 ÷ N | N ≥ 8（直接）〜9（委譲）で $1 以下 | 自分専用でなくなる（N 人が同じフィードを受け取る）。**今の日次手順のままでは共有にならない**: 下の「日次手順」は読者ごとに `sent/` の直近 14 日分を戻して curate-news を回し直すので、重複除外の履歴が読者ごとに違い、同じプロファイルでも選定は別になる。共有するには、グループ単位で curate-news を 1 回回し、履歴もグループで持つ手順への変更が要る。変更後は、送信先が増えてもスクリプトの呼び出しの数ターン分しか増えない見込み |
 | 同上（Sonnet） | 約 $3.4 ÷ N | N ≥ 4 で $1 以下 | 上の 2 行の両方 |
 | 件数を減らす（10 件 → 5 件など） | 未測定。上限の目安は約 $5〜6（Opus 直接） | 5〜6 倍以上 | 件数。A の費用を一般的な単価比（入力 1 に対し cache read 0.1・cache write 1.25・出力 5）で分けると、cache read（130 万トークン）が約 5 割、cache write（7.4 万）が約 3 割、出力（9,282）が約 2 割。件数を半分にしても減るのは出力と、記事本文の読み込み（cache write の一部）で、ソース選択・フィードとスキル定義の読み直し（cache read の大半）は残るので、全体の 2〜3 割減を上限と見込む。測るなら件数を変えた同じ形の run を比べる |
@@ -134,6 +165,8 @@ A は採らない。日次のニュースで公開を数時間遅らせても読
 3. その日のフィード数を数え（`git ls-tree --name-only origin/main _posts/ | grep -c 'YYYY-MM-DD-news'`）、run 全体の費用をそれで割り、7 を掛けて週あたりにする
 
 curate-news 1 回の費用（上の「curate-news 1 回の実測」）は、Claude Code Remote の `create_session` で `/curate-news --profile <公開プリセット名>` を回す別セッションを立て（`append_system_prompt` で commit・push・コメント・reflect-and-improve を禁じる）、`get_session` の `session_status` が `SESSION_STATUS_IDLE` になってから同じく `usage` を読む。`post_turn_summary` で出力を書き終えたか（途中で止まっていないか）を確かめる。
+
+モデル間の品質比較（上の「Opus と Sonnet の品質比較」）は、1 セッションの中で行う: `fetch_feeds.py`（引数なしで全ソース）を 1 回回し、`git worktree add --detach` で作った 2 つの worktree に `.claude/skills/curate-news/cache/*.json` を複写して sha256 を控える。Agent ツールで `model` を変えた subagent を各 worktree に 1 つずつ同時に起動し、取得目的の `fetch_feeds.py`・commit・push・`_posts/` への書き込みを禁じて curate-news を回させる。終わったらキャッシュの sha256 が変わっていないことと、subagent transcript の `model` がすべて指定どおりであることを確かめ、出力をモデル名を伏せて fresh context の subagent に検査させる。トピック重複は検査役に掲載履歴が無いので `recent_topics.py --profile <名前>` で別に確かめる。
 
 記録に載せるのは公開プリセットの run の session ID と数値だけにする。有料プロファイルの run を測るときは、プロファイルの中身・見出し・URL を書かず、費用と件数だけを書く。
 
