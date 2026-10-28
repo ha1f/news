@@ -32,6 +32,7 @@ open PR をレビューし、合格したものをマージする。実装セッ
 レビューした候補は必ず次のいずれかに落とす（ready のまま放置しない）:
 
 - **合格** → マージ前に conflict の有無（`merge-tree`）と head SHA の checks を確認する（red / conflict は要修正として扱う）→ squash マージ（上の REST）→ `git fetch origin main && python3 .claude/scripts/wait_for_run.py pages.yml "$(git rev-parse origin/main)"` で main のビルドを待つ。exit 0 = success。1 = 失敗で完了 → 即 revert PR を作って自分でマージし、status issue に記録する。2 = SHA を展開できない / API に到達できない → `git fetch` し直して再実行。3 = run が現れない → SHA か workflow の起動を疑う。4 = 未完了 → `--timeout` を延ばして待ち直す。0 になるまでビルド未確認として扱い、linked issue を close しない。直前の別 run で代用しない（#426）→ linked issue に open な linked PR が残っていなければ close する（受け入れ条件との突合は develop-issue の要約コメントが担う）。ただし PR が `Refs` で merge 後にしか確かめられない受け入れ条件（公開後の観測など）を残していると書いているなら閉じず、残る条件と確認手順を issue にコメントする（develop-issue の close 規則。確かめた run が close する）→ body が別の PR の後継だと書いていて、その旧 PR が open なら、後継へのリンクをコメントして close する（develop run は旧 PR を close できず draft のまま残し、手順3 は draft に触れないため、ここで閉じる）
+- **合格したがマージの PUT が実行環境の権限確認（auto mode の分類器）に拒否された** → 拒否は環境の判断なので、別の経路（MCP の `merge_pull_request`・auto-merge の有効化・言い回しを変えた再実行）で通さず、PR を ready のまま残す（上の「ready のまま放置しない」の唯一の例外）。判定コメントに40桁の head SHA・合格理由と、固定文言「マージは拒否された。次の review run で再試行」を書く。次の run は通常どおりレビューしてマージを試みる（実測: 10/25 18時に拒否された #599 は翌日15時 run でマージできた）。拒否されたときは PR のコメントも見て、前の run の判定コメントが同じ head SHA（短縮形なら前方一致）でマージ拒否を書いていれば（2 run 連続。固定文言より前の「分類器に拒否」「権限確認で拒否」も数える）、ready で残さず `hold` + 理由コメントを付ける（人間のマージか環境の許可設定が要る。通知は完了条件）。end は `ok: false` とし、summary に「分類器のマージ拒否」と再試行先（次の review run か hold）を書く。原因の調査は #605
 - **要修正**（linked issue あり）→ 指摘をコメントして draft に戻す（`convert_to_draft`。次の develop run が拾う）
 - **要修正**（linked issue なし）→ 有効な学びを含むなら、指摘内容と合格と判定した部分を issue に残してから（合格部分が失われると次の run がゼロから再発見する）、理由をコメントして close する（学びを黙って失わない）。同じ論点の open issue が既にあればそこへコメントで足し、新規起票しない（重複起票は `open_issue_cap` を埋めるだけでなく、論点の置き場を増やして結論を食い違わせる）
 - **不採用** → 理由をコメントして close する
@@ -49,5 +50,5 @@ open PR をレビューし、合格したものをマージする。実装セッ
 ## 完了条件
 
 - status issue に開始と終了の各1コメント（1行目 JSON、stage は `review`。他ステージと同じ形で、`check_state.py` が start/end の対から前日の健全性を判定する）。全カテゴリ処理済みで、結果（マージ / close / draft 戻し / hold）が end に記録されている。end コメントの JSON に `reflect` キーを含める（例: `{"stage": "review", "phase": "end", "ok": true, "summary": "PR #27 マージ", "reflect": "改善なし"}`）
-- 保護パスへの `hold` 付与または revert を行った場合は、Slack ツールが使えればオーナーに DM で1通知する（人間ゲート行きは人間が気づけて初めて機能する）
+- 保護パスへの `hold` 付与、マージ拒否の2 run 連続による `hold` 付与、または revert を行った場合は、Slack ツールが使えればオーナーに DM で1通知する（人間ゲート行きは人間が気づけて初めて機能する）
 - 最後に reflect-and-improve を実行し、作成した改善 PR を ready 化する（次の review run のレビュー対象になる）
