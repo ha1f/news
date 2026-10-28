@@ -171,7 +171,7 @@ curate-news 1 回の費用（上の「curate-news 1 回の実測」）は、Clau
 - `readers.json`: `[{"reader_id": "r-001", "subscriber_id": "<配信サービスの購読者 ID>", "profile": "profiles/r-001.md"}]`。`reader_id` は英数字・`_`・`-`（数字だけは不可）。`profile` は `ROOT_DIR` からの相対パスで、`ROOT_DIR` の外や公開 repo の中は指せない。公開フィードのプロファイル（`preferences.md`・`profiles/*.md`）と同じ内容のものは拒否する（出力ファイル名のハッシュが重なり、公開フィードの重複除外の履歴を書き換えるため）。メールアドレスは置かない
 - `feeds.json`: `[{"feed_id": "f-space", "tag_id": "<配信サービスのタグ ID>", "profile": "profiles/f-space.md"}]`。`feed_id` と `profile` の決まりは `readers.json` の `reader_id`・`profile` と同じ。`tag_id` は Buttondown のタグ ID（`sub_tag_…` か UUID。タグ名は不可）で、購読者をフィードに結び付けるのは配信サービス側でタグを付けて行う（購読者の一覧は repo に置かない）
 - `footer.json`: メール本文の末尾に入れる送信者の名称と配信停止の案内（特定電子メール法 4 条の表示。#595）。`{"sender": "<送信者の氏名又は名称>", "unsubscribe_url": "{{ unsubscribe_url }}", "lines": ["<住所>", "<問い合わせ先>"]}`。`unsubscribe_url` は https の URL か、配信サービスが購読者ごとに差し込む配信停止リンクの変数（Buttondown の `{{ unsubscribe_url }}`。他の変数名は書き間違いとして拒否する）。`lines` は任意の追加行。文面はオーナーが決めて private repo に置き、公開 repo には置かない。無い・空・形式が違うと `finalize --send` は送らない（`send_email.py --send` も、フッタの無い本文は送らない）
-- `sent/{reader_id または feed_id}/{日付}.md`: 送信済みの出力。`finalize --send` が書く。`{日付}.sending` は送信中の印で、届いたか分からない失敗（通信の例外）のときに残る。残っている読者・フィードには同じ日の分を送らないので、配信サービス側で届いたか確かめてから人が消す
+- `sent/{reader_id または feed_id}/{日付}.md`: 送信済みの出力。`finalize --send` が書く。`{日付}.sending` は送信中の印で、届いたか分からない失敗（通信の例外か、作成した email が draft 以外の status だったとき）に残る。残っている読者・フィードには同じ日の分を送らないので、配信サービス側で届いたか確かめてから人が消す
 
 読者・フィードごとに（以下の `--reader ID` は、フィードなら `--feed ID` にする）:
 
@@ -182,7 +182,7 @@ curate-news 1 回の費用（上の「curate-news 1 回の実測」）は、Clau
 全件を回したら:
 
 4. `--send` で回したなら、`ROOT_DIR` の `sent/` を（送信中の印も含めて）private repo に commit・push する（次の run の重複除外と二重送信の防止に使う。push しないと翌日の run から見えない）
-5. `python3 .claude/scripts/paid_daily.py check --root ROOT_DIR --date YYYY-MM-DD --text "<公開 repo に書く予定の文>"` — 公開 repo の作業ツリーが clean か、run の起点から HEAD までに `_posts/` への commit が増えていないかを確かめ（Pages は commit からビルドされるので、ここに増えていなければ Pages にも出ない）、公開してよい要約（件数と成否だけ。例: `有料フィード: 読者 2人中 2人成功・0人失敗（送信 2人）／共有フィード 3本中 3本成功・0本失敗（送信 3本）`。`feeds.json` が無ければ「／」以降は付かない）を表示する。`--text` は要約の書式と完全一致するときだけ通す。非0なら公開 repo に何も書かない
+5. `python3 .claude/scripts/paid_daily.py check --root ROOT_DIR --date YYYY-MM-DD --text "<公開 repo に書く予定の文>"` — 公開 repo の作業ツリーが clean か、run の起点から HEAD までに `_posts/` への commit が増えていないかを確かめ（Pages は commit からビルドされるので、ここに増えていなければ Pages にも出ない）、公開してよい要約（件数と成否だけ。例: `有料フィード: 読者 2人中 2人成功・0人失敗（送信 2人）／共有フィード 3本中 3本成功・0本失敗（送信 3本）`。フィードが 0 本（`feeds.json` が無いか空）なら「／」以降は付かない）を表示する。`--text` は要約の書式と完全一致するときだけ通す。非0なら公開 repo に何も書かない
 
 status issue などの公開 repo に書くのは check が表示した要約だけにする。失敗した読者・フィードの ID と理由は端末（と `output/paid/{日付}/run.json`）にしか出さない。この run の後に reflect-and-improve を回すときも、証拠として見出し・URL・プロファイルの内容を引用せず、件数と成否で書く。
 

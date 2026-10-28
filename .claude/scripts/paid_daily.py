@@ -85,6 +85,10 @@ def load_all(root):
             if not READER_ID_RE.match(str(rid)) or rid in seen:
                 raise SystemExit(f"{k['file']} の {k['id']} が不正か重複（readers.json と feeds.json を通して一意）: {rid!r}")
             seen.add(rid)
+        dests = [r.get(k["dest"]) for r in rows if r.get(k["dest"])]
+        if len(dests) != len(set(dests)):
+            # 同じ宛先を2行に書くと、その購読者（タグの購読者全員）に毎日2通届く
+            raise SystemExit(f"{k['file']} の {k['dest']} が重複している")
         out[kind] = {r[k["id"]]: r for r in rows}
     return out
 
@@ -244,6 +248,9 @@ def finalize(root, day, reader_id, send, kind="reader"):
             sending.write_text("", encoding="utf-8")
         try:
             rc = send_email.main(args)
+        except send_email.MaybeSent as e:
+            # draft 以外で作られた（配信が始まっているかもしれない）。印を残して再送しない
+            raise Fail(f"送信の結果が不明: {e}。{sending.name} を残したので再送しない")
         except SystemExit as e:
             sending.unlink(missing_ok=True)  # send_email が自分で止めた（送る前、または送信を中止した）
             raise Fail(f"送信に失敗: {e}")

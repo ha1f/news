@@ -519,6 +519,37 @@ class PaidDailyTest(unittest.TestCase):
         quiet(p.prepare, self.root, DAY, "alice")
         self.assertEqual((self.out / f"{prev}-{h}.md").read_text(encoding="utf-8"), "alice の前日分")
 
+    def test_duplicate_destinations_are_rejected(self):
+        self.feeds(self.feed("f-a"), self.feed("f-b"))  # 同じ TAG
+        with self.assertRaises(SystemExit) as cm:
+            p.load_all(self.root)
+        self.assertIn("tag_id が重複", str(cm.exception))
+        self.feeds()
+        self.readers(self.reader("alice", sid="sub_x"), self.reader("bob", sid="sub_x"))
+        with self.assertRaises(SystemExit):
+            p.load_all(self.root)
+
+    def test_feed_created_with_other_status_keeps_sending_marker(self):
+        self.feeds(self.feed("f-space"))
+        quiet(p.prepare, self.root, DAY, "f-space", "feed")
+        self.curate_feed("f-space")
+
+        def opener(req, timeout=None):
+            opener.n += 1
+            return FakeResponse({"id": "em_1", "status": "about_to_send"})  # 作成時点で配信が始まった疑い
+        opener.n = 0
+        with mock.patch.dict(os.environ, {KEY: "k"}), self.send_with(opener):
+            rc, _, err = quiet(p.finalize, self.root, DAY, "f-space", True, "feed")
+            self.assertEqual(rc, 1)
+            self.assertIn("送信の結果が不明", err)
+            self.assertTrue((self.root / "sent" / "f-space" / f"{DAY}.sending").exists())
+            for f in p.run_dir(DAY).glob("*.sent.json"):
+                f.unlink()  # output/ が消えた次の run でも
+            rc, _, err = quiet(p.finalize, self.root, DAY, "f-space", True, "feed")
+            self.assertEqual(rc, 1)
+            self.assertIn("結果が不明", err)
+        self.assertEqual(opener.n, 1)
+
     def test_summary_with_feeds(self):
         runs = {"a": {"ok": True, "sent": True}, "f1": {"ok": True, "sent": True}, "f2": {"ok": False}}
         line = p.summary(["a"], runs, ["f1", "f2", "f3"])
@@ -532,7 +563,7 @@ class PaidDailyTest(unittest.TestCase):
 
     def test_check_counts_feeds(self):
         self.readers(self.reader("alice"))
-        self.feeds(self.feed("f-space", profile_text="# 興味・関心\n\n- 宇宙\n"), self.feed("f-chip", profile_text=None))
+        self.feeds(self.feed("f-space", profile_text="# 興味・関心\n\n- 宇宙\n"), self.feed("f-chip", profile_text=None, tag=TAG[:-1] + "k"))
         self.run_reader("alice")
         quiet(p.prepare, self.root, DAY, "f-space", "feed")
         self.curate_feed("f-space")
