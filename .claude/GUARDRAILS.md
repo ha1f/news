@@ -1,6 +1,6 @@
 # daily-loop ガードレール
 
-毎日の自動ループが従う上限と保護対象。各スキルのスクリプトがこの yaml ブロックを読む。ループ自身はこのファイルを変更しない（変更 PR は必ず人間がマージする）。
+毎日の自動ループが従う上限と保護対象。各スキルのスクリプトがこの yaml ブロックを読む。ループはこのファイルの変更を PR にしてよいが、マージはしない（必ず人間がマージする）。
 
 ```yaml
 max_new_issues_per_day: 3      # PdM（evaluate）の探索的な起票の上限。review の起票は含まない
@@ -9,13 +9,13 @@ quiescence_minutes: 30         # マージ前に PR の最終 commit から置�
 auto_merge_mode: enabled       # dry-run（判定コメントのみ）| enabled（自動マージ）
 protected_paths:               # 触れる PR は auto-merge 禁止 → hold を付けて人間に委ねる
   - .claude/skills/review-and-merge/scripts/classify_prs.py   # マージ候補の機械判定
-  - .github/workflows/**       # 権限・トリガー・デプロイ。検査と撮影の中身は .claude/scripts/ci_*.sh
+  - .github/workflows/**       # 権限・トリガー・デプロイ。検査と撮影の足し引きは .claude/scripts/ci_*.sh で行う
   - .claude/GUARDRAILS.md
   - terms.md                   # 法的文書はオーナー承認必須 (#226)
   - privacy.md                 # 同上
 ```
 
-起票の上限を探索と保全で分けているのは、学びを黙って失うほうが損失が大きいため（要修正だが linked issue の無い PR を close するとき、review は学びを issue に残す）。ただし保全分も `open_issue_cap` には数えるので、review の起票が cap を埋めると翌日の PdM はグルーミングのみになる。
+起票の上限を探索と保全で分けているのは、学びを黙って失うほうが損失が大きいため（要修正だが linked issue の無い PR を close するとき、review は学びを issue に残す。下の「hold を使う場面」の切り出しによる起票も保全分）。ただし保全分も `open_issue_cap` には数えるので、review の起票が cap を埋めると翌日の PdM はグルーミングのみになる。
 
 保護パスは安全装置の本体だけに絞る: このファイル（上限・保護対象・下の「マージの関門」と「hold を使う場面」）、マージ候補を機械判定する `classify_prs.py`、CI とデプロイの workflow、法的文書。これらを緩める変更は必ず人間のマージを通る。review-and-merge の手順（SKILL.md）や CI が回す検査（`.claude/scripts/`）はループが改善してよいが、関門はこのファイルにあるので、手順側の変更で関門は緩められない。保護パス内でもバージョン・digest 文字列の置換だけの変更は安全装置を変えないので、スクリプトが見分けて通常のレビューに回す（上流の changelog を確認するのはレビューの仕事）。
 
@@ -27,7 +27,7 @@ review-and-merge が PR をマージしてよいのは、次をすべて満た�
 
 - `classify_prs.py` が `merge_candidates` に分類した（draft・`hold`・保護パス・この repo に書き込めない名義・quiescence 未達のどれでもない）
 - fresh context のレビューに合格した
-- head SHA の CI が success で、main と conflict がない
+- head SHA の CI が success で、main と conflict がない。CI の検査を外す・判定を緩める PR は、根拠（誤検知の実例など）が body に無ければ不合格
 - `auto_merge_mode` が `enabled`
 
 保護パスに触れる PR には `hold` と理由コメントを付けて人間に委ねる。マージ後に main のビルドが失敗したら即 revert する（revert PR はこの関門を待たずにマージしてよい）。publish-pages が自分の配信 PR を CI green でマージするのは別枠。
@@ -45,10 +45,10 @@ status issue（📊 daily-loop status）へのコメントは1行目を JSON に
 hold はオーナーの時間を使い、その間ループは進めない。ループが付けるのは次のどちらかに当たるときだけ:
 
 - 保護パスに触れる PR（review が diff から機械判定して付ける。他のステージは先回りして付けない）
-- オーナーにしかできない判断・作業が先に要り、ループが進められる部分が残っていない issue。当たるのは次の3種類:
-  - 法的リスクの受容と、利用規約・プライバシーポリシーなど対外的な法的文書の文面
+- オーナーにしかできない判断・作業が先に要り、ループが進められる部分が残っていない issue や PR。当たるのは次の3種類:
+  - 法的リスクの受容と、利用規約・プライバシーポリシーなど対外的な法的文書の文面の承認。リスクを避ける側の選択（ソースを外す・原題のままにする等）と、文面の案を保護パスだけの PR にするところまではループが進める
   - お金と契約（課金・価格、外部サービスの契約や登録、LLM の契約形態）
-  - repo の外にあってループが操作できない設定（claude.ai の trigger、secrets、GitHub の repo 設定）
+  - repo の外にあってループが操作・実行できないもの（claude.ai の trigger、secrets、GitHub の repo 設定、実行環境の権限確認に拒否され続ける操作）
 
 次は hold にしない。ループが決めて進め、判断と理由を issue か PR に書く（repo 内の変更は revert で戻せるので、オーナーは後から覆せる）:
 
