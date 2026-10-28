@@ -38,36 +38,8 @@ jobs:
       - name: Install Playwright
         run: npx --yes "playwright@$PLAYWRIGHT_VERSION" install --with-deps chromium
       - name: Screenshot pages
-        run: |
-          mkdir -p screenshots
-          shot() {
-            npx --yes "playwright@$PLAYWRIGHT_VERSION" screenshot --browser chromium --full-page \
-              --viewport-size "$1" --color-scheme "$2" "$3" "screenshots/$4"
-          }
-          shot 1280,900 light "http://localhost:4000/news/" home-light.png
-          shot 1280,900 dark  "http://localhost:4000/news/" home-dark.png
-          shot 375,812  light "http://localhost:4000/news/" home-mobile-light.png
-          shot 375,812  dark  "http://localhost:4000/news/" home-mobile-dark.png
-          latest=$(find _site -regex '.*/20[0-9][0-9]/.*\.html' | sort | tail -1)
-          if [ -n "$latest" ]; then
-            path="${latest#_site/}"
-            shot 1280,900 light "http://localhost:4000/news/$path" article-light.png
-            shot 1280,900 dark  "http://localhost:4000/news/$path" article-dark.png
-          fi
-          if [ -f _site/archive.html ]; then
-            shot 1280,900 light "http://localhost:4000/news/archive.html" archive-light.png
-            shot 1280,900 dark  "http://localhost:4000/news/archive.html" archive-dark.png
-          fi
-          if [ -f _site/profiles/index.html ]; then
-            shot 1280,900 light "http://localhost:4000/news/profiles/" profiles-light.png
-            shot 1280,900 dark  "http://localhost:4000/news/profiles/" profiles-dark.png
-          fi
-          profile=$(find _site/profiles -name '*.html' ! -name 'index.html' | sort | head -1)
-          if [ -n "$profile" ]; then
-            path="${profile#_site/}"
-            shot 1280,900 light "http://localhost:4000/news/$path" profile-light.png
-            shot 1280,900 dark  "http://localhost:4000/news/$path" profile-dark.png
-          fi
+        # 撮るページと幅は ci_screenshots.sh が正（workflow は保護パスなので、変わりやすい中身は外に置く）
+        run: bash .claude/scripts/ci_screenshots.sh http://localhost:4000/news
       - name: Upload screenshots
         # 一部失敗でも撮れた分は残す（レビューの材料になる）
         if: always()
@@ -92,23 +64,7 @@ jobs:
       # スクリーンショットを撮り終えたあとに置く。ここが失敗しても撮れた分は
       # 上のステップで既にアップロード済みなので、レビュー材料が失われない
       - name: Check article quality
+        # 回す検査は ci_article_checks.sh が正（足す・外すはそちらで行う。workflow は保護パス）
         run: |
-          python3 .claude/scripts/check_article_anchors.py _site
-          # 全投稿に当てる。ツール呼び出し構文の混入は間欠的に起きるので
-          # 「この PR が触った投稿」だけを見ると、別の PR で入った分を素通り
-          # させる。誤検知は持たない（#408 で全 408 本に当てて0件）
-          python3 .claude/scripts/check_tool_artifacts.py
-          # 本文が変わった投稿だけを渡す。この2つの検査が見るのは本文の記事項目
-          # だけなので、front matter を一括更新した PR に全件を渡すと、その投稿が
-          # 書かれた当時のルールで書かれた既存の本文まで今の検査にかかり、PR が
-          # 持ち込んでいない違反で red になる（#401 で実測: title 行だけを直した
-          # 368件を渡すと 2,453 件の不一致。同じ数が main 側の同じファイルでも出る）
-          changed=$(python3 .claude/scripts/changed_post_bodies.py \
-            "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}")
-          if [ -n "$changed" ]; then
-            echo "$changed"
-            python3 .claude/scripts/check_article_notes.py $changed
-            python3 .claude/scripts/check_source_hints.py $changed
-          else
-            echo "この PR は _posts の本文を変更していないためスキップ"
-          fi
+          bash .claude/scripts/ci_article_checks.sh \
+            "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}"

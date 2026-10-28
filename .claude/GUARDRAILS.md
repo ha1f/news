@@ -8,8 +8,8 @@ open_issue_cap: 10             # open issue（status issue 除く）がこれを
 quiescence_minutes: 30         # マージ前に PR の最終 commit から置く時間
 auto_merge_mode: enabled       # dry-run（判定コメントのみ）| enabled（自動マージ）
 protected_paths:               # 触れる PR は auto-merge 禁止 → hold を付けて人間に委ねる
-  - .claude/skills/review-and-merge/**
-  - .github/workflows/**
+  - .claude/skills/review-and-merge/scripts/classify_prs.py   # マージ候補の機械判定
+  - .github/workflows/**       # 権限・トリガー・デプロイ。検査と撮影の中身は .claude/scripts/ci_*.sh
   - .claude/GUARDRAILS.md
   - terms.md                   # 法的文書はオーナー承認必須 (#226)
   - privacy.md                 # 同上
@@ -17,17 +17,50 @@ protected_paths:               # 触れる PR は auto-merge 禁止 → hold を
 
 起票の上限を探索と保全で分けているのは、学びを黙って失うほうが損失が大きいため（要修正だが linked issue の無い PR を close するとき、review は学びを issue に残す）。ただし保全分も `open_issue_cap` には数えるので、review の起票が cap を埋めると翌日の PdM はグルーミングのみになる。
 
-保護パスにこのファイル自身と review-and-merge が含まれるため、安全装置を緩める変更は必ず人間のマージを通る。保護パス内でもバージョン・digest 文字列の置換だけの変更は安全装置を変えないので、スクリプトが見分けて通常のレビューに回す（上流の changelog を確認するのはレビューの仕事）。
+保護パスは安全装置の本体だけに絞る: このファイル（上限・保護対象・下の「マージの関門」と「hold を使う場面」）、マージ候補を機械判定する `classify_prs.py`、CI とデプロイの workflow、法的文書。これらを緩める変更は必ず人間のマージを通る。review-and-merge の手順（SKILL.md）や CI が回す検査（`.claude/scripts/`）はループが改善してよいが、関門はこのファイルにあるので、手順側の変更で関門は緩められない。保護パス内でもバージョン・digest 文字列の置換だけの変更は安全装置を変えないので、スクリプトが見分けて通常のレビューに回す（上流の changelog を確認するのはレビューの仕事）。
 
 信頼の軸は「この repo に書き込める名義か」であり、人間・bot・AI を区別しない。head branch がこの repo にある PR は書き込み権限（オーナーが与えた collaborator 権限や App のインストール）の証明として信頼し、fork からの PR は external として扱う。オーナーが導入したツール（依存更新の Renovate など）が作る PR は、そのツール自身が終端化しないものをループが引き取ってマージまたは close まで運ぶ。各ツールのルールと固有の挙動は README とツールの設定ファイルを正とする。
 
+## マージの関門
+
+review-and-merge が PR をマージしてよいのは、次をすべて満たすときだけ。スキル側の手順はこれより緩くしない（食い違ったらこの節が優先する。緩める記述を足す PR はレビューで不合格にする）:
+
+- `classify_prs.py` が `merge_candidates` に分類した（draft・`hold`・保護パス・この repo に書き込めない名義・quiescence 未達のどれでもない）
+- fresh context のレビューに合格した
+- head SHA の CI が success で、main と conflict がない
+- `auto_merge_mode` が `enabled`
+
+保護パスに触れる PR には `hold` と理由コメントを付けて人間に委ねる。マージ後に main のビルドが失敗したら即 revert する（revert PR はこの関門を待たずにマージしてよい）。publish-pages が自分の配信 PR を CI green でマージするのは別枠。
+
 ## 状態の持ち方
 
-GitHub ネイティブの状態だけで回す: PR の draft（作業中・触らない。ただし後継 PR がマージされた draft と、audit-and-adopt の在庫レンズが `stale_drafts` に分類した draft は作業中とみなさず、ready 化か close で終わらせる）/ ready（レビュー・マージ候補）、issue の open / closed、作者の書き込み権限（PR は head branch の所在、issue は author_association。issue 側は bot のトラッキング issue を実装対象から外すため未移行）、linked PR、タイムスタンプ。専用ラベルは `hold`（自動処理を止めて人間が見る。人間・ループのどちらが付けてもよく、理由をコメントに書く）の1つだけ。優先度・進捗・完了をラベルやカウンタで管理しない。
+GitHub ネイティブの状態だけで回す: PR の draft（作業中・触らない。ただし後継 PR がマージされた draft と、audit-and-adopt の在庫レンズが `stale_drafts` に分類した draft は作業中とみなさず、ready 化か close で終わらせる）/ ready（レビュー・マージ候補）、issue の open / closed、作者の書き込み権限（PR は head branch の所在、issue は author_association。issue 側は bot のトラッキング issue を実装対象から外すため未移行）、linked PR、タイムスタンプ。専用ラベルは `hold`（自動処理を止めて人間が見る。人間はいつ付けてもよい。ループが付けるのは下の「hold を使う場面」に当たるときだけで、理由をコメントに書く）の1つだけ。優先度・進捗・完了をラベルやカウンタで管理しない。
 
 status issue（📊 daily-loop status）へのコメントは1行目を JSON にする（例: `{"stage": "develop", "phase": "end", "ok": true, "summary": "#26 実装 → PR #27"}`。stage は evaluate / develop / review / audit（週次）。スクリプトがこれを読んで前日の健全性を機械判定する（audit は週次のため健全性集計の対象外）。
 
 全アクションがオーナー名義のため GitHub 通知は発生しない。人間の対応が必要になったとき（緊急 issue の起票・保護パスへの hold・revert 実行）は、Slack ツールが使えればオーナーに DM で1通知する。
+
+## hold を使う場面
+
+hold はオーナーの時間を使い、その間ループは進めない。ループが付けるのは次のどちらかに当たるときだけ:
+
+- 保護パスに触れる PR（review が diff から機械判定して付ける。他のステージは先回りして付けない）
+- オーナーにしかできない判断・作業が先に要り、ループが進められる部分が残っていない issue。当たるのは次の3種類:
+  - 法的リスクの受容と、利用規約・プライバシーポリシーなど対外的な法的文書の文面
+  - お金と契約（課金・価格、外部サービスの契約や登録、LLM の契約形態）
+  - repo の外にあってループが操作できない設定（claude.ai の trigger、secrets、GitHub の repo 設定）
+
+次は hold にしない。ループが決めて進め、判断と理由を issue か PR に書く（repo 内の変更は revert で戻せるので、オーナーは後から覆せる）:
+
+- repo 内で元に戻せる設計・方針の選択（機能や手順を足すか足さないか、複数案のどれを採るか）。issue の受け入れ条件にも「判断はオーナー」と書かない
+- オーナーが既に示した方針で決まる判断。同じ問いを聞き直さず、方針を当てはめた結果を書いて進める
+- 同じアプローチの失敗の繰り返し。別の案に変えるか、通る大きさに切り出す。価値が下がったなら理由を書いて close する
+- 仕様の曖昧さ。戻しやすい解釈を採り、置いた前提を PR に書く
+
+切り出し: オーナーに回す部分とループが進められる部分が1つの PR や issue に混ざっていたら、オーナーに回す部分だけを切り出し、残りは止めない。
+
+- 保護パスの変更は、保護パス以外の変更と同じ PR に入れない。1 run で push できる branch が1本なら、その run の PR は保護パス以外だけで作り（issue は `Refs` にして閉じない）、保護パスの差分案は issue に残して別の run で保護パスだけの PR にする
+- オーナーの判断が要る論点を含む issue は、その論点だけを hold の issue に残し、残りは別の issue に切り出して進める
 
 ## コンテンツの権利ガードレール
 

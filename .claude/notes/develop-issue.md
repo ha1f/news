@@ -7,9 +7,9 @@
 ## 環境
 
 - Jekyll ベースの静的サイト (`_config.yml`, `_posts/`, `index.md`)。GitHub Pages で公開
-- CI は `.github/workflows/jekyll-build-check.yml`（PR の base が `main` のときだけ走る）。ビルド + Playwright のスクリーンショット取得までを行い、artifact に残す
-  - プロファイルページは1枚だけ撮る。対象は `find _site/profiles -name '*.html' ! -name 'index.html' | sort | head -1` で選ぶ（現状は `profiles/designer.html`）。**`profiles/` 直下に `designer-xxx.html` のようなページを足すと、撮る対象がそちらに入れ替わりうる**（workflow は保護パスなので、ページの置き場で避ける。#508 は古い月のページを `profiles/older/` に置いた）
-  - 「Check article quality」が `check_article_notes.py` / `check_source_hints.py` に渡すのは、PR で変更された `_posts/*.md` のうち**本文が変わったもの**だけ（選別は `.claude/scripts/changed_post_bodies.py`。`check_article_anchors.py` は毎回 `_site` 全件）。ルール制定前に書かれた過去の投稿は今の検査を通らない（実測 2026-09-23: 過去368件で不一致 2,453 件・読みどころなし 76 件。同じ数が main 側の同じファイルでも出るので PR が持ち込んだものではない）ため、**過去の投稿の本文にまとめて触ると、その PR と無関係な違反で red になる**。`_posts` を大量に触る前に `python3 .claude/scripts/changed_post_bodies.py origin/main HEAD` で何件渡るかを確かめる
+- CI は `.github/workflows/jekyll-build-check.yml`（PR の base が `main` のときだけ走る）。ビルド + Playwright のスクリーンショット取得までを行い、artifact に残す。workflow は保護パスなので、撮るページは `.claude/scripts/ci_screenshots.sh`、記事の検査は `.claude/scripts/ci_article_checks.sh` に出してあり、足す・直すはそちらで行う（保護パスに触れない）
+  - プロファイルページは1枚だけ撮る。対象は `find _site/profiles -name '*.html' ! -name 'index.html' | sort | head -1` で選ぶ（現状は `profiles/designer.html`）。**`profiles/` 直下に `designer-xxx.html` のようなページを足すと、撮る対象がそちらに入れ替わりうる**（撮る対象を変えるなら `ci_screenshots.sh` を直す。#508 は撮る対象が保護パスの workflow の中にあった頃で、古い月のページを `profiles/older/` に置いて避けた）
+  - 「Check article quality」（中身は `ci_article_checks.sh`）が `check_article_notes.py` / `check_source_hints.py` に渡すのは、PR で変更された `_posts/*.md` のうち**本文が変わったもの**だけ（選別は `.claude/scripts/changed_post_bodies.py`。`check_article_anchors.py` は毎回 `_site` 全件）。ルール制定前に書かれた過去の投稿は今の検査を通らない（実測 2026-09-23: 過去368件で不一致 2,453 件・読みどころなし 76 件。同じ数が main 側の同じファイルでも出るので PR が持ち込んだものではない）ため、**過去の投稿の本文にまとめて触ると、その PR と無関係な違反で red になる**。`_posts` を大量に触る前に `python3 .claude/scripts/changed_post_bodies.py origin/main HEAD` で何件渡るかを確かめる
   - **base が main でない PR（スタックした PR）には CI が付かない**。base の付け替えだけでは workflow は起動しない（`edited` は既定の trigger 外）ので、base ブランチのマージ後に rebase して push（`synchronize`）すると走る。スタックさせた側は base のマージまで検証できないので、既定は main から別 branch を切る
   - **並行作業の正本はこの項**（他所に書かない。develop-issue の体制表は1 issue 内の分割）。同じファイルを触るだけでは、拾わない・統合する・積む理由にならない（実測 2026-09-28: 重なる6組中5組が merge-tree で clean）。積むのは後の変更が先の出力に依存するとき、統合は同一成果物への入れ直し（内容の重複）だけ
   - **run の完了待ちは `python3 .claude/scripts/wait_for_run.py <workflow ファイル> <sha>` に任せる**（#426）。ポーリングを手で書かない。`gh` があれば `gh`、無ければ REST 直叩きに自動で落ちる。40桁でない引数は `git rev-parse` で展開し、できなければ exit 2 で即座に止まる（短縮 SHA のまま待ち続けることが構造的に起きない）。exit code は success 0 / failed 1 / usage 2 / **not_found 3**（run が現れない = SHA 違いか workflow 未起動）/ **running 4**（在るが未完了 = 待てばよい）で、「run が無い」と「run が未完了」を取り違えない。1回だけ見るなら `--once`。**PR の head SHA を待つ workflow は `pages.yml` ではなく `jekyll-build-check.yml`**（`pages.yml` は main への push でしか起動せず、PR head に当てると約2分待って not_found になる。実測 2026-10-02）。`jekyll-build-check.yml` も `pull_request` でしか起動しないので、**PR を作る前に push しただけの SHA を待っても約2分で not_found になる**（実測 2026-10-17）。待つのは PR を作ってから
@@ -71,7 +71,7 @@ playwright screenshot --browser chromium --full-page \
 
 ### CI の screenshot artifact を取る
 
-push 後はこちらも見る。ローカルで撮るのは1〜2枚だが、CI は5ページ（トップ・最新記事・archive・profiles 一覧・プロファイル1件）× light/dark に、トップだけモバイル幅（375×812）を加えた12枚を撮っている（`jekyll-build-check.yml` の「Screenshot pages」が正）。MCP 経由なら認証込みで取得できる（実測）:
+push 後はこちらも見る。ローカルで撮るのは1〜2枚だが、CI は5ページ（トップ・最新記事・archive・profiles 一覧・プロファイル1件）× light/dark に、トップだけモバイル幅（375×812）を加えた12枚を撮っている（`.claude/scripts/ci_screenshots.sh` が正）。MCP 経由なら認証込みで取得できる（実測）:
 
 ```
 mcp__github__actions_list(method=list_workflow_run_artifacts, resource_id=<run id>)
