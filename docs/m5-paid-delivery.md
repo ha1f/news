@@ -47,7 +47,7 @@ A は採らない。日次のニュースで公開を数時間遅らせても読
 
 - **有料プロファイルの定義と出力は公開 repo・Pages に出さない。** 定義は人間が作る private repo（例: `ha1f/news-paid`）に置く。日次ループはそれを**公開 repo の作業ツリーの外に** clone し（中に置くと、publish-pages の `ls profiles/*.md` が拾って公開する経路や、公開 repo の `git add` に巻き込まれる経路ができる）、curate-news に `--profile <private repo 内のパス>` で渡して走らせる。出力は gitignore 対象の `output/` に出し、publish-pages は通さず、そのまま配信の本文生成に渡す。公開 repo には有料プロファイルの名前も中身も残らない
 - **公開 repo への書き込み経路にも中身を出さない。** 有料の run は status issue へのコメント・reflect-and-improve の PR・issue コメントなど、公開 repo に書く経路を持つ。そこには件数と成否だけを書き、プロファイルの関心・見出し・URL は書かない。reflect-and-improve を呼ぶなら、証拠の引用を伏せることを有料の手順に明記する
-- **プロファイルが取れないときは送らずに止める。** clone に失敗してファイルが無いと、`preference_hash.py` は `default` を返し、curate-news は汎用フィードを作る。そのまま送ると、全読者に汎用フィードが黙って届く。また出力のファイル名はプロファイル内容のハッシュなので、プロファイルを編集すると重複除外の履歴が切れ、中身が同じ読者どうしでは出力が衝突する。有料の手順は、プロファイルの存在を確かめてから走らせ、出力は読者 ID で区別する
+- **プロファイルが取れないときは送らずに止める。** clone に失敗してファイルが無いと、`preference_hash.py` は `default` を返し、curate-news は汎用フィードを作る。そのまま送ると、全読者に汎用フィードが黙って届く。また出力のファイル名はプロファイル内容のハッシュなので、プロファイルを編集すると重複除外の履歴が切れ、中身が同じ読者どうしでは出力が衝突する。有料の手順は、プロファイルの存在を確かめてから走らせ、出力は読者 ID（プレミアムフィードはフィード ID）で区別する。プレミアムフィードは curate-news をフィードごとに 1 回だけ回し、重複除外の履歴もフィード単位で持ち、同じ本文をそのフィードの購読者のタグへ一斉に送る（下の「日次手順」。#613）
 - **出力の保管先も private repo にする。** 実行環境はセッションごとに作り直されるため、`output/` は run をまたいで残らない。curate-news の重複除外（`recent_urls.py` が過去 7 日の `output/` を見る）を有料フィードでも効かせるには、送信済みの出力を private repo に保存し、次の run で `output/` に戻す必要がある
 - **有料 run で使うソースは、ソース定義の「商用利用（課金）」の値で機械的に絞る**（値が `可` のソースに限る。語彙は curate-news の STYLEGUIDE.md の `可 / 不可 / 要許諾 / 要連絡 / 要判断 / 規定なし` で、許諾を取得した後の値は未定義。許諾済みのソースを使うなら、先に STYLEGUIDE.md へ語彙を足す）。curate-news は既定で全ソースを読むため、#241 の結論が出ても適用先が無いと、商用不可のソース（2026-10-11 時点で 18 ソース中、不可 5・要許諾 4・要連絡 1）が有料フィードに入る。無料のテスト配信はこの制限を掛けない（実装済み: `fetch_feeds.py --paid`。#575）
 - 購読管理・決済・解約は配信サービスに任せ、ループは決済情報を持たない
@@ -156,33 +156,35 @@ curate-news 1 回の費用（上の「curate-news 1 回の実測」）は、Clau
 この文書が review を通ってから、#522 から切り出して起票する（設計が固まる前に実装の issue を置くと、作り直しになるコードが先に作られるため。2026-10-10 のグルーミングで、旧構成を前提にした #523・#524 は #522 に統合して close 済み）。
 
 - **配信用の本文生成**（実装済み: `.claude/scripts/render_email_body.py`、#528 / PR #541）: curate-news の出力（`output/` 配下。`_posts/` ではない）からメール用の本文（HTML/テキスト）を作る決定的なスクリプトと、そのテスト。入力も出力も公開 repo にコミットしない
-- **送信スクリプト**（実装済み: `.claude/scripts/send_email.py`、#555 / PR #556。配信サービスは Buttondown を仮置き）: 配信サービスの API に本文を渡す（`--dry-run` が既定でネットワークに出ない。キーは環境変数）。実送信は人間がサービスを選び、キーを登録してから。1 人にだけ送る経路は公式 OpenAPI で裏が取れるものに限る（Buttondown では `status: draft` で作って `POST /v1/emails/{id}/send-draft` に購読者 ID を渡す。`status: transactional` は API changelog 2025-04-17 では表示用の値で、`/v1/subscribers/{id}/emails/{email_id}` は finalized なメール専用。2026-10-18 の monetization 監査で修正）。ただし send-draft は公式 docs 上「下書きをレビュー用に送る」機能で、有料読者への本番配信に使えるか（下書き表示が付かないか、配信停止リンクとフッタが付くか、配信記録に残るか）は未確認。初回の実送信は、オーナーだけが購読するテスト用ニュースレターで draft のまま作られること・本人にだけ届くこと・下書き表示が無いこと・配信停止リンクが付くこと（本文の `{{ unsubscribe_url }}` が本人用の有効なリンクに展開され、配信サービス自身のフッタと二重にならないこと）を確かめてから行う。使えなければ経路を選び直す
+- **送信スクリプト**（実装済み: `.claude/scripts/send_email.py`、#555 / PR #556。配信サービスは Buttondown を仮置き）: 配信サービスの API に本文を渡す（`--dry-run` が既定でネットワークに出ない。キーは環境変数）。実送信は人間がサービスを選び、キーを登録してから。1 人にだけ送る経路とタグへの一斉配信の経路（`--tag-id`、#613）は公式 OpenAPI で裏が取れるものに限る（Buttondown では `status: draft` で作って `POST /v1/emails/{id}/send-draft` に購読者 ID を渡す。`status: transactional` は API changelog 2025-04-17 では表示用の値で、`/v1/subscribers/{id}/emails/{email_id}` は finalized なメール専用。2026-10-18 の monetization 監査で修正）。ただし send-draft は公式 docs 上「下書きをレビュー用に送る」機能で、有料読者への本番配信に使えるか（下書き表示が付かないか、配信停止リンクとフッタが付くか、配信記録に残るか）は未確認。初回の実送信は、オーナーだけが購読するテスト用ニュースレターで draft のまま作られること・本人にだけ届くこと・下書き表示が無いこと・配信停止リンクが付くこと（本文の `{{ unsubscribe_url }}` が本人用の有効なリンクに展開され、配信サービス自身のフッタと二重にならないこと）を確かめてから行う。使えなければ経路を選び直す。タグへの一斉配信は、`status: draft` に `filters`（`subscriber.tags` が `contains` でタグ ID。名前でなく ID が要る）を付けて作り、作成の応答の `status` と `filters` が送ったものと一致したときだけ `POST /v1/emails/{id}/publish`（"Publishes and sends an email."。本文は空にして filters を書き換えない）で送る（OpenAPI と docs/api-emails-publish を 2026-10-28 に確認）。応答が filters を落とした・書き換えたときは publish せず draft のまま残すので、Buttondown が応答で filters を正規化して返す形だと送れない（初回の実送信で確かめる）。こちらも初回は、オーナーだけがそのタグを持つテスト用ニュースレターで、タグを持たない購読者に届かないこと・配信停止リンクが展開されることを確かめてから行う
 - **有料フィードの日次手順**: private repo の対応表の読者ごとに、プロファイルの存在確認 → curate-news → 本文生成 → 送信 → 出力の private repo への保存、を回すスキル側の手順。公開 repo の `_posts/` と Pages に何も出ないこと、status issue などへの書き込みに件数と成否しか載らないことを検査で確かめる（実装済み: 下の「日次手順」と `.claude/scripts/paid_daily.py`。#582）
 
 いずれも 1 日で完走できる粒度。上から順に依存する（3 つ目は private repo の作成を待つ）。workflow の追加が要る場合は保護パス（`.github/workflows/**`）に当たるため、人間のマージを通る。
 
 ## 日次手順
 
-有料フィードの run は、次の順で読者を1人ずつ回す（並列にしない。同じ内容のプロファイルを持つ読者どうしは curate-news の出力ファイル名が同じになる）。決定的な部分は `.claude/scripts/paid_daily.py` が持ち、curate-news（LLM の選定）はその間に挟む。`ROOT_DIR` は private repo を clone した先で、公開 repo の作業ツリーの外に置く（中にある・作業ツリーを含む、のどちらも `paid_daily.py` が拒否する）。
+有料フィードの run は、完全パーソナライズの読者（`readers.json`）とプレミアムフィード（`feeds.json`）を、次の順で1件ずつ回す（並列にしない。同じ内容のプロファイルどうしは curate-news の出力ファイル名が同じになる）。プレミアムフィードは購読者の人数によらず 1 フィード 1 回で、同じ本文をそのフィードのタグを持つ購読者全員に送る（上の「費用を下げる手段の見込み」の共有の行が「今の日次手順のままでは共有にならない」と書いているのは読者単位の手順のことで、フィード単位の手順がその変更に当たる。#613）。決定的な部分は `.claude/scripts/paid_daily.py` が持ち、curate-news（LLM の選定）はその間に挟む。`ROOT_DIR` は private repo を clone した先で、公開 repo の作業ツリーの外に置く（中にある・作業ツリーを含む、のどちらも `paid_daily.py` が拒否する）。
 
 `ROOT_DIR` の構成:
 
+- `readers.json` と `feeds.json`: どちらか片方だけでもよい。`reader_id` と `feed_id` は 2 つのファイルを通して重複させない（`sent/` と run の記録を ID で共有するため。重複は `paid_daily.py` が拒否する）
 - `readers.json`: `[{"reader_id": "r-001", "subscriber_id": "<配信サービスの購読者 ID>", "profile": "profiles/r-001.md"}]`。`reader_id` は英数字・`_`・`-`（数字だけは不可）。`profile` は `ROOT_DIR` からの相対パスで、`ROOT_DIR` の外や公開 repo の中は指せない。公開フィードのプロファイル（`preferences.md`・`profiles/*.md`）と同じ内容のものは拒否する（出力ファイル名のハッシュが重なり、公開フィードの重複除外の履歴を書き換えるため）。メールアドレスは置かない
+- `feeds.json`: `[{"feed_id": "f-space", "tag_id": "<配信サービスのタグ ID>", "profile": "profiles/f-space.md"}]`。`feed_id` と `profile` の決まりは `readers.json` の `reader_id`・`profile` と同じ。`tag_id` は Buttondown のタグ ID（`sub_tag_…` か UUID。タグ名は不可）で、購読者をフィードに結び付けるのは配信サービス側でタグを付けて行う（購読者の一覧は repo に置かない）
 - `footer.json`: メール本文の末尾に入れる送信者の名称と配信停止の案内（特定電子メール法 4 条の表示。#595）。`{"sender": "<送信者の氏名又は名称>", "unsubscribe_url": "{{ unsubscribe_url }}", "lines": ["<住所>", "<問い合わせ先>"]}`。`unsubscribe_url` は https の URL か、配信サービスが購読者ごとに差し込む配信停止リンクの変数（Buttondown の `{{ unsubscribe_url }}`。他の変数名は書き間違いとして拒否する）。`lines` は任意の追加行。文面はオーナーが決めて private repo に置き、公開 repo には置かない。無い・空・形式が違うと `finalize --send` は送らない（`send_email.py --send` も、フッタの無い本文は送らない）
-- `sent/{reader_id}/{日付}.md`: 送信済みの出力。`finalize --send` が書く。`{日付}.sending` は送信中の印で、届いたか分からない失敗（通信の例外）のときに残る。残っている読者には同じ日の分を送らないので、配信サービス側で届いたか確かめてから人が消す
+- `sent/{reader_id または feed_id}/{日付}.md`: 送信済みの出力。`finalize --send` が書く。`{日付}.sending` は送信中の印で、届いたか分からない失敗（通信の例外か、作成した email が draft 以外の status だったとき）に残る。残っている読者・フィードには同じ日の分を送らないので、配信サービス側で届いたか確かめてから人が消す
 
-読者ごとに:
+読者・フィードごとに（以下の `--reader ID` は、フィードなら `--feed ID` にする）:
 
-1. `python3 .claude/scripts/paid_daily.py prepare --root ROOT_DIR --date YYYY-MM-DD --reader ID` — プロファイルを確かめ、最初の読者のときは run の起点として HEAD を記録し、`sent/` の直近14日分を `output/` に戻し（curate-news の重複除外がその読者の履歴で効く）、当日の出力を消す。プロファイルが無い・読めない・空なら非0で終わる。**その読者は curate-news に進めない**（`preference_hash.py` が `default` を返し、汎用フィードを作る経路に入る）
-2. curate-news を、prepare が表示した `--profile <絶対パス>` と日付で回す。手順2・3の `fetch_feeds.py` に `--paid` を付ける。curate-news の中の `recent_urls.py`・`recent_topics.py` は実行環境の TZ で今日を決めるので、`TZ=Asia/Tokyo` を付けて回す（UTC のまま 0〜9時 JST に回すと、戻した前日分が重複除外の窓から外れる）。`--paid` が終了コード3（使えるソースが0件）で止まったら、その読者は失敗として次へ進む（finalize を回さなければ、check の要約で失敗に数えられる）（2026-10-21 時点では「可」のソースが0件なので、#241 の結論が出るまで必ずここで止まる）
-3. `python3 .claude/scripts/paid_daily.py finalize --root ROOT_DIR --date YYYY-MM-DD --reader ID [--send]` — 当日の出力を `output/paid/{日付}/{読者 ID}.md` に取り分け、本文を生成し、送る。**既定は dry-run**（送る予定を表示するだけ）。`--send` を付けたときだけ実送信し、成功したら出力を `ROOT_DIR/sent/` に保存する。prepare を通っていない・その後にプロファイルが変わった・当日の出力が無い・その日の分を送信済み、のどれかなら送らずに非0で終わる。前回の送信中の印が残っているときも送らない。`ROOT_DIR/footer.json` が無い・空・形式が違うときも送らずに非0で終わる（dry-run は警告を出してフッタ無しの本文で続ける）
+1. `python3 .claude/scripts/paid_daily.py prepare --root ROOT_DIR --date YYYY-MM-DD --reader ID` — プロファイルを確かめ、最初の読者のときは run の起点として HEAD を記録し、`sent/` の直近14日分を `output/` に戻し（curate-news の重複除外がその読者・フィードの履歴で効く）、当日の出力を消す。プロファイルが無い・読めない・空なら非0で終わる。**その読者・フィードは curate-news に進めない**（`preference_hash.py` が `default` を返し、汎用フィードを作る経路に入る）
+2. curate-news を、prepare が表示した `--profile <絶対パス>` と日付で回す。手順2・3の `fetch_feeds.py` に `--paid` を付ける。curate-news の中の `recent_urls.py`・`recent_topics.py` は実行環境の TZ で今日を決めるので、`TZ=Asia/Tokyo` を付けて回す（UTC のまま 0〜9時 JST に回すと、戻した前日分が重複除外の窓から外れる）。`--paid` が終了コード3（使えるソースが0件）で止まったら、その読者・フィードは失敗として次へ進む（finalize を回さなければ、check の要約で失敗に数えられる）（2026-10-21 時点では「可」のソースが0件なので、#241 の結論が出るまで必ずここで止まる）
+3. `python3 .claude/scripts/paid_daily.py finalize --root ROOT_DIR --date YYYY-MM-DD --reader ID [--send]` — 当日の出力を `output/paid/{日付}/{ID}.md` に取り分け、本文を生成し、送る（読者はその購読者 1 人に、フィードは `tag_id` のタグを持つ購読者全員に）。**既定は dry-run**（送る予定を表示するだけ）。`--send` を付けたときだけ実送信し、成功したら出力を `ROOT_DIR/sent/` に保存する。prepare を通っていない・その後にプロファイルが変わった・宛先（`subscriber_id`・`tag_id`）が無いか形式が違う・当日の出力が無い・その日の分を送信済み、のどれかなら送らずに非0で終わる。前回の送信中の印が残っているときも送らない。`ROOT_DIR/footer.json` が無い・空・形式が違うときも送らずに非0で終わる（dry-run は警告を出してフッタ無しの本文で続ける）
 
-全員を回したら:
+全件を回したら:
 
 4. `--send` で回したなら、`ROOT_DIR` の `sent/` を（送信中の印も含めて）private repo に commit・push する（次の run の重複除外と二重送信の防止に使う。push しないと翌日の run から見えない）
-5. `python3 .claude/scripts/paid_daily.py check --root ROOT_DIR --date YYYY-MM-DD --text "<公開 repo に書く予定の文>"` — 公開 repo の作業ツリーが clean か、run の起点から HEAD までに `_posts/` への commit が増えていないかを確かめ（Pages は commit からビルドされるので、ここに増えていなければ Pages にも出ない）、公開してよい要約（件数と成否だけ）を表示する。`--text` は要約の書式と完全一致するときだけ通す。非0なら公開 repo に何も書かない
+5. `python3 .claude/scripts/paid_daily.py check --root ROOT_DIR --date YYYY-MM-DD --text "<公開 repo に書く予定の文>"` — 公開 repo の作業ツリーが clean か、run の起点から HEAD までに `_posts/` への commit が増えていないかを確かめ（Pages は commit からビルドされるので、ここに増えていなければ Pages にも出ない）、公開してよい要約（件数と成否だけ。例: `有料フィード: 読者 2人中 2人成功・0人失敗（送信 2人）／共有フィード 3本中 3本成功・0本失敗（送信 3本）`。フィードが 0 本（`feeds.json` が無いか空）なら「／」以降は付かない）を表示する。`--text` は要約の書式と完全一致するときだけ通す。非0なら公開 repo に何も書かない
 
-status issue などの公開 repo に書くのは check が表示した要約だけにする。失敗した読者の ID と理由は端末（と `output/paid/{日付}/run.json`）にしか出さない。この run の後に reflect-and-improve を回すときも、証拠として見出し・URL・プロファイルの内容を引用せず、件数と成否で書く。
+status issue などの公開 repo に書くのは check が表示した要約だけにする。失敗した読者・フィードの ID と理由は端末（と `output/paid/{日付}/run.json`）にしか出さない。この run の後に reflect-and-improve を回すときも、証拠として見出し・URL・プロファイルの内容を引用せず、件数と成否で書く。
 
 ## VISION.md との整合
 
