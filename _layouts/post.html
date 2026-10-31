@@ -205,7 +205,7 @@ layout: default
       {%- endcomment -%}
       {%- comment -%}
         serendipity（curate-news のセレンディピティ枠で興味の外から選んだ記事の番号, #619）に入る記事には、
-        トピックの後ろに意図を示す語を出す。印が無いと、職種別フィードに無関係な記事が紛れ込んだ分類の誤りに見える
+        選んだ意図を示す語を出す（理由まで画面の文言に入れる。title 属性はタッチ端末で出ない）。印が無いと、職種別フィードに無関係な記事が紛れ込んだ分類の誤りに見える
       {%- endcomment -%}
       {%- assign item_topics = page.article_tags[forloop.index0] -%}
       {%- assign item_serendipity = false -%}
@@ -219,7 +219,7 @@ layout: default
             印は読みどころの行頭に置く。見出し行の末尾だとトピック（科学 / 開発）の続きに並び、トピックの1つに読める。
             読みどころの無い項目（item_tail が <br で始まらない）では見出し行の末尾に出す
           {%- endcomment -%}
-          {%- capture serendipity_html -%}<span class="serendipity-label" title="興味・関心の外から、視野を広げるためにあえて選んだ記事">視野を広げる1本</span>{%- endcapture -%}
+          {%- capture serendipity_html -%}<span class="serendipity-label">興味の外から、視野を広げる1本</span>{%- endcapture -%}
           {%- assign tail_head = item_tail | slice: 0, 3 -%}
           {%- if tail_head == '<br' -%}
             {%- assign br_tag = item_tail | split: '>' | first | append: '>' -%}

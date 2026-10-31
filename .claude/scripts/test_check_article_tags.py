@@ -155,6 +155,13 @@ class TestSerendipity(unittest.TestCase):
     def test_not_number(self):
         self.assertTrue(any("整数" in e for e in self.check("serendipity: [末尾]\n")))
 
+    def test_fullwidth_digits(self):
+        self.assertTrue(any("整数" in e for e in self.check("serendipity: [１]\n")))
+
+    def test_checked_without_article_tags(self):
+        text = post("serendipity: [10]\n")
+        self.assertTrue(any("範囲外" in e for e in c.check(text, require=False)))
+
     def test_block_style(self):
         self.assertTrue(any("フロー形式" in e for e in self.check("serendipity:\n  - 3\n")))
 

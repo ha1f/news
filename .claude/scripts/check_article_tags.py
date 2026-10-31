@@ -21,7 +21,7 @@
   4. `tags` が `article_tags` の和集合と一致する（日単位の導線と記事単位の導線で
      同じ日が出たり出なかったりしないように）
   5. `serendipity`（セレンディピティ枠の記事番号, #619）があれば、各番号が本文の記事の
-     範囲内で重複せず、2本以内（表示側は N 本目に「視野を広げる1本」を出すので、
+     範囲内で重複せず、2本以内（表示側は N 本目に「興味の外から、視野を広げる1本」を出すので、
      範囲外の番号は黙って印が消え、多すぎると印の意味が薄れる）。省略は合格
 
 「トピックが記事の主題に合っているか」は機械では判定できないので検査しない。
@@ -100,7 +100,8 @@ def serendipity_errors(text: str, count: int):
     if not flow:
         return ["serendipity はフロー形式（`serendipity: [11]`）で書く"]
     items = [t.strip() for t in flow.group("body").split(",") if t.strip()]
-    if not all(t.isdigit() for t in items):
+    # isdigit() は全角数字も通すが、YAML はそれを文字列として読み、表示側の contains が黙って偽になる
+    if not all(re.fullmatch(r"[0-9]+", t) for t in items):
         return [f"serendipity は記事の番号（1始まりの整数）で書く: {items}"]
     numbers = [int(t) for t in items]
     errors = []
@@ -120,9 +121,10 @@ def check(text: str, require: bool):
     if parsed is None:
         return ["front matter が無い"]
     tags, article_tags, count, list_items = parsed
+    # serendipity は article_tags の有無によらず表示されるので、先に検査する
+    errors = serendipity_errors(text, count)
     if article_tags is None:
-        return ["article_tags が無い"] if require else []
-    errors = []
+        return errors + (["article_tags が無い"] if require else [])
     if len(article_tags) != count:
         errors.append(f"article_tags が {len(article_tags)} 件、本文の記事は {count} 本")
     if list_items != count:
@@ -135,7 +137,6 @@ def check(text: str, require: bool):
             errors.append(f"{i}本目: トピックが {len(topics)} 個（{MAX_PER_ARTICLE} 個まで）")
         if len(set(topics)) != len(topics):
             errors.append(f"{i}本目: トピックが重複している {topics}")
-    errors += serendipity_errors(text, count)
     union = {t for topics in article_tags for t in topics}
     if tags is None or set(tags) != union:
         errors.append(f"tags {tags} が article_tags の和集合 {sorted(union)} と一致しない")
