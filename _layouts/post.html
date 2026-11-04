@@ -203,12 +203,34 @@ layout: default
         N 本目の見出しに article_tags の N 番目を当てる番号は #article-N の着地点と同じ。
         説明文の行を持たない項目（過去の投稿の (HN) / (Lobsters) で終わる行など）にも出す。
       {%- endcomment -%}
+      {%- comment -%}
+        serendipity（curate-news のセレンディピティ枠で興味の外から選んだ記事の番号, #619）に入る記事には、
+        選んだ意図を示す語を出す（理由まで画面の文言に入れる。title 属性はタッチ端末で出ない）。印が無いと、職種別フィードに無関係な記事が紛れ込んだ分類の誤りに見える
+      {%- endcomment -%}
       {%- assign item_topics = page.article_tags[forloop.index0] -%}
-      {%- if item_topics.size > 0 -%}
+      {%- assign item_serendipity = false -%}
+      {%- if page.serendipity contains forloop.index -%}{%- assign item_serendipity = true -%}{%- endif -%}
+      {%- if item_topics.size > 0 or item_serendipity -%}
         {%- comment -%}見出し行の終わり（説明文の <br>、無ければ </p> か </li>）の直前に入れる。説明文の無い項目にも出すため{%- endcomment -%}
         {%- assign item_head = item_html | split: '<br' | first | split: '</p>' | first | split: '</li>' | first -%}
         {%- assign item_tail = item_html | slice: item_head.size, item_html.size -%}
-        {%- capture item_html -%}{{ item_head }}<span class="article-topics">{%- for t in item_topics -%}<span class="article-topic">{{ t | escape }}</span>{%- endfor -%}</span>{{ item_tail }}{%- endcapture -%}
+        {%- if item_serendipity -%}
+          {%- comment -%}
+            印は読みどころの行頭に置く。見出し行の末尾だとトピック（科学 / 開発）の続きに並び、トピックの1つに読める。
+            読みどころの無い項目（item_tail が <br で始まらない）では見出し行の末尾に出す
+          {%- endcomment -%}
+          {%- capture serendipity_html -%}<span class="serendipity-label">興味の外から、視野を広げる1本</span>{%- endcapture -%}
+          {%- assign tail_head = item_tail | slice: 0, 3 -%}
+          {%- if tail_head == '<br' -%}
+            {%- assign br_tag = item_tail | split: '>' | first | append: '>' -%}
+            {%- assign item_tail = item_tail | slice: br_tag.size, item_tail.size | lstrip -%}
+            {%- assign item_tail = br_tag | append: serendipity_html | append: item_tail -%}
+          {%- else -%}
+            {%- assign serendipity_html = serendipity_html | replace: 'class="serendipity-label"', 'class="serendipity-label serendipity-label-inline"' -%}
+            {%- assign item_tail = serendipity_html | append: item_tail -%}
+          {%- endif -%}
+        {%- endif -%}
+        {%- capture item_html -%}{{ item_head }}{%- if item_topics.size > 0 -%}<span class="article-topics">{%- for t in item_topics -%}<span class="article-topic">{{ t | escape }}</span>{%- endfor -%}</span>{%- endif -%}{{ item_tail }}{%- endcapture -%}
       {%- endif -%}
       <li id="article-{{ forloop.index }}">{{- item_html -}}
     {%- endfor -%}

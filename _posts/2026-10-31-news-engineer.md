@@ -4,6 +4,7 @@ title: "公式 Claude Code 拡張に SSH バックドア発覚（ソフトウェ
 date: 2026-10-31
 profile: engineer
 tags: [AI, 開発, セキュリティ, 科学]
+serendipity: [11]
 article_tags:
   - [セキュリティ, 開発]
   - [AI, 開発]

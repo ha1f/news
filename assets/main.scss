@@ -413,6 +413,19 @@ $ui-border-color: #8d8d8d; // 背景 #fdfdfd と 3.26:1
   margin-left: 0.5em;
 }
 
+// セレンディピティ枠の印 (#619)。トピックと同じ灰色の小さな語にとどめ、バッジや色で目立たせない
+.serendipity-label {
+  font-size: $base-font-size * 0.75;
+  color: $grey-color;
+  margin-right: 0.5em;
+  white-space: nowrap;
+}
+
+// 読みどころの無い項目では見出し行の末尾に付くので、左に間を取る
+.serendipity-label-inline {
+  margin-left: 0.5em;
+}
+
 .post-footer-nav {
   font-size: $base-font-size * 0.875;
   color: $grey-color;
@@ -660,6 +673,7 @@ $ui-border-color: #8d8d8d; // 背景 #fdfdfd と 3.26:1
   }
 
   .shared-label,
+  .serendipity-label,
   .article-topics {
     color: #8b949e;
   }

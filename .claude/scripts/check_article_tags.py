@@ -20,6 +20,9 @@
   3. 1本に付けるトピックは3個まで（全部付けると絞り込みとして働かない）
   4. `tags` が `article_tags` の和集合と一致する（日単位の導線と記事単位の導線で
      同じ日が出たり出なかったりしないように）
+  5. `serendipity`（セレンディピティ枠の記事番号, #619）があれば、各番号が本文の記事の
+     範囲内で重複せず、2本以内（表示側は N 本目に「興味の外から、視野を広げる1本」を出すので、
+     範囲外の番号は黙って印が消え、多すぎると印の意味が薄れる）。省略は合格
 
 「トピックが記事の主題に合っているか」は機械では判定できないので検査しない。
 
@@ -40,6 +43,7 @@ from pathlib import Path
 JST = timezone(timedelta(hours=9))
 VOCAB = ("AI", "開発", "セキュリティ", "ビジネス", "科学", "デザイン", "経済", "ハードウェア", "社会")
 MAX_PER_ARTICLE = 3
+MAX_SERENDIPITY = 2
 # 本文の番号付き記事。kramdown が `<li>` にするのは行頭（3字までの字下げ）の `N. `
 ITEM_RE = re.compile(r"^ {0,3}\d+\.\s", re.M)
 # `<li>` になりうる行すべて（箇条書き・入れ子を含む）
@@ -48,6 +52,8 @@ FRONT_RE = re.compile(r"\A---[ \t]*\n(?P<front>.*?)\n---[ \t]*\n(?P<body>.*)\Z",
 TAGS_RE = re.compile(r"^tags:\s*\[(?P<body>[^\]]*)\]\s*$", re.M)
 ARTICLE_TAGS_HEAD_RE = re.compile(r"^article_tags:(?P<rest>.*)$", re.M)
 ARTICLE_TAGS_ITEM_RE = re.compile(r"^\s+-\s*\[(?P<body>[^\]]*)\]\s*(?:#.*)?$")
+SERENDIPITY_RE = re.compile(r"^serendipity:(?P<rest>.*)$", re.M)
+SERENDIPITY_FLOW_RE = re.compile(r"^\s*\[(?P<body>[^\]]*)\]\s*(?:#.*)?$")
 
 
 def split_list(body: str):
@@ -84,15 +90,41 @@ def parse(text: str):
     return tags, article_tags, len(ITEM_RE.findall(body)), len(ANY_LIST_ITEM_RE.findall(body))
 
 
+def serendipity_errors(text: str, count: int):
+    """front matter の `serendipity: [N, ...]` を検査し、違反の説明のリストを返す（無ければ空）"""
+    fm = FRONT_RE.match(text)
+    m = SERENDIPITY_RE.search(fm.group("front")) if fm else None
+    if not m:
+        return []
+    flow = SERENDIPITY_FLOW_RE.match(m.group("rest"))
+    if not flow:
+        return ["serendipity はフロー形式（`serendipity: [11]`）で書く"]
+    items = [t.strip() for t in flow.group("body").split(",") if t.strip()]
+    # isdigit() は全角数字も通すが、YAML はそれを文字列として読み、表示側の contains が黙って偽になる
+    if not all(re.fullmatch(r"[0-9]+", t) for t in items):
+        return [f"serendipity は記事の番号（1始まりの整数）で書く: {items}"]
+    numbers = [int(t) for t in items]
+    errors = []
+    out_of_range = [n for n in numbers if not 1 <= n <= count]
+    if out_of_range:
+        errors.append(f"serendipity の番号 {out_of_range} が本文の記事（1〜{count} 本目）の範囲外")
+    if len(set(numbers)) != len(numbers):
+        errors.append(f"serendipity の番号が重複している {numbers}")
+    if len(numbers) > MAX_SERENDIPITY:
+        errors.append(f"serendipity が {len(numbers)} 本（{MAX_SERENDIPITY} 本まで）")
+    return errors
+
+
 def check(text: str, require: bool):
     """違反の説明のリストを返す（空なら合格）"""
     parsed = parse(text)
     if parsed is None:
         return ["front matter が無い"]
     tags, article_tags, count, list_items = parsed
+    # serendipity は article_tags の有無によらず表示されるので、先に検査する
+    errors = serendipity_errors(text, count)
     if article_tags is None:
-        return ["article_tags が無い"] if require else []
-    errors = []
+        return errors + (["article_tags が無い"] if require else [])
     if len(article_tags) != count:
         errors.append(f"article_tags が {len(article_tags)} 件、本文の記事は {count} 本")
     if list_items != count:

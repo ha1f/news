@@ -120,5 +120,51 @@ class TestCheck(unittest.TestCase):
         self.assertTrue(any("2 件" in e for e in c.check(text, require=False)))
 
 
+class TestSerendipity(unittest.TestCase):
+    """serendipity（セレンディピティ枠の記事番号, #619）。表示側は N 本目に印を出すので、範囲外は黙って消える"""
+
+    FRONT = "tags: [AI, セキュリティ]\narticle_tags:\n  - [AI]\n  - [セキュリティ, AI]\n  - []\n"
+
+    def check(self, line, before=True):
+        front = line + self.FRONT if before else self.FRONT + line
+        return c.check(post(front), require=True)
+
+    def test_absent_is_ok(self):
+        self.assertEqual(c.check(GOOD, require=True), [])
+
+    def test_last_article(self):
+        self.assertEqual(self.check("serendipity: [3]\n"), [])
+
+    def test_after_article_tags(self):
+        self.assertEqual(self.check("serendipity: [2, 3]\n", before=False), [])
+
+    def test_empty_is_ok(self):
+        self.assertEqual(self.check("serendipity: []\n"), [])
+
+    def test_out_of_range(self):
+        """番号は本文の記事の位置（1始まり）。記事の表記上の番号 10 ではなく 3 本目"""
+        self.assertTrue(any("範囲外" in e for e in self.check("serendipity: [10]\n")))
+        self.assertTrue(any("範囲外" in e for e in self.check("serendipity: [0]\n")))
+
+    def test_too_many(self):
+        self.assertTrue(any("2 本まで" in e for e in self.check("serendipity: [1, 2, 3]\n")))
+
+    def test_duplicate(self):
+        self.assertTrue(any("重複" in e for e in self.check("serendipity: [3, 3]\n")))
+
+    def test_not_number(self):
+        self.assertTrue(any("整数" in e for e in self.check("serendipity: [末尾]\n")))
+
+    def test_fullwidth_digits(self):
+        self.assertTrue(any("整数" in e for e in self.check("serendipity: [１]\n")))
+
+    def test_checked_without_article_tags(self):
+        text = post("serendipity: [10]\n")
+        self.assertTrue(any("範囲外" in e for e in c.check(text, require=False)))
+
+    def test_block_style(self):
+        self.assertTrue(any("フロー形式" in e for e in self.check("serendipity:\n  - 3\n")))
+
+
 if __name__ == "__main__":
     unittest.main()
