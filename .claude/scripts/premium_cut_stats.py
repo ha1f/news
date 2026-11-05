@@ -40,28 +40,32 @@ POSTS_DIR = os.path.join(ROOT, "_posts")
 CACHE_DIR = os.path.join(ROOT, ".claude", "skills", "curate-news", "cache")
 sys.path.insert(0, os.path.join(ROOT, ".claude", "skills", "curate-news", "scripts"))
 from commercial_filter import read_value  # noqa: E402
+from published_urls import normalize  # noqa: E402
 
 # 切り方の候補。(id, 名前, 判定語の正規表現)。大文字小文字は区別しない
+# 見出しの正規表現に加え、_posts/ の article_tags に当たる名前がある候補は TAGS にも載せる
+TAGS = {"security": "セキュリティ", "chips-hardware": "ハードウェア",
+        "apple-mobile": None, "ai-build": "AI", "climate-energy": None, "policy": None}
 CUTS = [
     ("ai-build", "AI を作る人向け（LLM・エージェントの実装と運用）",
      r"LLM|エージェント|\bagents?\b|agentic|\bRAG\b|プロンプト|\bprompt|Claude|GPT|Gemini|"
-     r"\bMCP\b|ファインチューン|fine-?tun|推論|inference|ベンチマーク|benchmark|"
+     r"\bMCP\b|ファインチューン|fine-?tuning|推論|inference|ベンチマーク|benchmark|"
      r"\bevals?\b|オープンウェイト|open-?weight|言語モデル|language model"),
     ("security", "セキュリティ（脆弱性・攻撃・情報漏洩）",
-     r"脆弱性|vulnerab|\bCVE|攻撃|attack|ハッキング|hack|マルウェア|malware|ランサム|ransom|"
+     r"脆弱性|vulnerab|\bCVE|攻撃|attack|ハッキング|\bhack(?:ed|ers?|ing)?\b|マルウェア|malware|ランサム|ransom|"
      r"漏洩|漏えい|\bleak|breach|セキュリティ|security|フィッシング|phishing|"
      r"ゼロデイ|zero-?day|exploit|不正アクセス|サイバー|cyber"),
     ("apple-mobile", "Apple・モバイルのアプリ開発",
      r"\biOS|iPhone|iPad|macOS|\bSwift|Xcode|Apple|watchOS|visionOS|Android|"
      r"モバイル|mobile|App Store|アプリ開発"),
     ("chips-hardware", "半導体・ハードウェア",
-     r"半導体|semiconductor|\bchips?\b|チップ|\bGPU|NVIDIA|TSMC|Intel|\bAMD\b|\bArm\b|"
+     r"半導体|semiconductor|\bchips?\b|チップ|\bGPU|NVIDIA|TSMC|\bIntel\b|\bAMD\b|\bArm\b|"
      r"プロセッサ|processor|\bDRAM|\bHBM|メモリ|ロボット|robot|ハードウェア|hardware"),
     ("climate-energy", "気候・エネルギー",
      r"気候|climate|温暖化|脱炭素|carbon|\bCO2|再エネ|再生可能|renewable|太陽光|solar|"
-     r"風力|原発|原子力|nuclear|電池|batter|\bEVs?\b|電力|energy|エネルギー|核融合|fusion"),
+     r"風力|原発|原子力|nuclear|電池|batter|\bEVs?\b|電力|energy|エネルギー|核融合|\bfusion\b"),
     ("policy", "テックの政策・規制・訴訟",
-     r"規制|regulat|法案|独禁|独占禁止|antitrust|公取|訴訟|lawsuit|\bsue[sd]?\b|裁判|court|"
+     r"規制|\bregulat(?:ion|ions|ory|ors?|e|ed)\b|法案|独禁|独占禁止|antitrust|公取|訴訟|lawsuit|\bsue[sd]?\b|裁判|court|"
      r"\bFTC\b|\bDOJ\b|欧州委員会|European Commission|著作権|copyright|省令|政府|government"),
 ]
 
@@ -73,7 +77,12 @@ LABEL_TO_SOURCE = {
     "MIT TR": "mit-tech-review", "Science": "science", "Dribbble": "dribbble",
     "Nature": "nature", "GitHub Trending": "github-trending", "Qiita": "qiita",
     "PH": "producthunt", "Product Hunt": "producthunt",
+    "はてなブックマーク": "hatena", "日経新聞": "nikkei", "Gigazine": "gigazine",
+    "MIT Technology Review": "mit-tech-review", "Nature Machine Intelligence": "nature",
 }
+# キャッシュの見出しの先頭に付く媒体内のカテゴリ札（例: `[ITmedia Mobile]`）。判定語に当てない
+PREFIX_RE = re.compile(r"^\s*\[[^\]]*\]\s*")
+TAGS_RE = re.compile(r"^article_tags:\s*\n((?:\s+- \[.*\]\n?)+)", re.M)
 
 ITEM_RE = re.compile(r"^\d+\. \[(?P<title>.+?)\]\((?P<url>\S+?)\) \((?P<label>[^)]*)\)", re.M)
 POST_NAME_RE = re.compile(r"^(\d{4}-\d{2}-\d{2})-news(?:-[a-z0-9-]+)?\.md$")
@@ -96,9 +105,13 @@ def iter_posts(since: str | None = None, until: str | None = None):
         feed = name[len(date) + 1:-3]
         with open(path, encoding="utf-8") as f:
             text = f.read()
-        for im in ITEM_RE.finditer(text):
+        tm = TAGS_RE.search(text)
+        tag_rows = [set(t.strip() for t in line.strip()[3:-1].split(",")) for line in tm.group(1).splitlines()] if tm else []
+        for i, im in enumerate(ITEM_RE.finditer(text)):
             label = im.group("label").split("・")[0].strip()
-            yield date, feed, im.group("title"), im.group("url"), LABEL_TO_SOURCE.get(label, f"?{label}")
+            tags = tag_rows[i] if i < len(tag_rows) else set()
+            yield (date, feed, im.group("title"), im.group("url"),
+                   LABEL_TO_SOURCE.get(label, f"?{label}"), tags)
 
 
 def commercial(source_id: str) -> str:
@@ -107,8 +120,15 @@ def commercial(source_id: str) -> str:
     return read_value(source_id) or "不明"
 
 
-def fmt_sources(counter: Counter, top: int = 4) -> str:
+def fmt_sources(counter: Counter, top: int = 5) -> str:
     return "、".join(f"{s}({commercial(s)}) {n}" for s, n in counter.most_common(top))
+
+
+def tag_cell(cid, per_tag_urls, n):
+    if not TAGS.get(cid):
+        return "-"
+    u = len(per_tag_urls[cid])
+    return f"{u}（{u / n:.1f}）[{TAGS[cid]}]"
 
 
 def run_posts(args) -> int:
@@ -120,7 +140,9 @@ def run_posts(args) -> int:
     per_cut_slots = Counter()
     per_cut_sources = defaultdict(Counter)
     seen_src = {}
-    for date, _feed, title, url, src in iter_posts(args.since, args.until):
+    per_tag_urls = defaultdict(set)
+    for date, _feed, title, url, src, tags in iter_posts(args.since, args.until):
+        url = normalize(url)
         days.add(date)
         slots_all += 1
         urls_all.add(url)
@@ -130,18 +152,22 @@ def run_posts(args) -> int:
                 if url not in per_cut_urls[cid]:
                     per_cut_urls[cid].add(url)
                     per_cut_sources[cid][src] += 1
+        for cid, tag in TAGS.items():
+            if tag and tag in tags:
+                per_tag_urls[cid].add(url)
         seen_src[url] = src
     n = len(days)
     if n == 0:
         print("対象期間に投稿がありません", file=sys.stderr)
         return 1
     print(f"posts: {args.since}〜{args.until} の {n} 日、掲載枠 {slots_all}・異なる URL {len(urls_all)}")
-    print("| 候補 | 異なる URL（日あたり） | 掲載枠（日あたり） | 主なソース（商用利用（課金）） 本数 |")
-    print("|---|---|---|---|")
+    print("| 候補 | 見出しに当たる異なる URL（日あたり） | 掲載枠（日あたり） | article_tags に当たる異なる URL（日あたり） "
+          "| 主なソース（商用利用（課金）） 本数 |")
+    print("|---|---|---|---|---|")
     for cid, name, _rx in cuts:
         u = len(per_cut_urls[cid])
         print(f"| {cid} | {u}（{u / n:.1f}） | {per_cut_slots[cid]}（{per_cut_slots[cid] / n:.1f}） "
-              f"| {fmt_sources(per_cut_sources[cid])} |")
+              f"| {tag_cell(cid, per_tag_urls, n)} | {fmt_sources(per_cut_sources[cid])} |")
     return 0
 
 
@@ -158,7 +184,7 @@ def _parse_time(value):
 
 def run_pool(args) -> int:
     cuts = compiled_cuts()
-    published = {url for *_x, url, _s in iter_posts()}
+    published = {normalize(x[3]) for x in iter_posts()}
     files = sorted(glob.glob(os.path.join(args.cache_dir, "*.json")))
     items = {}
     fetched = []
@@ -170,9 +196,9 @@ def run_pool(args) -> int:
             continue
         fetched.append(data.get("fetched_at", ""))
         for it in data.get("items", []):
-            url = it.get("url")
+            url = normalize(it["url"]) if it.get("url") else None
             if url and url not in items:
-                items[url] = (it.get("title") or "", data.get("source_id", "?"),
+                items[url] = (PREFIX_RE.sub("", it.get("title") or ""), data.get("source_id", "?"),
                               _parse_time(it.get("published_at")))
     if not items:
         print("キャッシュに候補がありません。先に fetch_feeds.py を走らせる", file=sys.stderr)
