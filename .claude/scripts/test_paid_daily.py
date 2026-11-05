@@ -536,8 +536,9 @@ class PaidDailyTest(unittest.TestCase):
         self.assertIn("tag_id は文字列", str(cm.exception))
         self.feeds()
         self.readers({"reader_id": "alice", "subscriber_id": {"id": "sub_x"}, "profile": "p.md"})
-        with self.assertRaises(SystemExit):
+        with self.assertRaises(SystemExit) as cm:
             p.load_all(self.root)
+        self.assertIn("subscriber_id は文字列", str(cm.exception))
 
     def test_feed_created_with_other_status_keeps_sending_marker(self):
         self.feeds(self.feed("f-space"))
