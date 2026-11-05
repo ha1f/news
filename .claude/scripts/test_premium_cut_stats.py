@@ -14,6 +14,10 @@ import premium_cut_stats as pcs  # noqa: E402
 
 POST = """---
 title: t
+article_tags:
+  - [セキュリティ, 開発]
+  - [開発]
+  - [社会]
 ---
 
 リード。
@@ -60,7 +64,7 @@ class PremiumCutStatsTest(unittest.TestCase):
     def test_iter_posts_maps_labels(self):
         items = list(pcs.iter_posts("2026-11-01", "2026-11-01"))
         self.assertEqual(len(items), 6)
-        self.assertEqual({s for *_x, s in items}, {"hatena", "zenn", "hackernews"})
+        self.assertEqual({x[4] for x in items}, {"hatena", "zenn", "hackernews"})
 
     def test_posts_counts_unique_urls_and_slots(self):
         code, out = self.run_main(["posts", "--since", "2026-11-01", "--until", "2026-11-01"])
@@ -85,6 +89,23 @@ class PremiumCutStatsTest(unittest.TestCase):
         self.assertEqual(code, 0)
         # 当たる 3・うち公開済み 1・未公開 2・うち直近24時間 1
         self.assertIn("| security | 3 | 1（33%） | 2 | 1 |", out)
+
+    def test_posts_counts_article_tags(self):
+        _code, out = self.run_main(["posts", "--since", "2026-11-01", "--until", "2026-11-01"])
+        self.assertIn("1（1.0）[セキュリティ]", self.row(out, "security"))
+
+    def test_pool_ignores_media_prefix_and_utm(self):
+        data = {"source_id": "itmedia", "fetched_at": "2026-11-05T16:00:00+09:00", "items": [
+            {"title": "[ITmedia Mobile] 充電器のセール", "url": "https://example.com/x",
+             "published_at": "2026-11-05T10:00:00+09:00"},
+            {"title": "nginx vulnerability", "url": "https://example.com/a?utm_source=feed",
+             "published_at": "2026-11-05T10:00:00+09:00"},
+        ]}
+        with open(os.path.join(self.cache, "i.json"), "w", encoding="utf-8") as f:
+            json.dump(data, f)
+        _code, out = self.run_main(["pool", "--cache-dir", self.cache])
+        self.assertIn("| apple-mobile | 0 |", out)
+        self.assertIn("| security | 1 | 1（100%） | 0 |", out)
 
     def test_pool_empty_cache_fails(self):
         with contextlib.redirect_stderr(io.StringIO()):
