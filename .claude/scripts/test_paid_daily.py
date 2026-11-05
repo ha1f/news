@@ -529,6 +529,16 @@ class PaidDailyTest(unittest.TestCase):
         with self.assertRaises(SystemExit):
             p.load_all(self.root)
 
+    def test_non_string_destination_is_rejected_without_type_error(self):
+        self.feeds({"feed_id": "f-a", "tag_id": [TAG], "profile": "p.md"})
+        with self.assertRaises(SystemExit) as cm:
+            p.load_all(self.root)
+        self.assertIn("tag_id は文字列", str(cm.exception))
+        self.feeds()
+        self.readers({"reader_id": "alice", "subscriber_id": {"id": "sub_x"}, "profile": "p.md"})
+        with self.assertRaises(SystemExit):
+            p.load_all(self.root)
+
     def test_feed_created_with_other_status_keeps_sending_marker(self):
         self.feeds(self.feed("f-space"))
         quiet(p.prepare, self.root, DAY, "f-space", "feed")

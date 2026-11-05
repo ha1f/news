@@ -86,6 +86,9 @@ def load_all(root):
                 raise SystemExit(f"{k['file']} の {k['id']} が不正か重複（readers.json と feeds.json を通して一意）: {rid!r}")
             seen.add(rid)
         dests = [r.get(k["dest"]) for r in rows if r.get(k["dest"])]
+        if not all(isinstance(d, str) for d in dests):
+            # list などは集合に入らず TypeError で落ちるので、他の不正と同じく SystemExit にする
+            raise SystemExit(f"{k['file']} の {k['dest']} は文字列にする")
         if len(dests) != len(set(dests)):
             # 同じ宛先を2行に書くと、その購読者（タグの購読者全員）に毎日2通届く
             raise SystemExit(f"{k['file']} の {k['dest']} が重複している")
