@@ -109,6 +109,7 @@ artifact に写るのは、その branch の `_posts/` をビルドした結果�
 ## この repo の癖
 
 - `.claude/skills/` 配下のスキルは repo 自身に置かれている。branch を切り替えても開始時に読んだ版に従う
+- **公開プリセットの好みファイルは `.claude/skills/curate-news/profiles/<名前>.md`**。repo 直下の `profiles/<名前>.md` は同じ名前の配信ページ（front matter だけで好みは無い）。curate-news を subagent に回させるプロンプトで好みファイルを名指しするときは、こちらを渡す（実測 2026-11-06 #612: 直下のほうを渡し、Sonnet の subagent はそれを読んで「興味・関心の節が無い」まま絞り込んだ。Opus の subagent は自分で正しいほうを見つけた。2 run を捨てて回し直した）
 - スキルのスクリプトは「エージェントの Bash から起動すると stdin が非 tty」を踏まえた分岐になっているか確認する（`not sys.stdin.isatty()` で stdin モードに入る実装は必ず壊れる）
 - 毎朝9時のキュレーションで当日分の投稿が main に入る。`_posts/` の中身に関わるルールを足す PR は、rebase のたびに当日分を揃え直す必要がある
 - レビュー stage で PR を調べるときは、取得元を **git → 素の REST → MCP** の順で選ぶ（MCP は往復が重く、返り値がトークン上限を超えるとファイルに退避される）。実測で迷ったのは次の4つ:
