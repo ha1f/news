@@ -203,9 +203,9 @@ def run_pool(args) -> int:
     if not items:
         print("キャッシュに候補がありません。先に fetch_feeds.py を走らせる", file=sys.stderr)
         return 1
-    stamp = max(fetched)[:16] if fetched else "?"
     sources_all = Counter(s for _t, s, _p in items.values())
-    newest = _parse_time(max(fetched)) if fetched else None
+    newest = max((t for t in map(_parse_time, fetched) if t), default=None)
+    stamp = newest.strftime("%Y-%m-%d %H:%M %z") if newest else "?"
     recent_from = newest - dt.timedelta(hours=24) if newest else None
     print(f"pool: キャッシュ {len(files)} フィード・異なる URL {len(items)}（取得 {stamp} 頃）、"
           f"公開済み {sum(u in published for u in items)}")
