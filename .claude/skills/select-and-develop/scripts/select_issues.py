@@ -46,7 +46,6 @@ from pathlib import Path
 
 TRUSTED = {"OWNER", "MEMBER", "COLLABORATOR"}
 STATUS_TITLE = "daily-loop status"
-LINK_RE = re.compile(r"(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?|refs?)\s+#(\d+)", re.I)
 BRANCH_ISSUE_RE = re.compile(r"(?:^|/)(\d+)[-_]")
 API_BASE = "https://api.github.com"
 API_TIMEOUT = 15
@@ -186,7 +185,7 @@ def merged_prs_linking(events, issue_number):
     """issue の timeline から、その issue を本文でリンクしているマージ済み PR を返す（純関数）。
 
     素の cross-reference は「番号に触れただけ」の PR も拾う（#354 で4件中1件、#362 で8件中1件が
-    正解）ので、open PR の判定（build_candidates）と同じ LINK_RE を本文に当てて絞る。
+    正解）ので、open PR の判定（build_candidates）と同じ `extract_linked_issues`（`.claude/scripts/pr_links.py`）を本文に当てて絞る。
     `source.issue.pull_request` を持たない（PR でない）参照と、マージされていない PR は落ちる。"""
     found = {}
     for event in events:
@@ -196,7 +195,7 @@ def merged_prs_linking(events, issue_number):
         merged_at = (source.get("pull_request") or {}).get("merged_at")
         if not merged_at:
             continue
-        linked = {int(m.group(1)) for m in LINK_RE.finditer(source.get("body") or "")}
+        linked = set(extract_linked_issues(source.get("body")))
         if issue_number in linked:
             found[source["number"]] = {"number": source["number"],
                                        "title": source.get("title", ""),
@@ -273,6 +272,28 @@ def load_check_state():
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+def load_pr_links():
+    """PR body から linked issue を取り出す正本 `.claude/scripts/pr_links.py` を読み込む。
+
+    正本を1つにしているのは、同じ正規表現を review 側と develop 側に写した結果、
+    コード引用まで linked issue に数える欠陥が両方に生まれたため (#473)。
+    相対 import にしないのは `load_check_state` と同じ理由（任意の cwd から
+    単体起動される）。
+
+    読み込みに失敗したら黙って素の正規表現に戻したりはせず、そのまま落とす。
+    linked issue の有無はこのスクリプトの主要な出力（in_progress / backlog の
+    振り分け）そのものなので、劣化した値を返すほうが危ない。
+    """
+    path = Path(__file__).resolve().parents[3] / "scripts" / "pr_links.py"
+    spec = importlib.util.spec_from_file_location("daily_loop_pr_links", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+extract_linked_issues = load_pr_links().extract_linked_issues
 
 
 def load_summarize_issues():
@@ -387,9 +408,7 @@ def build_candidates(issues, prs, collaborators=None):
         # キー自体を返さない。gh CLI は dict のリスト。どちらでも同じ集合になるようにする
         pr_labels = {(label["name"] if isinstance(label, dict) else label)
                      for label in pr.get("labels", [])}
-        seen = set()
-        for m in LINK_RE.finditer(pr.get("body") or ""):
-            seen.add(int(m.group(1)))
+        seen = set(extract_linked_issues(pr.get("body")))
         branch = ((pr.get("head") or {}).get("ref") or "")
         for m in BRANCH_ISSUE_RE.finditer(branch):
             seen.add(int(m.group(1)))
