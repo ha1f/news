@@ -6,7 +6,7 @@ Claude Code のスキル機能を使ったニュースキュレーションツ�
 
 ## 使い方
 
-[Claude Code](https://docs.anthropic.com/en/docs/claude-code) でこのリポジトリを開き、`/curate-news` を実行する。
+[Claude Code](https://code.claude.com/docs/) でこのリポジトリを開き、`/curate-news` を実行する。
 
 ```
 $ claude
@@ -79,7 +79,7 @@ flowchart LR
 
 - **日次ステージ** — その時点の標準的な最新世代を指定する
 - **週次監査だけは最上位モデル** — 監査は最上位モデルで行うオーナー方針
-- 日次ステージのスキル（publish-pages・select-and-develop）は SKILL.md の frontmatter に `model: opus`（alias）を持ち、trigger 側の指定が空でも方針どおりの世代で動く見込み（実行モデルの実測で確かめるまでは未確認。#568）。alias は世代交代に追従するので ID の更新漏れが起きない
+- 日次ステージのスキル（publish-pages・select-and-develop）は SKILL.md の frontmatter に `model: opus`（alias）を持ち、trigger 側の指定が空でも方針どおりの世代で動くことを狙ったもの。ただし `model` の上書きはそのターン限りで（skills docs）、1 ターンで完走する select-and-develop は実測で Opus 5.5 になった一方、subagent をバックグラウンド起動する publish-pages は完了通知で始まる後続ターンで既定モデル（実測 Sonnet 5.5）に戻る。`毎日ニュース` trigger のモデル指定は人間の作業として #568 で hold 中。alias は世代交代に追従するので ID の更新漏れが起きない
 
 現行世代が何かは live docs（`https://platform.claude.com/docs/en/models/overview`）で確認する。claude-api スキルの Current Models はキャッシュで1世代遅れうる。コンテキスト長のサフィックス（`[1m]` 等）は、既定で足りるなら付けない — 旧世代の指定が残る原因になる。
 
@@ -179,7 +179,7 @@ GitHub Actions・workflow 内の `*_VERSION`（Playwright）・`.python-version`
 3. **ソースの調整** — 不要なソースを削除したり、読んでいるメディアを追加する（[追加方法](#ソースの追加)）
 4. **GitHub Pagesの有効化** — リポジトリの **Settings → Pages** で Source を **GitHub Actions** に設定する（`.github/workflows/pages.yml` が main への push でビルド・デプロイする）。公開URLは `https://{ユーザー名}.github.io/news/` になる
 5. **実行** — Claude Code で `/publish-pages` を実行し、PRをマージすれば公開される
-6. **（任意）毎日の自動ループ** — [毎日の自動ループ](#毎日の自動ループ) を使う場合は、pinned の status issue（📊 daily-loop status）と `hold` ラベルを作成し、claude.ai で trigger を設定する（[trigger 定義](#trigger-定義claudeai-上にあり-repo-外のため記録)参照）。評価対象の URL は Pages API から自動解決される
+6. **（任意）毎日の自動ループ** — [毎日の自動ループ](#毎日の自動ループ) を使う場合は、pinned の status issue（📊 daily-loop status）と `hold` ラベルを作成し、claude.ai で trigger を設定する（[trigger 定義](#trigger-定義claudeai-上にあり-repo-外のため記録)参照）。評価対象の URL は README 冒頭の GitHub Pages リンクから取る（Pages API は実行環境の proxy が 403 で塞ぐ）ので、Fork 後は README の URL を自分のものに書き換える
 
 ## ファイル構成
 

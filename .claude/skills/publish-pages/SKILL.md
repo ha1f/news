@@ -159,7 +159,7 @@ checks が green になったら、PR を squash マージする。
 gh api -X PUT repos/{owner}/{repo}/pulls/{n}/merge -f merge_method=squash -f sha=<40桁の head SHA>
 ```
 
-`gh` が無ければ MCP の `merge_pull_request` で squash マージする。マージが 502 で返っても実際には通っていることがある。再実行は `405 Merge already in progress` になるので、PR の state ではなく `git fetch origin main` で main の先頭が進んだかを見る（実測 2026-09-29 PR #460: マージ済みなのに `pull_request_read` が 20分以上 `open` のまま、push 起点の pages.yml run も現れなかった）。run が数分経っても現れなければ `actions_run_trigger`(run_workflow, `pages.yml`, ref `main`) で手動デプロイし、`open` のまま残った PR は閉じる（`publish_state` が `running` から戻らないため）。branch の削除は repo 設定（`delete_branch_on_merge: true`）が行うので手動で消さない。
+`gh` が無ければ MCP の `merge_pull_request` で squash マージする。マージの PUT が実行環境の権限確認（auto mode の分類器）に拒否されたら、別の経路や言い回しで通そうとせず（review-and-merge と同じ方針。#605）、下の「どれかが揃わないまま続けられなくなったとき」の手順で PR にコメントして終える（次の evaluate ステージが `publish_state` の stalled を見て回復する）。マージが 502 で返っても実際には通っていることがある。再実行は `405 Merge already in progress` になるので、PR の state ではなく `git fetch origin main` で main の先頭が進んだかを見る（実測 2026-09-29 PR #460: マージ済みなのに `pull_request_read` が 20分以上 `open` のまま、push 起点の pages.yml run も現れなかった）。run が数分経っても現れなければ `actions_run_trigger`(run_workflow, `pages.yml`, ref `main`) で手動デプロイし、`open` のまま残った PR は閉じる（`publish_state` が `running` から戻らないため）。branch の削除は repo 設定（`delete_branch_on_merge: true`）が行うので手動で消さない。
 
 マージ後、対応する main のビルド run の完了を待つ:
 
