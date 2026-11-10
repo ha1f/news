@@ -110,6 +110,7 @@ artifact に写るのは、その branch の `_posts/` をビルドした結果�
 ## この repo の癖
 
 - `.claude/skills/` 配下のスキルは repo 自身に置かれている。branch を切り替えても開始時に読んだ版に従う
+- **公開プリセットの好みファイルは `.claude/skills/curate-news/profiles/<名前>.md`**。repo 直下の `profiles/<名前>.md` は同じ名前の配信ページ（front matter だけで好みは無い）。curate-news を subagent に回させるプロンプトで好みファイルを名指しするときは、こちらを渡す（実測 2026-11-06 #612: 直下のほうを渡し、Sonnet の subagent はそれを読んで「興味・関心の節が無い」まま絞り込んだ。Opus の subagent は自分で正しいほうを見つけた。2 run を捨てて回し直した）
 - スキルのスクリプトは「エージェントの Bash から起動すると stdin が非 tty」を踏まえた分岐になっているか確認する（`not sys.stdin.isatty()` で stdin モードに入る実装は必ず壊れる）
 - 毎朝9時のキュレーションで当日分の投稿が main に入る。`_posts/` の中身に関わるルールを足す PR は、rebase のたびに当日分を揃え直す必要がある
   - **当日分が作業ブランチに無いとき（run 中にマージされた・セッション開始時の checkout が古い）、`_posts/` を `git checkout origin/main -- _posts` で取り込まない。** 作業ツリーが汚れ、ターン終了時の Stop hook に「未コミットの変更を commit・push せよ」と止められる（実測 2026-11-07 の evaluate run: 停止していた publish PR #636 をマージした後、`check_topic_repeats.py` を当日分に当てるために取り込んで踏んだ）。読むだけなら `git worktree add --detach <scratchpad>/main origin/main` で別ツリーを作り、そこでスクリプトを回して `git worktree remove` で消す（同じ run で `check_topic_repeats.py _posts/2026-11-07-*.md` がそのまま動き、元の作業ツリーは clean のままだった）。1ファイルだけなら `git show origin/main:<path>` で足りる
