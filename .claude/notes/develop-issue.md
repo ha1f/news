@@ -102,7 +102,7 @@ artifact に写るのは、その branch の `_posts/` をビルドした結果�
   `.claude/skills/review-and-merge/scripts` / `.claude/skills/evaluate-and-triage/scripts` /
   `.claude/skills/curate-news/scripts` / `.claude/skills/remove-ai-tells/scripts`
 - 有料読者向けメール本文の生成（#528）: `python3 .claude/scripts/render_email_body.py <curate-news の output/*.md>` → 同じ場所に .html/.txt（`--out-dir` で変更可）。入力・出力先は resolve 後に `.claude/skills/curate-news/output/` の下にあるときだけ受け付ける（名前が `output` なだけの `_posts/output` や repo ルートの `output`、output/ の外を指す symlink は拒否。入力を上書きする出力も拒否）。記事の取りこぼし（番号付き行数と件数の不一致）は exit 非0
-- 有料フィードの日次手順（#582）: `python3 .claude/scripts/paid_daily.py {prepare|finalize|check} --root <作業ツリー外の dir> --date D ...`。手順は `docs/m5-paid-delivery.md` の「日次手順」。テストは `python3 .claude/scripts/test_paid_daily.py`（`--root` は tempfile で作業ツリーの外に作り、output/ は本物の下の一時ディレクトリに差し替える）。`check` は `git status` が clean でないと非0（prepare 以後に `_posts/` への commit が増えていても非0）なので、未 commit の変更がある作業中は必ず非0になる
+- 有料フィードの日次手順（#582。プレミアムフィードは #613 で `--reader` の代わりに `--feed`）: `python3 .claude/scripts/paid_daily.py {prepare|finalize|check} --root <作業ツリー外の dir> --date D ...`。手順は `docs/m5-paid-delivery.md` の「日次手順」。テストは `python3 .claude/scripts/test_paid_daily.py`（`--root` は tempfile で作業ツリーの外に作り、output/ は本物の下の一時ディレクトリに差し替える）。`check` は `git status` が clean でないと非0（prepare 以後に `_posts/` への commit が増えていても非0）なので、未 commit の変更がある作業中は必ず非0になる
 - gitignore が効いているか: `git check-ignore -v <path>`
 - 意図しないファイルの混入: `git ls-files | grep <pattern>`
 

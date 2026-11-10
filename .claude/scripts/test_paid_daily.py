@@ -26,6 +26,7 @@ CURATED = """## ニュース (2026-10-21 07:00 JST)
    売上の半分を設備貸しが占め、前年は赤字だった。
 """
 KEY = send_email.PROVIDER["api_key_env"]
+TAG = "sub_tag_0j6hb7h40j6hb7h40j6hb7h40j"  # OpenAPI の Filter の説明にある例
 FOOTER = {"sender": "テスト運営者", "unsubscribe_url": "{{ unsubscribe_url }}"}
 
 
@@ -50,6 +51,20 @@ class FakeOpener:
     def __call__(self, req, timeout=None):
         self.requests.append(req)
         return FakeResponse({"id": "em_1", "status": "draft"} if req.full_url.endswith("/emails") else None)
+
+
+class FeedOpener(FakeOpener):
+    """作成のリクエストの filters をそのまま返す（Buttondown が送った audience を保持した応答）。"""
+
+    def __call__(self, req, timeout=None):
+        self.requests.append(req)
+        if req.full_url.endswith("/emails"):
+            return FakeResponse({"id": "em_1", "status": "draft", "filters": json.loads(req.data)["filters"]})
+        return FakeResponse(None)
+
+
+def no_network(*a, **k):
+    raise AssertionError("ネットワークに出た")
 
 
 def quiet(fn, *a, **k):
@@ -407,6 +422,165 @@ class PaidDailyTest(unittest.TestCase):
         self.readers(self.reader("alice"), self.reader("alice"))
         with self.assertRaises(SystemExit):
             p.load_readers(self.root)
+
+    # --- プレミアムフィード（feeds.json。#613） ---
+
+    def feeds(self, *rows):
+        (self.root / "feeds.json").write_text(json.dumps(list(rows)), encoding="utf-8")
+
+    def feed(self, fid, profile_text=PROFILE, tag=TAG):
+        if profile_text is not None:
+            (self.root / "profiles" / f"{fid}.md").write_text(profile_text, encoding="utf-8")
+        return {"feed_id": fid, "tag_id": tag, "profile": f"profiles/{fid}.md"}
+
+    def curate_feed(self, fid, text=CURATED):
+        _, h = p.profile_of(self.root, p.entry_of(self.root, fid, "feed"))
+        (self.out / f"{DAY}-{h}.md").write_text(text, encoding="utf-8")
+        return h
+
+    def send_with(self, opener):
+        real = send_email.main
+        return mock.patch.object(send_email, "main", lambda argv: real(argv, opener=opener))
+
+    def test_feed_only_root_runs_and_sends_one_body_to_the_tag(self):
+        self.feeds(self.feed("f-space"))
+        self.assertEqual(p.check_root(self.root), self.root)  # readers.json が無くても通る
+        self.assertEqual(quiet(p.prepare, self.root, DAY, "f-space", "feed")[0], 0)
+        h = self.curate_feed("f-space")
+        opener = FeedOpener()
+        with mock.patch.dict(os.environ, {KEY: "k"}), self.send_with(opener):
+            rc, _, err = quiet(p.finalize, self.root, DAY, "f-space", True, "feed")
+            self.assertEqual(rc, 0, err)
+            create, publish = opener.requests
+            self.assertEqual(json.loads(create.data)["filters"]["filters"],
+                             [{"field": "subscriber.tags", "operator": "contains", "value": TAG}])
+            self.assertEqual(json.loads(create.data)["status"], "draft")
+            self.assertTrue(publish.full_url.endswith("/emails/em_1/publish"))
+            self.assertEqual(json.loads(publish.data), {})
+            stored = self.root / "sent" / "f-space" / f"{DAY}.md"
+            self.assertEqual(stored.read_text(encoding="utf-8"), CURATED)
+            # 同じ日の同じフィードは2回送らない
+            quiet(p.prepare, self.root, DAY, "f-space", "feed")
+            self.curate_feed("f-space")
+            rc, _, err = quiet(p.finalize, self.root, DAY, "f-space", True, "feed")
+            self.assertEqual(rc, 1)
+            self.assertIn("送信済み", err)
+            self.assertEqual(len(opener.requests), 2)
+        self.assertIs(p.run_state(DAY)["f-space"]["sent"], True)
+        # 次の run: フィードの送信済み分がフィードのハッシュの名前で戻る
+        for f in self.out.glob("*.md"):
+            f.unlink()
+        rc, out, _ = quiet(p.prepare, self.root, "2026-10-22", "f-space", "feed")
+        self.assertEqual(rc, 0)
+        self.assertIn("送信済み 1 日分", out)
+        self.assertEqual((self.out / f"{DAY}-{h}.md").read_text(encoding="utf-8"), CURATED)
+
+    def test_feed_dry_run_is_default_and_sends_nothing(self):
+        self.feeds(self.feed("f-space"))
+        quiet(p.prepare, self.root, DAY, "f-space", "feed")
+        self.curate_feed("f-space")
+        with mock.patch.dict(os.environ, {KEY: "k"}), self.send_with(no_network):
+            rc, out, err = quiet(p.finalize, self.root, DAY, "f-space", False, "feed")
+        self.assertEqual(rc, 0, err)
+        self.assertIn(f"[dry-run] 宛先 タグ {TAG} の購読者全員", out)
+        self.assertFalse((self.root / "sent").exists())
+        self.assertIs(p.run_state(DAY)["f-space"]["sent"], False)
+
+    def test_feed_requires_tag_id_not_a_name(self):
+        for bad in ("paid-space", "宇宙", "", None, "sub_123"):
+            self.feeds(self.feed("f-space", tag=bad))
+            quiet(p.prepare, self.root, DAY, "f-space", "feed")
+            self.curate_feed("f-space")
+            with self.send_with(no_network):
+                rc, _, err = quiet(p.finalize, self.root, DAY, "f-space", False, "feed")
+            self.assertEqual(rc, 1, bad)
+            self.assertIn("tag_id が無いか不正", err)
+
+    def test_ids_are_unique_across_readers_and_feeds(self):
+        self.readers(self.reader("space"))
+        self.feeds(self.feed("space"))
+        with self.assertRaises(SystemExit) as cm:
+            p.load_all(self.root)
+        self.assertIn("一意", str(cm.exception))
+        self.feeds({"feed_id": "1", "tag_id": TAG, "profile": "p.md"})
+        with self.assertRaises(SystemExit):
+            p.load_all(self.root)
+
+    def test_reader_and_feed_with_same_profile_keep_separate_history(self):
+        self.readers(self.reader("alice"))
+        self.feeds(self.feed("f-space"))  # 同じ PROFILE（同じハッシュ）
+        prev = "2026-10-20"
+        for uid, text in (("alice", "alice の前日分"), ("f-space", "フィードの前日分")):
+            (self.root / "sent" / uid).mkdir(parents=True)
+            (self.root / "sent" / uid / f"{prev}.md").write_text(text, encoding="utf-8")
+        _, h = p.profile_of(self.root, p.reader_of(self.root, "alice"))
+        quiet(p.prepare, self.root, DAY, "f-space", "feed")
+        self.assertEqual((self.out / f"{prev}-{h}.md").read_text(encoding="utf-8"), "フィードの前日分")
+        quiet(p.prepare, self.root, DAY, "alice")
+        self.assertEqual((self.out / f"{prev}-{h}.md").read_text(encoding="utf-8"), "alice の前日分")
+
+    def test_duplicate_destinations_are_rejected(self):
+        self.feeds(self.feed("f-a"), self.feed("f-b"))  # 同じ TAG
+        with self.assertRaises(SystemExit) as cm:
+            p.load_all(self.root)
+        self.assertIn("tag_id が重複", str(cm.exception))
+        self.feeds()
+        self.readers(self.reader("alice", sid="sub_x"), self.reader("bob", sid="sub_x"))
+        with self.assertRaises(SystemExit):
+            p.load_all(self.root)
+
+    def test_feed_created_with_other_status_keeps_sending_marker(self):
+        self.feeds(self.feed("f-space"))
+        quiet(p.prepare, self.root, DAY, "f-space", "feed")
+        self.curate_feed("f-space")
+
+        def opener(req, timeout=None):
+            opener.n += 1
+            return FakeResponse({"id": "em_1", "status": "about_to_send"})  # 作成時点で配信が始まった疑い
+        opener.n = 0
+        with mock.patch.dict(os.environ, {KEY: "k"}), self.send_with(opener):
+            rc, _, err = quiet(p.finalize, self.root, DAY, "f-space", True, "feed")
+            self.assertEqual(rc, 1)
+            self.assertIn("送信の結果が不明", err)
+            self.assertTrue((self.root / "sent" / "f-space" / f"{DAY}.sending").exists())
+            for f in p.run_dir(DAY).glob("*.sent.json"):
+                f.unlink()  # output/ が消えた次の run でも
+            rc, _, err = quiet(p.finalize, self.root, DAY, "f-space", True, "feed")
+            self.assertEqual(rc, 1)
+            self.assertIn("結果が不明", err)
+        self.assertEqual(opener.n, 1)
+
+    def test_summary_with_feeds(self):
+        runs = {"a": {"ok": True, "sent": True}, "f1": {"ok": True, "sent": True}, "f2": {"ok": False}}
+        line = p.summary(["a"], runs, ["f1", "f2", "f3"])
+        self.assertEqual(line, "有料フィード: 読者 1人中 1人成功・0人失敗（送信 1人）／共有フィード 3本中 1本成功・2本失敗（送信 1本）")
+        self.assertTrue(p.SUMMARY_RE.match(line))
+        self.assertTrue(p.SUMMARY_RE.match(p.summary([], {}, ["f1"])))
+        self.assertFalse(p.SUMMARY_RE.match(line + "（宇宙）"))
+        self.assertFalse(p.SUMMARY_RE.match(line.replace("共有フィード", "f-space")))
+        # フィードが無ければ読者だけの書式のまま
+        self.assertEqual(p.summary(["a"], runs), "有料フィード: 読者 1人中 1人成功・0人失敗（送信 1人）")
+
+    def test_check_counts_feeds(self):
+        self.readers(self.reader("alice"))
+        self.feeds(self.feed("f-space", profile_text="# 興味・関心\n\n- 宇宙\n"), self.feed("f-chip", profile_text=None, tag=TAG[:-1] + "k"))
+        self.run_reader("alice")
+        quiet(p.prepare, self.root, DAY, "f-space", "feed")
+        self.curate_feed("f-space")
+        with self.send_with(no_network):
+            self.assertEqual(quiet(p.finalize, self.root, DAY, "f-space", False, "feed")[0], 0)
+        self.assertEqual(quiet(p.prepare, self.root, DAY, "f-chip", "feed")[0], 1)
+        with self.fake_git():
+            rc, out, err = quiet(p.check, self.root, DAY, "")
+        self.assertEqual(rc, 0, err)
+        self.assertEqual(out.strip(), "有料フィード: 読者 1人中 1人成功・0人失敗（dry-run）／共有フィード 2本中 1本成功・1本失敗（dry-run）")
+
+    def test_cli_reader_and_feed_are_exclusive(self):
+        self.feeds(self.feed("f-space"))
+        for args in ([], ["--reader", "a", "--feed", "f-space"]):
+            r = subprocess.run([sys.executable, str(SCRIPT), "prepare", "--root", str(self.root), "--date", DAY, *args],
+                               capture_output=True, text=True)
+            self.assertEqual(r.returncode, 2, args)
 
     def test_cli_rejects_root_inside_worktree(self):
         r = subprocess.run([sys.executable, str(SCRIPT), "check", "--root", str(ROOT), "--date", DAY],
