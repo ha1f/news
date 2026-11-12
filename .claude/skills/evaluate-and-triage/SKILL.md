@@ -33,7 +33,7 @@ description: "デプロイ済みのニュースサイトをサービスユーザ
     - 回復させた場合は、遅延した時間と回復手順を status issue の終了レコードに残す（止まった原因の調査は別途 ops issue にする）
   - `"idle"` → `pages/` の PR がまだ無い。publish が PR 作成前の段（キュレーションの subagent を並列で回している最中）でもここに落ちるので、**走っていないと決めつけない**。上と同じ手順でセッションの生死を確かめ、停止していれば緊急の ops issue を起票して評価はスキップ、走行中なら記録だけして終了する
 - `pages_build.conclusion` が failure → ログを確認して build job と deploy job のどちらが失敗したか切り分ける。build job が失敗していればコードが壊れているので緊急の ops issue を起票する。deploy job のみの失敗（503 等の一過性エラー）は failed jobs の再実行を試み、再実行も失敗したら ops issue を起票する
-- `health.incomplete` / `health.failed` / `health.missing` が非空 → セッション死亡・失敗・無記録（trigger 停止の疑い）。`git log --since=24hours origin/main -- .claude/` で直近24時間に `.claude/` を変更したマージが有るか確認し、有れば「その変更を revert する」緊急 issue、無ければ「失敗原因を調査する」issue を起票する（一過性の失敗で良い変更を revert しない）。`health.no_records` が true（導入直後）なら起票せず記録だけして進む
+- `health.incomplete` / `health.failed` / `health.missing` が非空 → セッション死亡・失敗・無記録（trigger 停止の疑い）。`git log --since=24hours origin/main -- .claude/` で直近24時間に `.claude/` を変更したマージが有るか確認し、有れば「その変更を revert する」緊急 issue、無ければ「失敗原因を調査する」issue を起票する（一過性の失敗で良い変更を revert しない）。変更が有っても、失敗したステージの end の summary が変更と無関係な原因（実行環境の権限確認による拒否など）を名指ししていれば revert でなく調査の issue にする。どちらの issue も、前の run が同じ失敗を記録だけで済ませていても起票する（同根の open issue が有れば証拠の追記に代える。実測 2026-10-25〜26: review のマージが分類器に2日続けて拒否されたが、初日の翌朝の run は revert 対象が無いとして記録だけで抜け、起票は2日目の #605 まで遅れた）。`health.no_records` が true（導入直後）なら起票せず記録だけして進む
 - main に有るがサイト未反映（ビルドは success）は伝搬遅延。issue 化せず、反映済みの最新記事を評価する
 
 ## Step 1: サービスユーザとして評価
