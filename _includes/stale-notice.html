@@ -1,0 +1,34 @@
+{%- comment -%}最新の配信が今日 (JST) の分でないとき、一覧の上に「どの日の分が届いていないか」を出す (#652)。
+配信が止まった日、トップの先頭には最後に配信できた日がそのまま残り、読者は日付を見比べて
+「見落としか、サイトが止まったか」を自分で判断するしかなかった。
+今日の日付はビルド時には分からないので、閲覧時に JS で一覧の先頭の data-date と比べる。
+JS が動かない環境では hidden のまま何も出ない (従来どおり)。
+include.list は data-date を持つ li を含む要素の CSS セレクタ。先頭の li[data-date] を最新とみなす
+(トップの .post-list もプロファイルの #archive-months も新しい順に描いている){%- endcomment -%}
+<p class="stale-notice" hidden></p>
+<script>
+(function() {
+  // 一覧より手前に置くので、一覧が読み込まれてから比べる (currentScript は後からは取れないので先に掴む)
+  var notice = document.currentScript.previousElementSibling;
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', show);
+  else show();
+  function show() {
+  var first = document.querySelector('{{ include.list }} li[data-date]');
+  if (!first) return;
+  var latest = first.getAttribute('data-date');
+  var today = new Date().toLocaleDateString('en-CA', {timeZone: 'Asia/Tokyo'});
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(latest) || latest >= today) return;
+  // 日付だけを UTC で扱い、端末のタイムゾーンで日がずれないようにする
+  function parse(s) { var p = s.split('-'); return new Date(Date.UTC(+p[0], p[1] - 1, +p[2])); }
+  function label(d) { return (d.getUTCMonth() + 1) + '月' + d.getUTCDate() + '日'; }
+  var latestDate = parse(latest);
+  var todayDate = parse(today);
+  var missingFrom = new Date(latestDate.getTime() + 86400000);
+  var range = missingFrom.getTime() === todayDate.getTime()
+    ? '今日（' + label(todayDate) + '）'
+    : label(missingFrom) + '〜今日（' + label(todayDate) + '）';
+  notice.textContent = range + 'の分はまだ配信されていません。最新は' + label(latestDate) + 'の分です。';
+  notice.hidden = false;
+  }
+})();
+</script>
