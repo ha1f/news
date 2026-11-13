@@ -35,6 +35,17 @@ TZ=Asia/Tokyo date +%F
 
 以降、このリストの各要素を「対象プロファイル」と呼ぶ。`null` はデフォルトプロファイルを表す。
 
+過去の日付の `pages/` PR がマージされずに open のまま残っていれば（`hold` 付きも含む）、その `_posts/` を作業ツリーに未追跡のまま置いてからステップ2に進む。既出の判定（curate-news のサマリー・ステップ4の `check_repeat_urls.py` / `check_topic_repeats.py`）は作業ツリーの `_posts/` しか見ないので、置かないと人のマージ待ちの日に載せた記事を翌日また載せる（実測 2026-11-13: #647・#649 が未マージのまま、main だけを見た選定に既出 URL 5件と同じ出来事4項目が混ざった）。置いたファイルはステップ5の `git add` の前に消す（`gh` が無ければ PR の一覧は MCP の `list_pull_requests` で取る）:
+
+```bash
+git fetch origin main
+for b in $(gh api "repos/{owner}/{repo}/pulls?state=open&per_page=100" --jq '.[].head.ref | select(startswith("pages/"))'); do
+  git fetch -q origin "$b"
+  for f in $(git diff --name-only --diff-filter=A origin/main...FETCH_HEAD -- _posts/ | grep -v "^_posts/{YYYY-MM-DD}-"); do git show "FETCH_HEAD:$f" > "$f"; done
+done
+git status --short _posts/   # 置いたファイルを控える
+```
+
 ### 2. `/curate-news` の実行
 
 キュレーションはコンテキストを大きく消費するので、オーケストレータ自身は実行せず、対象プロファイル1件につき fresh context の subagent を1つ、並列に起動する（1件のみの場合も同様）。指示は次のテンプレートの `{name}` と `{YYYY-MM-DD}` を**実値に置換してから**渡す。デフォルトプロファイルには1文目を「`curate-news` スキルを Skill ツールで引数なしで実行する。」に差し替える:
@@ -130,6 +141,8 @@ python3 .claude/scripts/check_tool_artifacts.py _posts/{YYYY-MM-DD}-*.md
 続けて、デフォルトプロファイルの各項目を**予備知識のない読者として上から読み、「誰が・何を」に口で答える**（#371）。他プロファイルの記事から分かったことは使わず、その面の見出しと読みどころだけで答える。答えられない項目は、curate-news の「各記事の見出し」「読みどころ」節に従って主語か固有名詞の説明を補う（字数は増やさず、詳細を削って入れ替える）。
 
 ### 5. コミットと PR 作成
+
+ステップ1で未マージの PR から置いた `_posts/` を先に消し、`git status --short _posts/` に当日の投稿だけが残ったことを確かめてから:
 
 ```bash
 git add _posts/
