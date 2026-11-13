@@ -52,7 +52,10 @@ function label(y, m, d) {
     const probe = await browser.newPage();
     await probe.goto(url);
     const listSel = p === '' ? '.post-list' : '#archive-months';
-    const latest = await probe.$eval(`${listSel} li[data-date]`, li => li.getAttribute('data-date')).catch(() => null);
+    const dates = await probe.$$eval(`${listSel} li[data-date]`, lis => lis.map(li => li.getAttribute('data-date')));
+    const latest = dates[0] || null;
+    // 表示側は「先頭が最新」を前提にしている。並び順が変わったら前提ごと崩れるので確かめる
+    if (latest && dates.some(x => x > latest)) failures.push(`${p || 'top'}: 一覧の先頭 ${latest} が最新でない`);
     await probe.close();
     if (!latest) { failures.push(`${p || 'top'}: 一覧の data-date が無い`); continue; }
     const [y, m, d] = latest.split('-').map(Number);
@@ -62,16 +65,17 @@ function label(y, m, d) {
       { name: 'two-days', offset: 2, expect: `${label(y, m, d + 1)}〜今日（${label(y, m, d + 2)}）の分はまだ配信されていません。最新は${label(y, m, d)}の分です。` },
     ];
     for (const c of cases) {
-      for (const scheme of ['light', 'dark']) {
-        const context = await browser.newContext({ colorScheme: scheme, viewport: { width: 375, height: 812 } });
+      // 端末は JST 以外 (ロサンゼルス) に置き、JST の日付の境目のすぐ内側の 00:30 と 23:30 で見る。
+      // JST 00:30 は UTC でも LA でも前日なので、JST 以外の日付で数える誤りを落とせる
+      for (const [scheme, jstHour] of [['light', 0], ['dark', 23]]) {
+        const context = await browser.newContext({ colorScheme: scheme, viewport: { width: 375, height: 812 }, timezoneId: 'America/Los_Angeles' });
         const page = await context.newPage();
-        // JST の 12:00 (UTC 03:00) に固定。日付の境界より十分内側に置く
-        await page.clock.setFixedTime(new Date(Date.UTC(y, m - 1, d + c.offset, 3, 0, 0)));
+        await page.clock.setFixedTime(new Date(Date.UTC(y, m - 1, d + c.offset, jstHour - 9, 30, 0)));
         await page.goto(url);
         const notice = page.locator('.stale-notice');
         const visible = await notice.isVisible();
         const text = visible ? (await notice.textContent()).trim() : null;
-        const where = `${p || 'top'} ${c.name} ${scheme}`;
+        const where = `${p || 'top'} ${c.name} ${scheme} JST${jstHour}:30`;
         if (c.expect === null && visible) failures.push(`${where}: 表示されるべきでないのに出た: ${text}`);
         if (c.expect !== null && text !== c.expect) failures.push(`${where}: 期待「${c.expect}」 実際「${text}」`);
         if (shotDir && (scheme === 'light' || p === '')) {
@@ -89,5 +93,5 @@ function label(y, m, d) {
     for (const f of failures) console.log('  ' + f);
     process.exit(1);
   }
-  console.log(`OK 検査 ${checked} 件 (${pages.length} ページ × 3 日付 × light/dark)`);
+  console.log(`OK 検査 ${checked} 件 (${pages.length} ページ × 3 日付 × light・JST 00:30 / dark・JST 23:30、端末は LA)`);
 })();

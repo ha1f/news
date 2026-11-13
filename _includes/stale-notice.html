@@ -13,22 +13,28 @@ include.list は data-date を持つ li を含む要素の CSS セレクタ。�
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', show);
   else show();
   function show() {
-  var first = document.querySelector('{{ include.list }} li[data-date]');
-  if (!first) return;
-  var latest = first.getAttribute('data-date');
-  var today = new Date().toLocaleDateString('en-CA', {timeZone: 'Asia/Tokyo'});
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(latest) || latest >= today) return;
-  // 日付だけを UTC で扱い、端末のタイムゾーンで日がずれないようにする
-  function parse(s) { var p = s.split('-'); return new Date(Date.UTC(+p[0], p[1] - 1, +p[2])); }
-  function label(d) { return (d.getUTCMonth() + 1) + '月' + d.getUTCDate() + '日'; }
-  var latestDate = parse(latest);
-  var todayDate = parse(today);
-  var missingFrom = new Date(latestDate.getTime() + 86400000);
-  var range = missingFrom.getTime() === todayDate.getTime()
-    ? '今日（' + label(todayDate) + '）'
-    : label(missingFrom) + '〜今日（' + label(todayDate) + '）';
-  notice.textContent = range + 'の分はまだ配信されていません。最新は' + label(latestDate) + 'の分です。';
-  notice.hidden = false;
+    var first = document.querySelector('{{ include.list }} li[data-date]');
+    if (!first) return;
+    var latest = first.getAttribute('data-date');
+    var today = new Date().toLocaleDateString('en-CA', {timeZone: 'Asia/Tokyo'});
+    // 書式が想定外 (ICU の変更で M/D/YYYY になった前例がある) なら何も出さない
+    var ymd = /^\d{4}-\d{2}-\d{2}$/;
+    if (!ymd.test(latest) || !ymd.test(today) || latest >= today) return;
+    // 日付だけを UTC で扱い、端末のタイムゾーンで日がずれないようにする
+    function parse(s) { var p = s.split('-'); return new Date(Date.UTC(+p[0], p[1] - 1, +p[2])); }
+    var latestDate = parse(latest);
+    var todayDate = parse(today);
+    // 年をまたいで止まったときは、範囲の向きが読めるよう今年でない日付に年を付ける
+    function label(d) {
+      var y = d.getUTCFullYear() !== todayDate.getUTCFullYear() ? d.getUTCFullYear() + '年' : '';
+      return y + (d.getUTCMonth() + 1) + '月' + d.getUTCDate() + '日';
+    }
+    var missingFrom = new Date(latestDate.getTime() + 86400000);
+    var range = missingFrom.getTime() === todayDate.getTime()
+      ? '今日（' + label(todayDate) + '）'
+      : label(missingFrom) + '〜今日（' + label(todayDate) + '）';
+    notice.textContent = range + 'の分はまだ配信されていません。最新は' + label(latestDate) + 'の分です。';
+    notice.hidden = false;
   }
 })();
 </script>
