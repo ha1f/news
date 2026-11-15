@@ -34,7 +34,7 @@ description: スライド・プレゼン資料・デッキを、目的と届け�
 | [references/structure.md](references/structure.md) | 中核メッセージ、ドットダッシュ、タイトル列、目的別の並び | 手順 2〜3 |
 | [references/titles.md](references/titles.md) | タイトルの決め方 | 手順 3〜4 |
 | [references/visuals.md](references/visuals.md) | 図・データ・書体・色・装飾・描画後の確認 | 手順 4〜6 |
-| [references/foundations.md](references/foundations.md) | 考え方の根拠、ぶつかったときの解き方、ルールにない状況の例 | ルールで決まらないとき |
+| [references/foundations.md](references/foundations.md) | 考え方の根拠、ぶつかったときの解き方、ルールにない状況の例 | ルールで決まらないとき、ルールを当てはめた結果が考え方に反しそうなとき |
 | [references/sources.md](references/sources.md) | 出典と根拠の種類 | 根拠を聞かれたとき |
 
 各 reference のルールには ID 付きの合格条件があり、どの考え方の症状かを付けてある。作るときはこの条件を満たすように作り、決まった時点で同じ条件を合否で判定する。数値の目安による条件（表に「目安」とあるもの）は警告として扱い、外れたら、その数値が守ろうとしている考え方を満たしているかで決めて理由を書く。
