@@ -61,7 +61,8 @@ class SupersededTest(unittest.TestCase):
              open_pr(629, draft=True, body="PR #615 の後継", updated="2026-10-05T00:00:00Z")],
             [], [613], NOW)
         self.assertEqual(result["superseded"], [])
-        self.assertEqual(numbers(result["stalled"]), [615, 629])
+        self.assertEqual(numbers(result["stalled"]), [615])
+        self.assertEqual(numbers(result["stale_drafts"]), [629])
 
     def test_plain_mention_is_not_succession(self):
         result = classify_stock(
