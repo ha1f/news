@@ -15,7 +15,7 @@ description: "最新のニュースを取得・キュレーションして表示
 
 - `--profile alice` → `profiles/alice.md` を使用
 - `--profile path/to/pref.md` → 指定パスを使用
-- 引数なし → `preferences.md`（既存動作）
+- 引数なし → `preferences.md`
 
 プロファイルが指定された場合、`--profile` オプションを受け付けるスクリプト（`recent_urls.py`・`recent_topics.py`・`preference_hash.py`）にはそのオプションを付与する。`fetch_feeds.py` は `--profile` を受け付けないため付与しない。
 
