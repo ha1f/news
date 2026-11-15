@@ -179,7 +179,7 @@
 - **原則**: データの読み取りを邪魔する装飾（グラフの背後の画像、立体化など）は入れない。一方、データと関係のある図像的な装飾は、理解を損なわずに記憶を助けることがある。
 - **手順・チェック項目**: グラフの背景に写真やテクスチャを敷かない。装飾を加える場合は、データの外側に置き、データの意味と関係するものに限る。
 - **良い例・悪い例**: Bateman, Mandryk, Gutwin ら「Useful Junk?」（CHI 2010, pp. 2573–2582）は、Nigel Holmes の装飾的なグラフと最小限のグラフを比べた。読み取りの正確さは同等で、直後の想起も同等だったが、2〜3 週間後の想起は装飾版が有意に良かった。ただし、装飾の位置と機能によって結果は変わり、背景画像は解釈を難しくした — [Bateman et al. 2010 PDF](https://vis.csail.mit.edu/classes/6.859/readings/pdfs/Bateman-UsefulJunk.pdf)
-- **出典（Tufte 側）**: Tufte（イェール大学名誉教授）『The Cognitive Style of PowerPoint』は 2003 年に Graphics Press から 27 頁の小冊子として出版され、2006 年に改訂されて『Beautiful Evidence』に収録された — [edwardtufte.com「new edition」](https://www.edwardtufte.com/notebook/new-edition-of-the-cognitive-style-of-powerpoint/)。主張の中心は、PowerPoint の認知スタイルが思考と伝達を損なうこと、PowerPoint で示す図は紙の配布資料より情報が少ないことにある — [Farkas「Toward a Better Understanding of PowerPoint」（検索抜粋）](https://faculty.washington.edu/farkas/dfpubs/Farkas-Toward%20A%20Better%20Understanding%20of%20PowerPoint.pdf)
+- **出典（Tufte 側）**: Edward Tufte『The Cognitive Style of PowerPoint』は 2003 年に Graphics Press から 27 頁の小冊子として出版され、2006 年に改訂されて『Beautiful Evidence』に収録された — [edwardtufte.com「new edition」](https://www.edwardtufte.com/notebook/new-edition-of-the-cognitive-style-of-powerpoint/)。主張の中心は、PowerPoint の認知スタイルが思考と伝達を損なうこと、PowerPoint で示す図は紙の配布資料より情報が少ないことにある — [Farkas「Toward a Better Understanding of PowerPoint」（検索抜粋）](https://faculty.washington.edu/farkas/dfpubs/Farkas-Toward%20A%20Better%20Understanding%20of%20PowerPoint.pdf)
 - **根拠の種類**: Tufte は個人の経験則と事例分析、Bateman らは実証研究
 - **適用範囲・反対意見**: Bateman ら自身、すべてのグラフをこの様式で作ることを勧めるのには慎重で、最小主義の前提の一部に疑問を投げたにとどまる — [Bateman et al. 2010](https://vis.csail.mit.edu/classes/6.859/readings/pdfs/Bateman-UsefulJunk.pdf)。後の論評には、装飾されたグラフをよく覚えていても、メッセージが伝わらなければ意味がないという懐疑もある — [検索結果の論評（Medium）](https://medium.com/@jopuga/useful-junk-the-effects-of-visual-embellishment-on-comprehension-and-memorability-of-charts-cf9b7539dae0)。
 
@@ -270,7 +270,7 @@
   - 背景に色を付けたいが色数を増やしたくない場合はグレーを使う。
   - 細部の色は 4 色に数えない。背景・文字・強調の 3 色だけでもよい。
 - **良い例・悪い例**: 悪い例は、ページごとに違う色を使うこと、赤地に青い文字のような高彩度で同じ明度の組み合わせ。
-- **出典（別の流儀）**: 森重湧太氏（『一生使える 見やすい資料のデザイン入門』の著者）は、コーポレートカラーをメインにし、2 番目の色を補色から選ぶと述べている — [PRESIDENT WOMAN（検索抜粋）](https://president.jp/articles/woman-print/23084)、[関連記事](https://president.jp/articles/woman-print/22963)
+- **出典（別の流儀）**: 資料デザインの著書がある森重湧太氏は、PRESIDENT WOMAN のインタビューで、コーポレートカラーをメインにし、2 番目の色を補色から選ぶと述べている — [PRESIDENT WOMAN（検索抜粋）](https://president.jp/articles/woman-print/23084)、[関連記事](https://president.jp/articles/woman-print/22963)
 - **根拠の種類**: 個人の経験則
 - **適用範囲・反対意見**: 色覚多様性への配慮から、色数を抑えること自体が推奨されている（P21 を参照）。
 
@@ -330,10 +330,10 @@
 - **根拠の種類**: 組織規範（自治体ガイドライン、CUDO）と個人の経験則。有病率は政府統計に基づく。
 - **適用範囲・反対意見**: 有病率は 2000 年版の白書に基づく古い値。反対意見は見つからなかった。
 
-#### P22 最小文字サイズは出典によって割れている。投影では 18pt を下限とし、24pt 以上を推奨とする根拠はない（すべて経験則）
+#### P22 最小文字サイズは出典によって 18〜36pt と割れており、どの値も経験則か組織規範
 - **原則**: 会場の最後列から読める大きさにする。ただし「何 pt 以上」という数値に実証的な根拠はなく、出典ごとに値が違う。
 - **出典ごとの数値（すべて記録）**:
-  - Guy Kawasaki（元 Apple エバンジェリスト、ベンチャーキャピタリスト）: 30pt 未満のフォントを使わない。最適なフォントサイズは聴衆の最年長者の年齢を 2 で割った値、という冗談も添えている — [Entrepreneur（Kawasaki 名義の転載）](https://www.entrepreneur.com/article/192718)
+  - Guy Kawasaki（何百件もの起業家の売り込みを聞いてきた立場で書いた） — [InformationWeek](https://www.informationweek.com/it-infrastructure/powerpoint-rules-that-could-save-our-sanity): 30pt 未満のフォントを使わない。最適なフォントサイズは聴衆の最年長者の年齢を 2 で割った値、という冗談も添えている — [Entrepreneur（Kawasaki 名義の転載）](https://www.entrepreneur.com/article/192718)
   - Alley 系のアサーション・エビデンスのチェックリスト: 見出し 28pt、本文 18〜24pt、参考文献 12〜14pt（太字にしない）、Calibri などの太めのサンセリフ — [UNM 転載チェックリスト](https://cpl.health.unm.edu/AssetListing/Using-PowerPoint-Effectively-2506/Checklist-for-Assertion-Evidence-Slides-5559)、[Northeastern 大学の講義ページ](https://course.ccs.neu.edu/cs7976f19/Materials/Slide-guidelines.html)
   - 名古屋大学の資料: 見出し 36pt 以上、本文 28pt 以上 — [名古屋大学（検索抜粋）](https://web.cshe.nagoya-u.ac.jp/asg/designpresentation/DesignPresentation.pdf)
   - WCAG の「大きい文字」の閾値は 18pt（ウェブ向けで、スライドの最小サイズを定めるものではない） — [W3C](https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html)
