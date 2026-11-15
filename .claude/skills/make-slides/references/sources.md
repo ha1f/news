@@ -43,6 +43,11 @@ references で略称で挙げた出典の一覧。スライドを作るときに
 | Few | 見せたい関係で図を選ぶ。角度（円グラフ）は読み取りにくい | [Few 2004](https://online225.psych.wisc.edu/wp-content/uploads/225-Master/225-UnitPages/Unit-12/Few_PerceptualEdge_2004.pdf) |
 | Kawasaki | ピッチは 10 枚、20 分、30pt 以上 | [CBS News](https://www.cbsnews.com/news/improve-your-powerpoint-presentations-with-guy-kawasakis-10-20-30-rule/) |
 | 前田 | タイトルは 13 字以内で、収まらなければ 13 字＋補足 40 字。社内決裁は 5〜9 枚・3 分。平仮名表現と助詞を削る | [ダイヤモンド・オンライン 2022](https://diamond.jp/articles/-/301341)、[ニュースイッチ 2020](https://newswitch.jp/p/20564) |
+| いる科 | AI のタイトルは本文を圧縮しただけで重要度を決めていない。文脈を字数制限なしで書き出し、要素に 1〜10 の重要度を付け、最上位をタイトルにする | [X 2026-11-14](https://x.com/iru_cection/status/2121705510319825086) |
+| 森重 | 表紙タイトルは一番訴えたいことに絞り 40 字以内 | [PRESIDENT Online 2017](https://president.jp/articles/-/22963) |
+| NN/g | 一覧を見る人は各項目の最初の約 2 語しか見ない。情報を運ぶ語を先頭に置く（ウェブのリンク、n=80） | [Nielsen 2009](https://www.nngroup.com/articles/first-2-words-a-signal-for-scanning/) |
+| 新聞の見出し | 一番言いたいことを前に、本文にないことを書かない、句点を付けない | 調査レポートのニュース見出しの節 |
+| 広木 | タイトルにコロン、感嘆符、疑問符を使わない | [Qiita 2026](https://qiita.com/hirokidaichi/items/243bd176b84900f4cc0d) |
 | 杉野 | 1 メッセージは相手の問いへの答え。「〜がわかる」で終えず言い切る。メッセージを先に決めて図は後から | [ダイヤモンド・オンライン 2025](https://diamond.jp/articles/-/373384) |
 | 伊藤 | 結論を先に、1 分で話す | [PRESIDENT Online 2018](https://president.jp/articles/-/25226) |
 | 中嶋 | 重要なキーワードは残し、ニュアンスは中身で説明し、短いタイトルに読点を入れない。AI が作るスライドは情報量が多すぎる | [X 2026-11-14](https://x.com/valuefp/status/2121735384728232421)、[シェアーズカフェ・オンライン](https://sharescafe.net/59893662-20221108.html) |
