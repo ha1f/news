@@ -31,7 +31,8 @@ ECDSA の seed の由来が、印なしで再掲された）。ここで疑わ�
 ビルド時にリンクになる先（名前が無ければ同じフィード、あれば名前のフィードの、このページより前で
 最も近い M/D。check_follow_up_links.py と同じ規則）の投稿を引き、同じ点数で MIN_SCORE に届く
 項目が無ければ「続報の指し先」として出す。あわせて直近 WINDOW_DAYS 日の全フィードから点数の高い
-掲載を、そのまま書ける表記で出す。前回が別フィードにしか無いのに M/D だけ書くと、リンクは実在する
+掲載を、そのまま書ける表記で出す（このフィードの掲載を先に新しい順、続けて別フィードを点数順）。
+「続報（」で始まるのに決まった形でない表記（全角スペース・区切り無し・名前の後置）もここに出す。前回が別フィードにしか無いのに M/D だけ書くと、リンクは実在する
 同じフィードのその日のページに着き、前回の記事が無い（10/17〜11/16 の53件中5件）。
 表記揺れ（「アンソロピック」と「Anthropic」）で点数が届かない正しい組も出るので、判断はモデルに残す
 （同じ期間で約20件。#659 の5件はいずれも出る）。
@@ -88,6 +89,8 @@ def items(text: str) -> list[dict]:
             "line": text.count("\n", 0, m.start()) + 1,
             "title": m.group(1),
             "note": note,
+            # note は空白を詰めるので全角スペースが半角になる。表記の形はビルドと同じく元の文字で見る
+            "raw_note": m.group(3).strip(),
             "terms": terms(f"{m.group(1)} {note}"),
         })
     return out
@@ -184,10 +187,13 @@ def follow_up_targets(post: Path, archive: Archive, names: dict[str, str] | None
               if day - timedelta(days=WINDOW_DAYS) <= d < day for it in its]
     found = []
     for it in items(post.read_text(encoding="utf-8")):
-        m = FOLLOW_UP_RE.match(it["note"])
-        if not m:
+        m = FOLLOW_UP_RE.match(it["raw_note"])
+        if not m and not it["note"].startswith(FOLLOW_UP_PREFIX):
             continue
-        if m["name"] and m["name"] not in by_name:
+        if not m:
+            # 全角スペース・区切り無し・名前の後置などはリンクにならず、どの検査にも数えられない
+            where, target_score = "表記が「続報（M/D掲載）」「続報（{フィード名} M/D掲載）」の形でない（リンクにならない）", None
+        elif m["name"] and m["name"] not in by_name:
             where, target_score = f"「{m['name']}」というフィードは無い（表示名: {'・'.join(by_name)}）", None
         else:
             t_feed = by_name[m["name"]] if m["name"] else feed
@@ -200,11 +206,16 @@ def follow_up_targets(post: Path, archive: Archive, names: dict[str, str] | None
                 if target_score >= MIN_SCORE:
                     continue
                 where = f"{label}の {t_day} に同じ出来事が見当たらない"
-        hits = sorted(((score(it, p), d, f, p) for d, f, p in window), key=lambda h: (h[0], h[1]), reverse=True)
+        # このフィードの掲載を先に（新しい順）、別フィードは点数順。続報の日付の選び方と同じ優先順
+        scored = [(score(it, p), d, f, p) for d, f, p in window]
+        hits = (sorted((h for h in scored if h[2] == feed), key=lambda h: (h[1], h[0]), reverse=True)
+                + sorted((h for h in scored if h[2] != feed), key=lambda h: (h[0], h[1]), reverse=True))
         cands = []
         for sc, d, f, p in hits:
-            if sc < MIN_SCORE or len(cands) >= MAX_PAIRS:
+            if len(cands) >= MAX_PAIRS:
                 break
+            if sc < MIN_SCORE:
+                continue
             cands.append((marker(d, f, feed, display), p, sc))
         found.append((it, where, target_score, cands))
     return found

@@ -249,6 +249,20 @@ class FollowUpTargetsTest(unittest.TestCase):
         found = self.targets(self.write("2026-10-20-news.md", self.follow_up("投資家 10/10")))
         self.assertIn("フィードは無い", found[0][1])
 
+    def test_malformed_marker_is_listed(self):
+        self.write("2026-10-10-news-entrepreneur.md", post(self.PREV))
+        for md in ("起業家　10/10", "起業家10/10", "10/10 起業家"):
+            found = self.targets(self.write("2026-10-20-news.md", self.follow_up(md)))
+            self.assertEqual(len(found), 1, md)
+            self.assertIn("形でない", found[0][1])
+
+    def test_own_feed_candidates_come_first(self):
+        # 別フィードの高得点の掲載より、このフィードの直近の掲載を先に出す
+        self.write("2026-10-12-news-entrepreneur.md", post(("Zorblax と Quuxcorp と Vintrel", "Zorblax の話。")))
+        self.write("2026-10-14-news.md", post(self.PREV))
+        found = self.targets(self.write("2026-10-20-news.md", self.follow_up("10/12")))
+        self.assertEqual([c[0] for c in found[0][3]][:2], ["続報（10/14掲載）", "続報（起業家 10/12掲載）"])
+
     def test_main_exit_code_counts_targets(self):
         self.write("2026-10-10-news-entrepreneur.md", post(self.PREV))
         path = self.write("2026-10-20-news.md", self.follow_up("10/10"))

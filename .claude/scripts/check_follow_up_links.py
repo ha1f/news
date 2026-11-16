@@ -14,6 +14,7 @@
 前回が別のフィードにしか無いときの「続報（起業家 M/D掲載）」（#659）は、上の「同じフィード」を
 名前のフィードに読み替えて同じ検査をする。表示名はメインが「メイン」、プロファイルは配信ページ
 profiles/{name}.md の title（_layouts/post.html と同じ）。知らない名前は NG。
+配信ページの title を変えると、過去の名前付きの表記はリンクでなくなり、ここで NG になる。
 
 使い方:
   python3 .claude/scripts/check_follow_up_links.py [_site]
@@ -84,6 +85,7 @@ def check(site, names=None):
         if key:
             pages[key] = path
     errors, linked, unlinked = [], 0, 0
+    bare_errors = 0  # 文字のまま残った表記のうち NG にしたもの（件数の表示から引く）
     for (page_date, feed), path in sorted(pages.items()):
         rel = path.relative_to(site)
         body = BODY_RE.search(path.read_text(encoding="utf-8"))
@@ -117,12 +119,14 @@ def check(site, names=None):
             want_feed = names.get(m["name"]) if m["name"] else feed
             if want_feed is None:
                 errors.append(f"{rel}: 続報（{label}掲載）のフィード名が配信ページの表示名に無い")
+                bare_errors += 1
                 continue
             prior = nearest_prior(page_date, int(m["m"]), int(m["d"]))
             if prior and (prior, want_feed) in pages:
                 where = "そのフィード" if m["name"] else "同じフィード"
                 errors.append(f'{rel}: 続報（{label}掲載）にリンクが無い（{where}の {prior} は実在する）')
-    return errors, linked, unlinked
+                bare_errors += 1
+    return errors, linked, unlinked - bare_errors
 
 
 def main():
@@ -130,7 +134,7 @@ def main():
     errors, linked, unlinked = check(site)
     for e in errors:
         print("NG", e)
-    print(f"リンク {linked} 件 / 指すフィードに掲載日のページが無く文字のまま {unlinked - sum('リンクが無い' in e or ('フィード名が' in e and '<a' not in e) for e in errors)} 件 / 失敗 {len(errors)} 件")
+    print(f"リンク {linked} 件 / 指すフィードに掲載日のページが無く文字のまま {unlinked} 件 / 失敗 {len(errors)} 件")
     return 1 if errors else 0
 
 

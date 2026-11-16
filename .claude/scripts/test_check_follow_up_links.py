@@ -117,6 +117,14 @@ class NamedFeedFollowUpTest(unittest.TestCase):
         page(self.site, "2026/11/15/news.html", "続報（投資家 11/14掲載）。")
         self.assertTrue(any("表示名に無い" in e for e in self.errors()))
 
+    def test_unlinked_count_excludes_only_bare_errors(self):
+        # リンク付きの表記の NG は「文字のまま」の件数から引かない
+        page(self.site, "2026/11/15/news.html",
+             link("/news/2026/11/14/news.html", "投資家 11/14") + "続報（研究者 11/14掲載）。")
+        names = dict(self.NAMES, 研究者="news-researcher")
+        errors, linked, unlinked = c.check(self.site, names)
+        self.assertEqual((len(errors), linked, unlinked), (1, 1, 1))
+
     def test_feed_names_from_real_profile_pages(self):
         names = c.feed_names()
         if len(names) == 1:
