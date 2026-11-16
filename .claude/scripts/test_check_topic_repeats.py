@@ -60,6 +60,38 @@ class RealPostsTest(unittest.TestCase):
         )
 
 
+class RealFollowUpTargetsTest(unittest.TestCase):
+    """#659 の実例: 別フィードの日付を書いた続報が出て、正しい表記が候補に入ること"""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.archive = check_topic_repeats.Archive(REPO_POSTS)
+
+    def misses(self, name):
+        if not (REPO_POSTS / name).exists():
+            self.skipTest(f"{name} が無い")
+        found = check_topic_repeats.follow_up_targets(REPO_POSTS / name, self.archive)
+        return {it["title"]: [c[0] for c in cands] for it, _, _, cands in found}
+
+    def test_2026_11_15_main_nvidia(self):
+        misses = self.misses("2026-11-15-news.md")
+        self.assertIn("続報（起業家 11/13掲載）", misses["NVIDIA にフアン氏の復帰を求める署名、11.5万人超"])
+
+    def test_2026_11_12_entrepreneur_nvidia(self):
+        misses = self.misses("2026-11-12-news-entrepreneur.md")
+        self.assertIn("続報（メイン 11/10掲載）", misses["NVIDIA 取締役会、ファン CEO の解任を準備と報道"])
+
+    def test_2026_11_16_engineer_m365(self):
+        misses = self.misses("2026-11-16-news-engineer.md")
+        self.assertIn("続報（メイン 11/13掲載）",
+                      misses["Microsoft 365 障害でアラートが届かず、ホテルのプールで塩素ガス被害"])
+
+    def test_correct_follow_up_is_not_listed(self):
+        # 11/10 メインの NVIDIA 株安は同じフィードの 11/9 を正しく指している
+        self.assertNotIn("NVIDIA 株4%安、ファン CEO のスパイ疑惑を議会が超党派で追及",
+                         self.misses("2026-11-10-news.md"))
+
+
 class SyntheticTest(unittest.TestCase):
     def setUp(self):
         self._tmp = tempfile.TemporaryDirectory()
@@ -165,6 +197,65 @@ class SyntheticTest(unittest.TestCase):
         self.assertEqual(code, 2)
         code, _ = self.run_main(self.write("notes.md", post(self.AGAIN)))
         self.assertEqual(code, 2)
+
+
+
+class FollowUpTargetsTest(unittest.TestCase):
+    """続報の指し先に前回の記事があるか (#659)"""
+
+    setUp = SyntheticTest.setUp
+    tearDown = SyntheticTest.tearDown
+    write = SyntheticTest.write
+    run_main = SyntheticTest.run_main
+    PREV, AGAIN = SyntheticTest.PREV, SyntheticTest.AGAIN
+
+    NAMES = {"メイン": "news", "起業家": "news-entrepreneur"}
+
+    def targets(self, path):
+        archive = check_topic_repeats.Archive(self.posts)
+        return check_topic_repeats.follow_up_targets(path, archive, self.NAMES)
+
+    def follow_up(self, md):
+        return post((self.AGAIN[0], f"続報（{md}掲載）。開発の終了が決まった。"))
+
+    def test_same_feed_target_with_event_passes(self):
+        self.write("2026-10-10-news.md", post(self.PREV))
+        self.assertEqual(self.targets(self.write("2026-10-20-news.md", self.follow_up("10/10"))), [])
+
+    def test_date_of_other_feed_is_listed_with_named_candidate(self):
+        self.write("2026-10-10-news.md", post(("無関係な Plimbo の話", "Plimbo が出た。")))
+        self.write("2026-10-10-news-entrepreneur.md", post(self.PREV))
+        found = self.targets(self.write("2026-10-20-news.md", self.follow_up("10/10")))
+        self.assertEqual(len(found), 1)
+        it, where, score, cands = found[0]
+        self.assertIn("メインの 2026-10-10 に同じ出来事が見当たらない", where)
+        self.assertEqual(cands[0][0], "続報（起業家 10/10掲載）")
+
+    def test_named_target_with_event_passes(self):
+        self.write("2026-10-10-news-entrepreneur.md", post(self.PREV))
+        self.assertEqual(self.targets(self.write("2026-10-20-news.md", self.follow_up("起業家 10/10"))), [])
+
+    def test_named_target_without_event_is_listed(self):
+        self.write("2026-10-10-news.md", post(self.PREV))
+        self.write("2026-10-10-news-entrepreneur.md", post(("無関係な Plimbo の話", "Plimbo が出た。")))
+        found = self.targets(self.write("2026-10-20-news-entrepreneur.md", self.follow_up("起業家 10/10")))
+        self.assertEqual(found[0][3][0][0], "続報（メイン 10/10掲載）")
+
+    def test_missing_target_and_unknown_name_are_listed(self):
+        self.write("2026-10-10-news.md", post(self.PREV))
+        found = self.targets(self.write("2026-10-20-news.md", self.follow_up("10/9")))
+        self.assertIn("投稿が無い", found[0][1])
+        self.assertEqual(found[0][3][0][0], "続報（10/10掲載）")
+        found = self.targets(self.write("2026-10-20-news.md", self.follow_up("投資家 10/10")))
+        self.assertIn("フィードは無い", found[0][1])
+
+    def test_main_exit_code_counts_targets(self):
+        self.write("2026-10-10-news-entrepreneur.md", post(self.PREV))
+        path = self.write("2026-10-20-news.md", self.follow_up("10/10"))
+        code, out = self.run_main(path)
+        self.assertEqual(code, 1)
+        self.assertIn("続報の指し先 2026-10-20-news.md:8", out)
+        self.assertIn("続報の指し先 1 項目", out)
 
 
 if __name__ == "__main__":

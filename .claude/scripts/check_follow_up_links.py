@@ -11,6 +11,10 @@
   3. リンクの付いていない表記について、同じフィードにその日のページがあるなら NG（付け損ね）。
      無ければ文字のまま残るのが正しいので件数だけ報告する
 
+前回が別のフィードにしか無いときの「続報（起業家 M/D掲載）」（#659）は、上の「同じフィード」を
+名前のフィードに読み替えて同じ検査をする。表示名はメインが「メイン」、プロファイルは配信ページ
+profiles/{name}.md の title（_layouts/post.html と同じ）。知らない名前は NG。
+
 使い方:
   python3 .claude/scripts/check_follow_up_links.py [_site]
 """
@@ -20,9 +24,15 @@ import sys
 from pathlib import Path
 
 PAGE_RE = re.compile(r"(\d{4})/(\d{2})/(\d{2})/(news(?:-[\w-]+)?)\.html$")
-LINKED_RE = re.compile(r'続報（<a class="follow-up-link" href="(?P<href>[^"]+)">(?P<m>\d{1,2})/(?P<d>\d{1,2})掲載</a>）')
+# 表示名は空白・括弧を含まない（「ソフトウェアエンジニア」「メイン」など）
+FEED_LABEL = r'(?:(?P<name>[^\s<>（）"]+) )?'
+LINKED_RE = re.compile(r'続報（<a class="follow-up-link" href="(?P<href>[^"]+)">' + FEED_LABEL + r'(?P<m>\d{1,2})/(?P<d>\d{1,2})掲載</a>）')
 # 見出しのリンク文字列の先頭（`">続報（`）にある表記は読みどころではないので数えない
-BARE_RE = re.compile(r'(?<!">)続報（(?P<m>\d{1,2})/(?P<d>\d{1,2})掲載）')
+BARE_RE = re.compile(r'(?<!">)続報（' + FEED_LABEL + r'(?P<m>\d{1,2})/(?P<d>\d{1,2})掲載）')
+MAIN_FEED_NAME = "メイン"
+FEED_PAGES_DIR = Path(__file__).resolve().parents[2] / "profiles"
+TITLE_RE = re.compile(r'^title:\s*"?(.+?)"?\s*$', re.M)
+PROFILE_RE = re.compile(r'^profile:\s*"?([\w-]+)"?\s*$', re.M)
 # 検査するのは本文だけ。meta description や JSON-LD に入った抜粋はリンクにできない場所なので外す
 BODY_RE = re.compile(r'itemprop="articleBody">(.*?)</article>', re.S)
 
@@ -36,6 +46,19 @@ def page_key(path):
     if not m:
         return None
     return datetime.date(int(m[1]), int(m[2]), int(m[3])), m[4]
+
+
+def feed_names(pages_dir=FEED_PAGES_DIR):
+    """表示名 → フィード名（`news` / `news-{profile}`）。配信ページの front matter から作る"""
+    names = {MAIN_FEED_NAME: "news"}
+    for path in sorted(Path(pages_dir).glob("*.md")):
+        text = path.read_text(encoding="utf-8")
+        if "layout: profile" not in text:
+            continue
+        title, profile = TITLE_RE.search(text), PROFILE_RE.search(text)
+        if title and profile:
+            names[title[1]] = f"news-{profile[1]}"
+    return names
 
 
 def nearest_prior(page_date, month, day):
@@ -52,8 +75,9 @@ def nearest_prior(page_date, month, day):
     return cand if page_date - cand <= MAX_AGE else None
 
 
-def check(site):
+def check(site, names=None):
     site = Path(site)
+    names = feed_names() if names is None else names
     pages = {}
     for path in site.glob("[0-9][0-9][0-9][0-9]/*/*/news*.html"):
         key = page_key(path.relative_to(site))
@@ -67,13 +91,17 @@ def check(site):
         for m in LINKED_RE.finditer(text):
             linked += 1
             target = page_key(m["href"])
-            label = f'{m["m"]}/{m["d"]}'
+            label = f'{m["name"] + " " if m["name"] else ""}{m["m"]}/{m["d"]}'
+            want_feed = names.get(m["name"]) if m["name"] else feed
+            if want_feed is None:
+                errors.append(f"{rel}: 続報（{label}掲載）のフィード名が配信ページの表示名に無い")
+                continue
             if target is None:
                 errors.append(f"{rel}: 続報（{label}掲載）のリンク先が日次ページでない: {m['href']}")
                 continue
             t_date, t_feed = target
-            if t_feed != feed:
-                errors.append(f"{rel}: 続報（{label}掲載）が別フィードを指す: {m['href']}")
+            if t_feed != want_feed:
+                errors.append(f"{rel}: 続報（{label}掲載）が{'書かれたフィードと' if m['name'] else ''}別フィードを指す: {m['href']}")
             if (t_date.month, t_date.day) != (int(m["m"]), int(m["d"])):
                 errors.append(f"{rel}: 続報（{label}掲載）が別の日を指す: {m['href']}")
             if t_date != nearest_prior(page_date, int(m["m"]), int(m["d"])):
@@ -85,9 +113,15 @@ def check(site):
                 errors.append(f"{rel}: 続報（{label}掲載）のリンク先が存在しない: {m['href']}")
         for m in BARE_RE.finditer(text):
             unlinked += 1
+            label = f'{m["name"] + " " if m["name"] else ""}{m["m"]}/{m["d"]}'
+            want_feed = names.get(m["name"]) if m["name"] else feed
+            if want_feed is None:
+                errors.append(f"{rel}: 続報（{label}掲載）のフィード名が配信ページの表示名に無い")
+                continue
             prior = nearest_prior(page_date, int(m["m"]), int(m["d"]))
-            if prior and (prior, feed) in pages:
-                errors.append(f'{rel}: 続報（{m["m"]}/{m["d"]}掲載）にリンクが無い（同じフィードの {prior} は実在する）')
+            if prior and (prior, want_feed) in pages:
+                where = "そのフィード" if m["name"] else "同じフィード"
+                errors.append(f'{rel}: 続報（{label}掲載）にリンクが無い（{where}の {prior} は実在する）')
     return errors, linked, unlinked
 
 
@@ -96,7 +130,7 @@ def main():
     errors, linked, unlinked = check(site)
     for e in errors:
         print("NG", e)
-    print(f"リンク {linked} 件 / 同じフィードに掲載日のページが無く文字のまま {unlinked - sum('リンクが無い' in e for e in errors)} 件 / 失敗 {len(errors)} 件")
+    print(f"リンク {linked} 件 / 指すフィードに掲載日のページが無く文字のまま {unlinked - sum('リンクが無い' in e or ('フィード名が' in e and '<a' not in e) for e in errors)} 件 / 失敗 {len(errors)} 件")
     return 1 if errors else 0
 
 

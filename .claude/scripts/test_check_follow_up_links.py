@@ -80,5 +80,52 @@ class CheckFollowUpLinksTest(unittest.TestCase):
         self.assertEqual(self.errors(), [])
 
 
+class NamedFeedFollowUpTest(unittest.TestCase):
+    """前回が別フィードにしか無いときの「続報（起業家 M/D掲載）」(#659)"""
+
+    NAMES = {"メイン": "news", "起業家": "news-entrepreneur", "ソフトウェアエンジニア": "news-engineer"}
+
+    def setUp(self):
+        self.site = tempfile.mkdtemp()
+        page(self.site, "2026/11/14/news.html", "")
+        page(self.site, "2026/11/14/news-entrepreneur.html", "")
+
+    def errors(self):
+        return c.check(self.site, self.NAMES)[0]
+
+    def test_named_link_to_that_feed_passes(self):
+        page(self.site, "2026/11/15/news.html", link("/news/2026/11/14/news-entrepreneur.html", "起業家 11/14"))
+        self.assertEqual(self.errors(), [])
+
+    def test_main_named_from_profile_passes(self):
+        page(self.site, "2026/11/15/news-engineer.html", link("/news/2026/11/14/news.html", "メイン 11/14"))
+        self.assertEqual(self.errors(), [])
+
+    def test_named_link_to_other_feed_fails(self):
+        page(self.site, "2026/11/15/news.html", link("/news/2026/11/14/news.html", "起業家 11/14"))
+        self.assertTrue(any("別フィード" in e for e in self.errors()))
+
+    def test_bare_named_marker_with_existing_page_fails(self):
+        page(self.site, "2026/11/15/news.html", "続報（起業家 11/14掲載）。")
+        self.assertTrue(any("リンクが無い" in e for e in self.errors()))
+
+    def test_bare_named_marker_without_page_passes(self):
+        page(self.site, "2026/11/15/news.html", "続報（ソフトウェアエンジニア 11/14掲載）。")
+        self.assertEqual(c.check(self.site, self.NAMES), ([], 0, 1))
+
+    def test_unknown_feed_name_fails(self):
+        page(self.site, "2026/11/15/news.html", "続報（投資家 11/14掲載）。")
+        self.assertTrue(any("表示名に無い" in e for e in self.errors()))
+
+    def test_feed_names_from_real_profile_pages(self):
+        names = c.feed_names()
+        if len(names) == 1:
+            self.skipTest("profiles/ が無い")
+        self.assertEqual(names["メイン"], "news")
+        self.assertEqual(names["起業家"], "news-entrepreneur")
+        for name in names:
+            self.assertRegex(name, r'^[^\s<>（）"]+$')
+
+
 if __name__ == "__main__":
     unittest.main()
