@@ -385,9 +385,12 @@ $ui-border-color: #8d8d8d; // 背景 #fdfdfd と 3.26:1
   word-break: keep-all;
 }
 
-// 「続報（起業家 11/14掲載）」のフィード名と日付の間で折れないようにする (#659)
-.follow-up-link {
-  white-space: nowrap;
+// 「続報（起業家 11/14掲載）」の中で折れるのを、フィード名と日付の間の空白だけにする (#659)。
+// 括弧・名前・日付の途中では折れない。以前の white-space: nowrap は空白でも折れず、
+// 320px 幅の「続報（ソフトウェアエンジニア 11/13掲載）」がページを横スクロールさせた。
+// inline-block で丸ごと次の行へ送る案は、後ろの「。」だけが次の行に残った。
+.follow-up {
+  word-break: keep-all;
 }
 
 .profile-exclusive-note {
