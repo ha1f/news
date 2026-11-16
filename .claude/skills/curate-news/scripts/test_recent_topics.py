@@ -41,8 +41,12 @@ class RecentTopicsWindowTest(unittest.TestCase):
             os.mkdir(d)
         with open(os.path.join(self.profiles, "researcher.md"), "w", encoding="utf-8") as f:
             f.write("researcher\n")
+        self.feed_pages = os.path.join(tmp.name, "feed_pages")
+        os.mkdir(self.feed_pages)
+        with open(os.path.join(self.feed_pages, "researcher.md"), "w", encoding="utf-8") as f:
+            f.write('---\nlayout: profile\ntitle: "研究者"\nprofile: researcher\n---\n')
         for attr, value in (("_POSTS_DIR", self.posts), ("_OUTPUT_DIR", self.output),
-                            ("_PROFILES_DIR", self.profiles)):
+                            ("_PROFILES_DIR", self.profiles), ("_FEED_PAGES_DIR", self.feed_pages)):
             patcher = mock.patch.object(mod, attr, value)
             patcher.start()
             self.addCleanup(patcher.stop)
@@ -103,6 +107,33 @@ class RecentTopicsWindowTest(unittest.TestCase):
         self.assertIn("## 2026-10-07（このフィードのみ）\n", out)
         self.assertIn("## 2026-10-01（このフィードのみ）\n", out)
         self.assertLess(out.index("## 2026-10-10"), out.index("## 2026-10-07"))
+
+
+    def test_other_feeds_are_labelled_with_display_name(self):
+        """全フィードの窓では、別フィードの見出しに載ったフィードを付ける (#659)"""
+        out = _run("--hash", "abcd1234", "--today", "2026-10-11")
+        self.assertIn("- 昨日のメイン (Src)", out)
+        self.assertIn("- ［研究者］2日前の研究者 (Src)", out)
+        # 配信ページが無いフィードは profile 名のまま
+        self.assertIn("- ［designer］3日前のデザイナー (Src)", out)
+        self.assertIn("- 6日前の自分の出力 (Src)", out)
+
+    def test_main_is_labelled_from_profile(self):
+        out = _run("--profile", "researcher", "--hash", "abcd1234", "--today", "2026-10-11")
+        self.assertIn("- ［メイン］昨日のメイン (Src)", out)
+        self.assertIn("- 2日前の研究者 (Src)", out)
+        self.assertIn("- 9日前の研究者 (Src)", out)
+
+    def test_same_headline_in_several_feeds(self):
+        _post(self.posts, "2026-10-10-news-researcher.md", "共通の見出し")
+        _post(self.posts, "2026-10-10-news-designer.md", "共通の見出し")
+        out = _run("--hash", "abcd1234", "--today", "2026-10-11")
+        self.assertIn("- ［designer・研究者］共通の見出し (Src)", out)
+        # 自分のフィードにもあれば印を付けない（自分のフィードの日付として書ける）
+        _post(self.posts, "2026-10-10-news.md", "昨日のメイン", "共通の見出し")
+        out = _run("--hash", "abcd1234", "--today", "2026-10-11")
+        self.assertIn("- 共通の見出し (Src)", out)
+        self.assertNotIn("］共通の見出し", out)
 
 
 class RecentTopicsRealPostsTest(unittest.TestCase):

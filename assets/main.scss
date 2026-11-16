@@ -385,6 +385,11 @@ $ui-border-color: #8d8d8d; // 背景 #fdfdfd と 3.26:1
   word-break: keep-all;
 }
 
+// 「続報（起業家 11/14掲載）」のフィード名と日付の間で折れないようにする (#659)
+.follow-up-link {
+  white-space: nowrap;
+}
+
 .profile-exclusive-note {
   font-size: $base-font-size * 0.875;
   color: $grey-color;
