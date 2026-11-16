@@ -133,7 +133,7 @@ layout: default
       {%- assign follow_up_md = post.date | date: '%-m/%-d' -%}
       {%- assign follow_up_marker = '続報（' | append: follow_up_md | append: '掲載）' -%}
       {%- if post_body contains follow_up_marker -%}
-        {%- capture follow_up_linked -%}続報（<a class="follow-up-link" href="{{ post.url | relative_url }}">{{ follow_up_md }}掲載</a>）{%- endcapture -%}
+        {%- capture follow_up_linked -%}<span class="follow-up">続報（<a class="follow-up-link" href="{{ post.url | relative_url }}">{{ follow_up_md }}掲載</a>）</span>{%- endcapture -%}
         {%- assign post_body = post_body | replace: follow_up_marker, follow_up_linked -%}
       {%- endif -%}
     {%- endfor -%}
@@ -171,7 +171,7 @@ layout: default
         {%- assign follow_up_md = post.date | date: '%-m/%-d' -%}
         {%- assign follow_up_marker = feed_prefix | append: follow_up_md | append: '掲載）' -%}
         {%- if post_body contains follow_up_marker -%}
-          {%- capture follow_up_linked -%}続報（<a class="follow-up-link" href="{{ post.url | relative_url }}">{{ feed_title }} {{ follow_up_md }}掲載</a>）{%- endcapture -%}
+          {%- capture follow_up_linked -%}<span class="follow-up">続報（<a class="follow-up-link" href="{{ post.url | relative_url }}">{{ feed_title }} {{ follow_up_md }}掲載</a>）</span>{%- endcapture -%}
           {%- assign post_body = post_body | replace: follow_up_marker, follow_up_linked -%}
         {%- endif -%}
       {%- endfor -%}

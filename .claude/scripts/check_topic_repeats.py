@@ -166,7 +166,8 @@ def follow_up_targets(post: Path, archive: Archive, names: dict[str, str] | None
     """続報の指し先に同じ出来事が見当たらない項目を (項目, 指し先の説明, 指し先の点数, 候補) で返す。
 
     names は表示名 → `news` / `news-{profile}`（check_follow_up_links.feed_names と同じ形）。
-    候補は [(表記, 前回の項目, 点数), ...] を点数の高い順に MAX_PAIRS 件まで。
+    候補は [(表記, 前回の項目, 点数), ...] を MAX_PAIRS 件まで。このフィードの掲載を新しい順に先に、
+    続けて別フィードの掲載を点数の高い順に並べる。
     """
     parsed = parse_name(post.name)
     if parsed is None:
