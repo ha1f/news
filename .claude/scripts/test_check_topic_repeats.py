@@ -74,8 +74,11 @@ class RealFollowUpTargetsTest(unittest.TestCase):
         return {it["title"]: [c[0] for c in cands] for it, _, _, cands in found}
 
     def test_2026_11_15_main_nvidia(self):
+        # 表記を揃える前（#664 より前）は「フアン」と「ファン CEO」が重ならず、同じフィードの 11/13
+        # （「NVIDIA、ファン CEO を事実上解任」）が候補に出ないので、起業家の 11/13 を期待していた。
+        # 揃えた後は同じフィードの掲載が先に出る（curate-news 4a の「名前の無い表記の直近」）
         misses = self.misses("2026-11-15-news.md")
-        self.assertIn("続報（起業家 11/13掲載）", misses["NVIDIA にフアン氏の復帰を求める署名、11.5万人超"])
+        self.assertEqual(misses["NVIDIA にフアン氏の復帰を求める署名、11.5万人超"][0], "続報（11/13掲載）")
 
     def test_2026_11_12_entrepreneur_nvidia(self):
         misses = self.misses("2026-11-12-news-entrepreneur.md")
@@ -131,6 +134,15 @@ class SyntheticTest(unittest.TestCase):
         prev_name, prev, score, shared = hits[0]
         self.assertEqual(prev_name, "2026-10-10-news.md")
         self.assertEqual(set(shared), {"zorblax", "quuxcorp"})
+
+    def test_name_variants_are_unified_before_matching(self):
+        # 「ファン氏」と「フアン氏」は names.md の表で同じ語になる（#664）。揃えないと共有語は
+        # Zorblax の1語だけで閾値に届かない
+        self.write("2026-10-10-news.md", post(("Zorblax のファン氏が辞任", "取引先にも動揺が広がる。")))
+        today = self.write("2026-10-20-news.md", post(("Zorblax、フアン氏の復帰を求める声", "署名が集まる。")))
+        found = self.check(today)
+        self.assertEqual(len(found), 1)
+        self.assertEqual(set(found[0][1][0][3]), {"zorblax", "フアン"})
 
     def test_lists_up_to_three_candidates_by_score(self):
         # 最高点の組（10/12）に続けて、同点の組を新しい日付から出す（4組目の 10/14 は出さない）

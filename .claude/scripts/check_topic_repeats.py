@@ -24,8 +24,10 @@ ECDSA の seed の由来が、印なしで再掲された）。ここで疑わ�
 
 拾えないもの: 1語の点数は母集合の大きさで頭打ちになる（約1100項目で log(n) ≒ 7）ため、
 固有名が1語しか重ならない再掲は閾値に届かない。漢字の連なりは丸ごと1語なので粒度が
-違うと一致せず（「安全性研究者」と「安全性」）、表記揺れ（「アンソロピック」と
-「Anthropic」）も一致しない。他フィードとの照合もしない（同じ日に別フィードに載るのは仕様）。
+違うと一致せず（「安全性研究者」と「安全性」）、表記揺れも `curate-news/references/names.md` の表に
+ある分（「アンソロピック」と「Anthropic」、「ファン氏」と「フアン氏」）しか揃えない（#664）。
+揃えると、揺れ同士が珍しい語として一致していた組（2026-11-17 起業家の「アンソロピック」同士、点数 9.8）は
+「Anthropic」がよく出る語になって閾値を割る。表記が揃った後の投稿ではこの一致はもともと起きない。他フィードとの照合もしない（同じ日に別フィードに載るのは仕様）。
 
 続報の指し先（#659）: 読みどころが「続報（M/D掲載）」「続報（起業家 M/D掲載）」で始まる項目は、
 ビルド時にリンクになる先（名前が無ければ同じフィード、あれば名前のフィードの、このページより前で
@@ -34,7 +36,7 @@ ECDSA の seed の由来が、印なしで再掲された）。ここで疑わ�
 掲載を、そのまま書ける表記で出す（このフィードの掲載を先に新しい順、続けて別フィードを点数順）。
 「続報（」で始まるのに決まった形でない表記（全角スペース・区切り無し・名前の後置）もここに出す。前回が別フィードにしか無いのに M/D だけ書くと、リンクは実在する
 同じフィードのその日のページに着き、前回の記事が無い（10/17〜11/16 の53件中5件）。
-表記揺れ（「アンソロピック」と「Anthropic」）で点数が届かない正しい組も出るので、判断はモデルに残す
+表に無い表記揺れで点数が届かない正しい組も出るので、判断はモデルに残す
 （同じ期間で約20件。#659 の5件はいずれも出る）。
 
 使い方:
@@ -72,7 +74,24 @@ FOLLOW_UP_PREFIX = "続報（"
 FOLLOW_UP_RE = re.compile(r"^続報（(?:(?P<name>[^\s<>（）\"]+) )?(?P<m>\d{1,2})/(?P<d>\d{1,2})掲載）")
 
 
+def _name_rules():
+    """固有名の表記の揺れを表記に直す規則（names.md、#664）。表が読めなければ揺れは直さずに照合する"""
+    try:
+        from check_name_variants import compiled, load_table
+
+        return compiled(load_table())
+    except (ImportError, OSError):
+        return []
+
+
+NAME_RULES = _name_rules()
+
+
 def terms(text: str) -> set[str]:
+    if NAME_RULES:
+        from check_name_variants import normalize
+
+        text = normalize(text, NAME_RULES)
     found = {w.lower() for w in LATIN_RE.findall(text) if len(w) >= 2}
     found.update(KATAKANA_RE.findall(text))
     found.update(KANJI_RE.findall(text))

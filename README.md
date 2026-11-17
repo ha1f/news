@@ -191,6 +191,7 @@ GitHub Actions・workflow 内の `*_VERSION`（Playwright）・`.python-version`
 ├── profiles/          # 追加プロファイル（`--profile {name}` で選択。publish-pages は全件を生成）
 ├── scripts/           # フィード取得スクリプト
 ├── references/sources/ # ニュースソース定義
+├── references/names.md # 人物・会社名の表記（`check_name_variants.py` が publish 前に照合）
 ├── cache/             # フィード取得キャッシュ（git管理外）
 └── output/            # キュレーション結果（git管理外）
 ```
