@@ -98,6 +98,7 @@ artifact に写るのは、その branch の `_posts/` をビルドした結果�
 - 読みどころの欠落: `python3 .claude/scripts/check_article_notes.py`
 - ソース表記の不一致: `python3 .claude/scripts/check_source_hints.py`
 - title が日付のままになっていないか: `python3 .claude/scripts/check_post_titles.py`
+- 続報の日付リンク（#559・#659）: `python3 .claude/scripts/check_follow_up_links.py <_site>`。CI にも publish の手順にも未配線（workflow は保護パス）なので、`_layouts/post.html` の続報の置き換えや配信ページ `profiles/*.md` の `title` に触ったら手で回す。**`title` を変えると過去の「続報（起業家 M/D掲載）」が黙ってリンクでなくなり**、ここで初めて NG として見える
 - 過去の日付の投稿に載せた URL の再掲: `python3 .claude/scripts/check_repeat_urls.py`（#40。判定の正本は curate-news の `published_urls.py`。CI には未配線。`--all` は過去の再掲を全部数えるので 300 件超で落ちる）
   （`check_article_notes.py` / `check_source_hints.py` / `check_post_titles.py` / `check_repeat_urls.py` の4つは引数なしで当日 JST 分を検査。`_posts/{YYYY-MM-DD}-*.md` を渡せば日付を固定できる。`--all` で全投稿）
 - 同じフィードの直近10日に載せた話題の、印の無い再掲の候補: `python3 .claude/scripts/check_topic_repeats.py _posts/{YYYY-MM-DD}-*.md`（#531。**引数なしでは当日を検査せず exit 2**。exit 1 は判断の要る候補があるだけで、別の話題も混ざる。CI には未配線）
@@ -105,7 +106,7 @@ artifact に写るのは、その branch の `_posts/` をビルドした結果�
 - 記事にツール呼び出し構文（`</content>` 等）が残っていないか: `python3 .claude/scripts/check_tool_artifacts.py`（#408。CI の「Check article quality」で全投稿に当たる。#469）。**上の当日分を検査するものと違い、引数なしで全投稿を検査する**（混入は間欠的に起きるので「今日は出ていない」を収束と読まないため。`--help` は受けず `--all` だけ）。混入を見つけたら取り除いてから**もう一度走らせて0件を確認する**（同じ日の全プロファイルにまとめて出るので、1本直して終わりにならない）
 - ユニットテスト: `python3 .claude/scripts/run_unit_tests.py`（#488。`test_*.py` の在るディレクトリを見つけて全部回す。`--list` で置き場の一覧。CI は `.claude/` に差分がある PR で同じものを回す）。1 ディレクトリだけ回すなら、そのディレクトリで `python3 -m unittest discover -p 'test_*.py'`（repo ルートからの discover は 0 件になる）
 - 有料読者向けメール本文の生成（#528）: `python3 .claude/scripts/render_email_body.py <curate-news の output/*.md>` → 同じ場所に .html/.txt（`--out-dir` で変更可）。入力・出力先は resolve 後に `.claude/skills/curate-news/output/` の下にあるときだけ受け付ける（名前が `output` なだけの `_posts/output` や repo ルートの `output`、output/ の外を指す symlink は拒否。入力を上書きする出力も拒否）。記事の取りこぼし（番号付き行数と件数の不一致）は exit 非0
-- 有料フィードの日次手順（#582）: `python3 .claude/scripts/paid_daily.py {prepare|finalize|check} --root <作業ツリー外の dir> --date D ...`。手順は `docs/m5-paid-delivery.md` の「日次手順」。テストは `python3 .claude/scripts/test_paid_daily.py`（`--root` は tempfile で作業ツリーの外に作り、output/ は本物の下の一時ディレクトリに差し替える）。`check` は `git status` が clean でないと非0（prepare 以後に `_posts/` への commit が増えていても非0）なので、未 commit の変更がある作業中は必ず非0になる
+- 有料フィードの日次手順（#582。プレミアムフィードは #613 で `--reader` の代わりに `--feed`）: `python3 .claude/scripts/paid_daily.py {prepare|finalize|check} --root <作業ツリー外の dir> --date D ...`。手順は `docs/m5-paid-delivery.md` の「日次手順」。テストは `python3 .claude/scripts/test_paid_daily.py`（`--root` は tempfile で作業ツリーの外に作り、output/ は本物の下の一時ディレクトリに差し替える）。`check` は `git status` が clean でないと非0（prepare 以後に `_posts/` への commit が増えていても非0）なので、未 commit の変更がある作業中は必ず非0になる
 - プレミアムフィードの切り方の候補ごとの材料の数（#628）: `python3 .claude/scripts/premium_cut_stats.py posts --since D --until D`（`_posts/` から。再現する）と `pool`（直前に `fetch_feeds.py --force` した取得キャッシュから。その日のスナップショット）。テストは `python3 .claude/scripts/test_premium_cut_stats.py`
 - gitignore が効いているか: `git check-ignore -v <path>`
 - 意図しないファイルの混入: `git ls-files | grep <pattern>`

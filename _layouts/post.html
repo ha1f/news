@@ -133,9 +133,48 @@ layout: default
       {%- assign follow_up_md = post.date | date: '%-m/%-d' -%}
       {%- assign follow_up_marker = '続報（' | append: follow_up_md | append: '掲載）' -%}
       {%- if post_body contains follow_up_marker -%}
-        {%- capture follow_up_linked -%}続報（<a class="follow-up-link" href="{{ post.url | relative_url }}">{{ follow_up_md }}掲載</a>）{%- endcapture -%}
+        {%- capture follow_up_linked -%}<span class="follow-up">続報（<a class="follow-up-link" href="{{ post.url | relative_url }}">{{ follow_up_md }}掲載</a>）</span>{%- endcapture -%}
         {%- assign post_body = post_body | replace: follow_up_marker, follow_up_linked -%}
       {%- endif -%}
+    {%- endfor -%}
+    {%- comment -%}
+      前回が別のフィードにしか無いときは「続報（起業家 M/D掲載）」のようにフィードの表示名を前に書く (#659)。
+      表示名はメインが「メイン」、プロファイルは配信ページ（layout: profile）の title。そのフィードの
+      投稿から上と同じ規則（このページより前で最も近い同じ M/D、180日まで）で探し、無ければ文字のまま残す。
+      名前付きの表記は「続報（M/D掲載）」の形を含まないので、上の同じフィードの置き換えには当たらない。
+    {%- endcomment -%}
+    {%- assign follow_up_feeds = site.pages | where: "layout", "profile" -%}
+    {%- assign follow_up_feed_names = '' -%}
+    {%- for feed_page in follow_up_feeds -%}
+      {%- assign follow_up_feed_names = follow_up_feed_names | append: '|' | append: feed_page.profile -%}
+    {%- endfor -%}
+    {%- assign follow_up_feed_names = 'MAIN' | append: follow_up_feed_names | split: '|' -%}
+    {%- for feed_id in follow_up_feed_names -%}
+      {%- if feed_id == 'MAIN' -%}
+        {%- assign feed_title = 'メイン' -%}
+      {%- else -%}
+        {%- assign feed_title = follow_up_feeds | where: "profile", feed_id | first -%}
+        {%- assign feed_title = feed_title.title -%}
+      {%- endif -%}
+      {%- assign feed_prefix = '続報（' | append: feed_title | append: ' ' -%}
+      {%- unless post_body contains feed_prefix -%}{%- continue -%}{%- endunless -%}
+      {%- if feed_id == 'MAIN' -%}
+        {%- assign feed_posts = site.posts | where_exp: "post", "post.profile == nil" -%}
+      {%- else -%}
+        {%- assign feed_posts = site.posts | where: "profile", feed_id -%}
+      {%- endif -%}
+      {%- for post in feed_posts -%}
+        {%- assign post_epoch = post.date | date: '%s' | plus: 0 -%}
+        {%- if post_epoch >= page_epoch -%}{%- continue -%}{%- endif -%}
+        {%- assign post_age = page_epoch | minus: post_epoch -%}
+        {%- if post_age > 15552000 -%}{%- break -%}{%- endif -%}
+        {%- assign follow_up_md = post.date | date: '%-m/%-d' -%}
+        {%- assign follow_up_marker = feed_prefix | append: follow_up_md | append: '掲載）' -%}
+        {%- if post_body contains follow_up_marker -%}
+          {%- capture follow_up_linked -%}<span class="follow-up">続報（<a class="follow-up-link" href="{{ post.url | relative_url }}">{{ feed_title }} {{ follow_up_md }}掲載</a>）</span>{%- endcapture -%}
+          {%- assign post_body = post_body | replace: follow_up_marker, follow_up_linked -%}
+        {%- endif -%}
+      {%- endfor -%}
     {%- endfor -%}
     {%- assign post_body = post_body | replace: '">FOLLOW_UP_IN_LINK（', '">続報（' -%}
   {%- endif -%}

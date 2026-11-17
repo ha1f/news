@@ -27,6 +27,16 @@ ECDSA の seed の由来が、印なしで再掲された）。ここで疑わ�
 違うと一致せず（「安全性研究者」と「安全性」）、表記揺れ（「アンソロピック」と
 「Anthropic」）も一致しない。他フィードとの照合もしない（同じ日に別フィードに載るのは仕様）。
 
+続報の指し先（#659）: 読みどころが「続報（M/D掲載）」「続報（起業家 M/D掲載）」で始まる項目は、
+ビルド時にリンクになる先（名前が無ければ同じフィード、あれば名前のフィードの、このページより前で
+最も近い M/D。check_follow_up_links.py と同じ規則）の投稿を引き、同じ点数で MIN_SCORE に届く
+項目が無ければ「続報の指し先」として出す。あわせて直近 WINDOW_DAYS 日の全フィードから点数の高い
+掲載を、そのまま書ける表記で出す（このフィードの掲載を先に新しい順、続けて別フィードを点数順）。
+「続報（」で始まるのに決まった形でない表記（全角スペース・区切り無し・名前の後置）もここに出す。前回が別フィードにしか無いのに M/D だけ書くと、リンクは実在する
+同じフィードのその日のページに着き、前回の記事が無い（10/17〜11/16 の53件中5件）。
+表記揺れ（「アンソロピック」と「Anthropic」）で点数が届かない正しい組も出るので、判断はモデルに残す
+（同じ期間で約20件。#659 の5件はいずれも出る）。
+
 使い方:
   python3 .claude/scripts/check_topic_repeats.py _posts/2026-10-20-*.md
 
@@ -42,6 +52,9 @@ from collections import Counter
 from datetime import date, timedelta
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from check_follow_up_links import MAIN_FEED_NAME, feed_names, nearest_prior  # noqa: E402
+
 WINDOW_DAYS = 10  # recent_topics.py の --own-days の既定と揃える
 IDF_DAYS = 30
 MIN_SCORE = 8.0
@@ -56,6 +69,7 @@ KATAKANA_RE = re.compile(r"[ァ-ヴ][ァ-ヴー・]{2,}")
 KANJI_RE = re.compile(r"[一-龥々]{3,}")
 QUOTED_RE = re.compile(r"「([^」]{2,30})」")
 FOLLOW_UP_PREFIX = "続報（"
+FOLLOW_UP_RE = re.compile(r"^続報（(?:(?P<name>[^\s<>（）\"]+) )?(?P<m>\d{1,2})/(?P<d>\d{1,2})掲載）")
 
 
 def terms(text: str) -> set[str]:
@@ -75,6 +89,8 @@ def items(text: str) -> list[dict]:
             "line": text.count("\n", 0, m.start()) + 1,
             "title": m.group(1),
             "note": note,
+            # note は空白を詰めるので全角スペースが半角になる。表記の形はビルドと同じく元の文字で見る
+            "raw_note": m.group(3).strip(),
             "terms": terms(f"{m.group(1)} {note}"),
         })
     return out
@@ -140,13 +156,80 @@ def repeats_of(post: Path, archive: Archive) -> list[tuple[dict, list[tuple[str,
     return found
 
 
+def marker(day: date, feed: str, own_feed: str, display: dict[str, str]) -> str:
+    """その掲載を指す「続報（…掲載）」の表記。同じフィードなら名前を付けない"""
+    md = f"{day.month}/{day.day}"
+    return f"続報（{md}掲載）" if feed == own_feed else f"続報（{display.get(feed, feed)} {md}掲載）"
+
+
+def follow_up_targets(post: Path, archive: Archive, names: dict[str, str] | None = None):
+    """続報の指し先に同じ出来事が見当たらない項目を (項目, 指し先の説明, 指し先の点数, 候補) で返す。
+
+    names は表示名 → `news` / `news-{profile}`（check_follow_up_links.feed_names と同じ形）。
+    候補は [(表記, 前回の項目, 点数), ...] を MAX_PAIRS 件まで。このフィードの掲載を新しい順に先に、
+    続けて別フィードの掲載を点数の高い順に並べる。
+    """
+    parsed = parse_name(post.name)
+    if parsed is None:
+        raise ValueError(f"ファイル名が YYYY-MM-DD-news*.md ではありません（{post.name}）")
+    day, feed = parsed
+    names = feed_names() if names is None else names
+    by_name = {k: f"{v}.md" for k, v in names.items()}
+    display = {v: k for k, v in by_name.items()}
+    corpus = [it for _, it in archive.between(day - timedelta(days=IDF_DAYS), day)]
+    df = Counter(t for it in corpus for t in it["terms"])
+    n = len(corpus)
+
+    def score(a, b):
+        return sum(math.log(n / df[t]) for t in a["terms"] & b["terms"] if df[t])
+
+    posts = {(d, f): its for d, f, _, its in archive.posts}
+    window = [(d, f, it) for d, f, _, its in archive.posts
+              if day - timedelta(days=WINDOW_DAYS) <= d < day for it in its]
+    found = []
+    for it in items(post.read_text(encoding="utf-8")):
+        m = FOLLOW_UP_RE.match(it["raw_note"])
+        if not m and not it["note"].startswith(FOLLOW_UP_PREFIX):
+            continue
+        if not m:
+            # 全角スペース・区切り無し・名前の後置などはリンクにならず、どの検査にも数えられない
+            where, target_score = "表記が「続報（M/D掲載）」「続報（{フィード名} M/D掲載）」の形でない（リンクにならない）", None
+        elif m["name"] and m["name"] not in by_name:
+            where, target_score = f"「{m['name']}」というフィードは無い（表示名: {'・'.join(by_name)}）", None
+        else:
+            t_feed = by_name[m["name"]] if m["name"] else feed
+            t_day = nearest_prior(day, int(m["m"]), int(m["d"]))
+            label = display.get(t_feed, t_feed)
+            if t_day is None or (t_day, t_feed) not in posts:
+                where, target_score = f"{label}の {m['m']}/{m['d']} の投稿が無い（リンクにならない）", None
+            else:
+                target_score = max((score(it, p) for p in posts[(t_day, t_feed)]), default=0.0)
+                if target_score >= MIN_SCORE:
+                    continue
+                where = f"{label}の {t_day} に同じ出来事が見当たらない"
+        # このフィードの掲載を先に（新しい順）、別フィードは点数順。続報の日付の選び方と同じ優先順
+        scored = [(score(it, p), d, f, p) for d, f, p in window]
+        hits = (sorted((h for h in scored if h[2] == feed), key=lambda h: (h[1], h[0]), reverse=True)
+                + sorted((h for h in scored if h[2] != feed), key=lambda h: (h[0], h[1]), reverse=True))
+        cands = []
+        for sc, d, f, p in hits:
+            if len(cands) >= MAX_PAIRS:
+                break
+            if sc < MIN_SCORE:
+                continue
+            cands.append((marker(d, f, feed, display), p, sc))
+        found.append((it, where, target_score, cands))
+    return found
+
+
 def main(argv: list[str]) -> int:
     posts = [Path(a) for a in argv if not a.startswith("--")]
     if not posts:
         print("使い方: check_topic_repeats.py _posts/YYYY-MM-DD-*.md", file=sys.stderr)
         return 2
     archives: dict[Path, Archive] = {}
-    pairs = errors = 0
+    pairs = errors = targets = 0
+    names = feed_names()
     for post in posts:
         if not post.is_file():
             print(f"NG {post}: ファイルがありません")
@@ -159,6 +242,18 @@ def main(argv: list[str]) -> int:
             print(f"NG {post}: {e}")
             errors += 1
             continue
+        try:
+            misses = follow_up_targets(post, archive, names)
+        except ValueError:
+            misses = []
+        for it, where, target_score, cands in misses:
+            targets += 1
+            print(f"続報の指し先 {post.name}:{it['line']} 「{it['title']}」")
+            print(f"  {where}" + (f"（点数 {target_score:.1f}）" if target_score is not None else ""))
+            for mk, prev, sc in cands:
+                print(f"  候補 {mk}: 「{prev['title']}」（点数 {sc:.1f}）")
+            if not cands:
+                print("  候補なし（直近の全フィードに点数の届く掲載が無い）")
         for it, hits in found:
             pairs += 1
             print(f"要判断 {post.name}:{it['line']} 「{it['title']}」")
@@ -166,10 +261,10 @@ def main(argv: list[str]) -> int:
             for prev_name, prev, score, shared in hits:
                 print(f"  前回 {prev_name[:10]}: 「{prev['title']}」 {prev['note']}")
                 print(f"    共有語: {', '.join(shared[:6])}（点数 {score:.1f}）")
-    print(f"検査 {len(posts) - errors} 件 / 要判断 {pairs} 項目 / 検査できなかった {errors} 件")
+    print(f"検査 {len(posts) - errors} 件 / 要判断 {pairs} 項目 / 続報の指し先 {targets} 項目 / 検査できなかった {errors} 件")
     if errors:
         return 2
-    return 1 if pairs else 0
+    return 1 if pairs or targets else 0
 
 
 if __name__ == "__main__":
