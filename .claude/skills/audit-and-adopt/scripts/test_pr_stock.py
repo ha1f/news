@@ -43,6 +43,27 @@ class SupersededTest(unittest.TestCase):
             [], NOW)
         self.assertEqual(numbers(result["superseded"]), [537])
 
+    def test_chain_through_open_successor_ends_at_merged(self):
+        # #630 → #639（open、superseded）→ #643（merged）。#630 も superseded で終端を指す
+        result = classify_stock(
+            [open_pr(630, draft=True, body="Refs #628"),
+             open_pr(639, draft=True, body="PR #630 の後継。Refs #628")],
+            [merged_pr(643, body="PR #639 の後継（推奨を取得5日分に限定）")],
+            [628], NOW)
+        self.assertEqual(sorted((e["number"], e["successor"]) for e in result["superseded"]),
+                         [(630, 643), (639, 643)])
+        self.assertEqual(result["stalled"], [])
+
+    def test_chain_ending_at_open_pr_is_not_superseded(self):
+        # 後継 #629 が open なら #615 は作業中（stalled 側）のまま
+        result = classify_stock(
+            [open_pr(615, draft=True, body="Closes #613", updated="2026-10-05T00:00:00Z"),
+             open_pr(629, draft=True, body="PR #615 の後継", updated="2026-10-05T00:00:00Z")],
+            [], [613], NOW)
+        self.assertEqual(result["superseded"], [])
+        self.assertEqual(numbers(result["stalled"]), [615])
+        self.assertEqual(numbers(result["stale_drafts"]), [629])
+
     def test_plain_mention_is_not_succession(self):
         result = classify_stock(
             [open_pr(12, draft=True)],

@@ -36,13 +36,25 @@ def days_since(value, now):
     return (now - parse_time(value)).days
 
 
-def successors_of(merged_prs):
-    """マージ済み PR が後継として置き換えた PR の番号 → 後継の番号"""
-    successors = {}
-    for pr in sorted(merged_prs, key=lambda p: p["number"]):
+def successors_of(merged_prs, open_prs=()):
+    """後継として置き換えられた PR の番号 → マージ済みの後継の番号。
+    後継が open な PR を経由する連鎖（#630 → #639 → #643 merged）も、終端がマージ済みなら
+    終端の番号を返す（実測 2026-11-15: 直接の後継 #639 が superseded で open のまま残っていた
+    #630 は、1 段しか見ないと stalled に分類された）。"""
+    direct = {}
+    for pr in sorted(list(open_prs) + list(merged_prs), key=lambda p: p["number"]):
         text = f"{pr.get('title') or ''}\n{pr.get('body') or ''}"
         for m in SUCCESSOR_RE.finditer(text):
-            successors[int(m.group(1))] = pr["number"]
+            direct[int(m.group(1))] = pr["number"]
+    merged = {pr["number"] for pr in merged_prs}
+    successors = {}
+    for number in direct:
+        current, seen = number, set()
+        while current in direct and current not in seen:
+            seen.add(current)
+            current = direct[current]
+        if current in merged:
+            successors[number] = current
     return successors
 
 
@@ -50,7 +62,7 @@ def classify_stock(open_prs, merged_prs, open_issues, now):
     """open PR を分類する（純関数）。open_prs の各要素は number/title/draft/labels/body/
     created_at/updated_at、merged_prs は number/title/body/merged_at を持つ dict。
     open_issues は open な issue の番号の列。"""
-    successors = successors_of(merged_prs)
+    successors = successors_of(merged_prs, open_prs)
     open_issue_set = set(open_issues)
     result = {"superseded": [], "stale_drafts": [], "hold": [], "stalled": []}
     counts = {"draft": 0, "hold": 0, "ready": 0}

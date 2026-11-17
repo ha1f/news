@@ -13,6 +13,8 @@ description: "デプロイ済みのニュースサイトをサービスユーザ
 
 `pages_url` は常に null になる（REST 経路では proxy が `/repos/{owner}/{repo}/pages` を 403 で塞ぐ。実測 2026-09-21）。Pages の URL は README の GitHub Pages URL を使う。
 
+続けて `git fetch origin main -q && python3 .claude/scripts/check_missing_publish_days.py` を実行する（直近14日で `_posts/` に1件も投稿の無い日を検出。`fetch` を省くと古い ref を見て誤検知しうる。`post_in_main` は当日しか見ないため、`health` の記録が揃っていても過去の欠落は別途この検査でしか見つからない。#421: 週次利用上限の枯渇でループが約42時間停止し、2026-09-25 の配信が丸ごと欠落したが誰にも気づかれなかった）。
+
 ### `--stdin` で渡すときの取得元
 
 上の実行が失敗したときだけ、データを自分で取得して `--stdin` で渡す。渡す JSON の形は `check_state.py` が stderr に出すヒントに載っている（`pages` は常に null 扱いなので渡さなくてよい）。取得元と、実測で踏んだハマりどころ:
@@ -28,12 +30,13 @@ description: "デプロイ済みのニュースサイトをサービスユーザ
 - `post_in_main` が false → `publish_state` で分岐する（旧 `publish_in_progress` は「PR が open」と「publish が動いている」を区別できず、止まった PR を毎日「走行中」と読んで黙って抜けていた。#447）。判断は `publish_prs` の PR 単位で行う。`publish_state` はその要約なので、古い `pages/` PR が1件残っているだけで `stalled` になり、当日の走行中の PR を隠しうる（`head_ref` の日付で当日ぶんかを見分ける）
   - `"running"` → 自動では触らない。`hold` か `draft` の PR があればオーナーの預かりなので、その旨と理由を書いて status issue に記録して終了する。そうでなければ publish がまだ動いているので、記録だけして終了する
   - `"stalled"` → **publish は止まっており、配信が止まったままになっている。** 何をしてよいかは `checks_conclusion` で分かれる:
-    - `success` → 残っているのはマージだけなので**配信を回復させる**。squash マージし、`git fetch origin main && python3 .claude/scripts/wait_for_run.py pages.yml "$(git rev-parse origin/main)"` で main の `pages.yml` run が success になるまで見届ける（exit 3 なら手動デプロイ、exit 4 なら `--timeout` を延ばす。他の exit code の意味は notes の `wait_for_run.py` の項）。マージは冪等で、万一 publish が生きていても二重マージにはならない（後から来たほうが「既にマージ済み」で失敗するだけ）
+    - `success` → 残っているのはマージだけなので**配信を回復させる**。squash マージし、`git fetch origin main && python3 .claude/scripts/wait_for_run.py pages.yml "$(git rev-parse origin/main)"` で main の `pages.yml` run が success になるまで見届ける（exit 3 なら手動デプロイ、exit 4 なら `--timeout` を延ばす。他の exit code の意味は notes の `wait_for_run.py` の項）。マージは冪等で、万一 publish が生きていても二重マージにはならない（後から来たほうが「既にマージ済み」で失敗するだけ）。**マージが実行環境の権限確認で拒否されたら**、別経路（MCP の merge 等）で迂回せず PR は ready のまま残し、拒否を追跡する open issue（2026-11 時点は #605）に観測を追記したうえで、Slack ツールが使えればオーナーに DM で1通知する（配信停止の回復が人間のマージ待ちになった時点で人間の対応が要る。review の `hold` 化と DM を待つと初報が数時間遅れ、実測 2026-11-10〜11-13 は読者に 404 が3日見えた）
     - `success` 以外（`failure` / `cancelled` / `timed_out` / `skipped` / run が見つからず null）→ **`pages/` ブランチに push しない。** 直すには publish と同じ作業をすることになり、publish セッションがまだ生きていれば同じブランチを2つのセッションが同時に押す。先に `.claude/notes/develop-issue.md`「ループが止まった原因は Claude Code Remote の MCP で辿れる」の手順でその publish セッションが本当に停止しているかを確かめる。停止していれば緊急の ops issue を起票し、CI の失敗が自明に直せるものなら回復させる。生きていれば触らず記録だけして終了する
     - 回復させた場合は、遅延した時間と回復手順を status issue の終了レコードに残す（止まった原因の調査は別途 ops issue にする）
   - `"idle"` → `pages/` の PR がまだ無い。publish が PR 作成前の段（キュレーションの subagent を並列で回している最中）でもここに落ちるので、**走っていないと決めつけない**。上と同じ手順でセッションの生死を確かめ、停止していれば緊急の ops issue を起票して評価はスキップ、走行中なら記録だけして終了する
 - `pages_build.conclusion` が failure → ログを確認して build job と deploy job のどちらが失敗したか切り分ける。build job が失敗していればコードが壊れているので緊急の ops issue を起票する。deploy job のみの失敗（503 等の一過性エラー）は failed jobs の再実行を試み、再実行も失敗したら ops issue を起票する
-- `health.incomplete` / `health.failed` / `health.missing` が非空 → セッション死亡・失敗・無記録（trigger 停止の疑い）。`git log --since=24hours origin/main -- .claude/` で直近24時間に `.claude/` を変更したマージが有るか確認し、有れば「その変更を revert する」緊急 issue、無ければ「失敗原因を調査する」issue を起票する（一過性の失敗で良い変更を revert しない）。`health.no_records` が true（導入直後）なら起票せず記録だけして進む
+- `health.incomplete` / `health.failed` / `health.missing` が非空 → セッション死亡・失敗・無記録（trigger 停止の疑い）。`git log --since=24hours origin/main -- .claude/` で直近24時間に `.claude/` を変更したマージが有るか確認し、有れば「その変更を revert する」緊急 issue、無ければ「失敗原因を調査する」issue を起票する（一過性の失敗で良い変更を revert しない）。変更が有っても、失敗したステージの end の summary が変更と無関係な原因（実行環境の権限確認による拒否など）を名指ししていれば revert でなく調査の issue にする。どちらの issue も、前の run が同じ失敗を記録だけで済ませていても起票する（同根の open issue が有れば証拠の追記に代える。実測 2026-10-25〜26: review のマージが分類器に2日続けて拒否されたが、初日の翌朝の run は revert 対象が無いとして記録だけで抜け、起票は2日目の #605 まで遅れた）。`health.no_records` が true（導入直後）なら起票せず記録だけして進む
+- `check_missing_publish_days.py` が日付を出力した → 同一の欠落日について記録済みの ops issue が無いか（open / closed を問わず。closed なら対応済みとして再起票も Slack 通知もしない）確認したうえで、`.claude/notes/develop-issue.md`「ループが止まった原因は Claude Code Remote の MCP で辿れる」の手順（`list_triggers` → 失敗した run の `session_id` → `get_session` の `rate_limit_info`）で欠落日周辺の原因を診断する。`list_triggers` の `last_run` は trigger ごとに直近1件しか残らないため、欠落から日が経ち trigger がその後成功していると失敗当時の `session_id` が追えないことがある（診断できなければ「原因不明の配信欠落」として起票し、調査を引き継ぐ）。`rateLimitType: seven_day` の枯渇が確認できたら、欠落日・原因・停止窓を緊急 ops issue に記録し、GUARDRAILS.md「人間の対応が必要になったとき」に従いオーナーに Slack DM で1通知する（枯渇は誰にも通知されず翌日の evaluate も気づかなかった実測が #421。既存の同一 issue があれば追記のみでよい）。原因がコードの退行等の別要因なら通常のバグとして issue 化する
 - main に有るがサイト未反映（ビルドは success）は伝搬遅延。issue 化せず、反映済みの最新記事を評価する
 
 ## Step 1: サービスユーザとして評価

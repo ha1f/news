@@ -20,7 +20,7 @@ team の形は 3 つ: 使い捨て subagent (独立作業)、会話を継続す�
 ## 癖
 
 - Sonnet 5.5: 字義通りに解釈するので適用範囲を明示する（Sonnet 5 からの持ち越し。公式も 5 向けのパターンを出発点として挙げている）。レビュー依頼は「確信が低くても全部報告、フィルタは別段階」。orchestrator を任せるなら、計画コメントを投稿する run では checklist として更新させる
-  - **effort の目安が変わった**: 既定は `high`。agentic coding は well-specified なら `medium`、難しい・長いものは `high` から。レベルの体感は Sonnet 5 と同じではないので、5 の設定をそのまま持ち越さない
+  - **effort の目安が変わった**: 既定は API では `high`、Claude Code（subagent 含む）では `medium`（code.claude.com/docs/en/model-config。完走させたい worker は frontmatter か Agent 呼び出しの `effort` で明示する）。agentic coding は well-specified なら `medium`、難しい・長いものは `high` から。レベルの体感は Sonnet 5 と同じではないので、5 の設定をそのまま持ち越さない
   - **`low` / `medium` では途中で確認に戻ることがある**（完走させたい worker には effort を上げるか、「頼まれたことが全部終わるまで続け、ユーザなしでは進めないときと危険な操作の前だけ聞く」を指示に入れる）
   - **頼んでいないテスト・ドキュメント・補助ファイルを足す傾向**がどの effort でも出る（diff を最小に保ちたいタスクでは「終わって検証できたら止まる。頼まれていない追加はしない」を添える）
 - Fable 5.1: 手順を書くほど品質が下がる。ゴールと制約だけ渡す。宣言だけして止まることが稀にあるので、return が実行を伴うか確認する。並列ツール呼び出しが減る傾向あり（1文のバッチ指示で戻る）
