@@ -111,6 +111,17 @@ class NormalizeTest(unittest.TestCase):
         )
 
 
+class FullNameTest(unittest.TestCase):
+    def test_full_name_is_fixed_as_a_whole(self):
+        self.assertEqual(found(post("見出し", "Sam Altman と Jensen Huang")),
+                         [("Sam Altman", "サム・アルトマン"), ("Jensen Huang", "ジェンスン・フアン")])
+        # 表の並び順によらない（短い揺れを先に書いた表でも全体で直す）
+        reordered = check_name_variants.compiled(list(reversed(check_name_variants.load_table())))
+        for rules in (RULES, reordered):
+            self.assertEqual(check_name_variants.normalize("Sam Altman と Jensen Huang、Altman", rules),
+                             "サム・アルトマン と ジェンスン・フアン、アルトマン")
+
+
 class MainTest(unittest.TestCase):
     def setUp(self):
         self._tmp = tempfile.TemporaryDirectory()

@@ -71,7 +71,8 @@ def variant_pattern(variant: str) -> re.Pattern:
 
 
 def compiled(pairs: list[tuple[str, str]]) -> list[tuple[re.Pattern, str, str]]:
-    return [(variant_pattern(v), v, c) for v, c in pairs]
+    """長い揺れを先に並べる（normalize が「Sam Altman」を「Altman」より先に直し、「Sam アルトマン」にしない）"""
+    return [(variant_pattern(v), v, c) for v, c in sorted(pairs, key=lambda p: -len(p[0]))]
 
 
 def normalize(text: str, rules: list[tuple[re.Pattern, str, str]]) -> str:

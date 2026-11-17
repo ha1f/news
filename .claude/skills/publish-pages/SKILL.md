@@ -135,7 +135,7 @@ python3 .claude/scripts/check_tool_artifacts.py _posts/{YYYY-MM-DD}-*.md
 python3 .claude/scripts/check_name_variants.py _posts/{YYYY-MM-DD}-*.md
 ```
 
-`check_name_variants.py` が `NG` 行（`「アンソロピック」→「Anthropic」` の形）を出したら、その行の揺れを `→` の後ろの形に書き換え、0件になるまで走らせ直す（`title`・リード・見出し・読みどころのどこに出ても同じ。表は curate-news の `references/names.md` #664）。
+`check_name_variants.py` が `NG` 行（`「アンソロピック」→「Anthropic」` の形）を出したら、その行の揺れを `→` の後ろの形に書き換え、0件になるまで走らせ直す（`title`・リード・見出し・読みどころのどこに出ても同じ。表は curate-news の `references/names.md` #664）。表の人物と別人の同姓（ジェンスン・フアン以外の「ファン氏」など）を指す NG だけは直さずに残し、終了コード 1 のまま進めてよい。
 
 `check_tool_artifacts.py` が「ツール呼び出し構文が残っています」の `NG` 行を出したら（終了コード 1）、その行の `</content>` 等を本文から消し、0件になるまで走らせ直す（同じ日の全プロファイルにまとめて出るので、1本直して終わりにならない。CI の "Check article quality" も全投稿に当てて止める）。
 
