@@ -112,6 +112,8 @@ python3 .claude/skills/curate-news/scripts/fetch_feeds.py --source hatena --cate
 
 海外ニュースも含めて全て日本語で出力する。表現は [.claude/GUARDRAILS.md](../../GUARDRAILS.md) のコンテンツの権利ガードレールに従う。
 
+人物・会社の名前は [references/names.md](references/names.md) の表記で書く（見出し・リード・読みどころのどれでも）。元記事の媒体が別の表記を使っていても、その表記のまま持ち込まない（日経の「アンソロピック」「ファン氏」は「Anthropic」「フアン氏」に直す）。表に無い名前は同じファイルの「揃え方の原則」で決める。日によって表記が割れると、同じ話題を数日追う読者が同じ主体だと結びつけられない（#664）。
+
 ```
 ## ニュース ({取得日時} JST)
 
