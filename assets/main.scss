@@ -131,6 +131,13 @@ $ui-border-color: #8d8d8d; // 背景 #fdfdfd と 3.26:1
   }
 }
 
+// 最新の配信が今日の分でないときの一文 (#652)。読者が開いた時点で気づけるよう本文色で出し、
+// 色付きの枠やバッジは使わない (DESIGN.md「強調はまず構造で」)
+.stale-notice {
+  font-size: $base-font-size * 0.875;
+  margin-bottom: $spacing-unit / 2;
+}
+
 .archive-no-results {
   color: $grey-color;
   font-style: italic;

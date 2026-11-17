@@ -7,6 +7,7 @@ layout: default
   {{ content }}
 
   <h2 class="post-list-heading">最新の記事</h2>
+  {% include stale-notice.html list=".post-list" %}
 
   {%- assign date_format = site.minima.date_format | default: "%Y年%-m月%-d日" -%}
   {%- assign default_posts = site.posts | where_exp: "post", "post.profile == nil" -%}
