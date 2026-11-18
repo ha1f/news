@@ -199,7 +199,7 @@ A は採らない。日次のニュースで公開を数時間遅らせても読
 
 ### ツールを絞った agent（T）の実測（2026-11-18 午後、#667）
 
-上の W と同じ手順で、`curate-runner`（`.claude/agents/curate-runner.md`。ツールを Bash・Read・Write・Skill・Glob・Grep に絞った Opus の agent）を今の形 X と比べた。定義が main に入った後に始まったセッションで回した。全ソースを 1 回取得し（reddit の 3 カテゴリは HTTP 429 で欠けたまま）、上と同じ commit（17124cd）から worktree を 4 つ作ってキャッシュを複写し、X を 2 つ（`general-purpose`）・T を 2 つ（`subagent_type: curate-runner`）、計 4 つを同時に起動した。プロンプトは 4 つとも同じで、違いは `subagent_type` だけ。禁じた操作・`STAGE:1`〜`STAGE:4` の区切りは上と同じ。終了後、4 つともキャッシュが取得時と一致する（sha256）ことを確かめた。4 つとも使ったツールは Skill・Bash・Read・Write だけで、T でツールが無くて拒否された呼び出しは無かった。
+上の W と同じ手順で、`curate-runner`（`.claude/agents/curate-runner.md`。ツールを Bash・Read・Write・Skill・Glob・Grep に絞った Opus の agent）を今の形 X と比べた。定義が main に入った後に始まったセッションで回した。全ソースを 1 回取得し（reddit の 3 カテゴリは HTTP 429 で欠けたまま）、上と同じ commit（17124cd）から worktree を 4 つ作ってキャッシュを複写し、X を 2 つ（`general-purpose`）・T を 2 つ（`subagent_type: curate-runner`）、計 4 つを同時に起動した。プロンプトは 4 つとも同じで、違いは `subagent_type` だけ。禁じた操作・`STAGE:1`〜`STAGE:4` の区切りは上と同じ。終了後、4 つともキャッシュが取得時と一致する（sha256）ことを確かめた。起動時に渡ったツールは X が 43 個、T が 7 個（定義の 6 個と、完了報告用の `SubagentHandback`。`agent-<id>.prefix.json` の `state.toolNames`）。4 つとも使ったツールは Skill・Bash・Read・Write だけで、T でツールが無くて拒否された呼び出しは無かった。
 
 | 工程 | X1 | X2 | T1 | T2 | X の平均 | T の平均 |
 |---|---|---|---|---|---|---|
