@@ -48,7 +48,7 @@ git status --short _posts/   # 置いたファイルを控える
 
 ### 2. `/curate-news` の実行
 
-キュレーションはコンテキストを大きく消費するので、オーケストレータ自身は実行せず、対象プロファイル1件につき fresh context の subagent を1つ、並列に起動する（1件のみの場合も同様）。指示は次のテンプレートの `{name}` と `{YYYY-MM-DD}` を**実値に置換してから**渡す。デフォルトプロファイルには1文目を「`curate-news` スキルを Skill ツールで引数なしで実行する。」に差し替える:
+キュレーションはコンテキストを大きく消費するので、オーケストレータ自身は実行せず、対象プロファイル1件につき fresh context の subagent を `subagent_type: curate-runner` で1つ、並列に起動する（1件のみの場合も同様）。`curate-runner`（`.claude/agents/curate-runner.md`）は渡すツールを curate-news が使うものに絞った agent で、起動時に読み込むツール定義が減る分 1 本あたりの費用が約3割下がる（`docs/m5-paid-delivery.md`、#670）。Agent ツールが `curate-runner` を not found で拒否したときだけ、`subagent_type` を付けずに起動する。指示は次のテンプレートの `{name}` と `{YYYY-MM-DD}` を**実値に置換してから**渡す。デフォルトプロファイルには1文目を「`curate-news` スキルを Skill ツールで引数なしで実行する。」に差し替える:
 
 > `curate-news` スキルを Skill ツールで `--profile {name}` を `args` に渡して実行する。日付はこの指示で渡した `{YYYY-MM-DD}` を使い、ステップ6で再計算しない。完了したら、ステップ6「結果の保存」で**自分が書き出した**ファイルのフルパスを報告する。`ls` で探さないこと（同じ日付のファイルが他プロファイルの分も並ぶため、自分の出力を判別できない）。
 
