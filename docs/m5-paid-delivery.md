@@ -404,7 +404,19 @@ python3 .claude/scripts/subagent_usage.py --by-stage ~/.claude/projects/<project
 
 形どうしを比べるときは、起動時のキャッシュの条件を揃える（上の「起動時のキャッシュの条件を揃えて比べる」）。最初の呼び出しの `cache_creation_input_tokens` が 5 万を超える subagent は system prompt 全体を書き込んでいる（そのモデルで最初か、同時に起動した）。0 の subagent は、直前に同じプロンプトの subagent が動いていて全体を読み直した。フィード間で重なる URL は `python3 .claude/scripts/count_shared_urls.py --since YYYY-MM-DD --until YYYY-MM-DD` で数える。
 
-読み方を変える形の比較（上の「Opus のまま読む量を減らす形の実測」）も同じ手順で回し、形の違いはプロンプトの追加の決まりか `subagent_type` だけにする。起動時のツールの一覧は、transcript と同じ場所の `agent-<id>.prefix.json` の `state.toolNames` で確かめる。ツールを絞った形は `subagent_type: curate-runner`（`.claude/agents/curate-runner.md`）で起動する。読みどころの形式（2 文・50 字超）は `python3 .claude/scripts/note_format_stats.py <出力>...` で数える（検査役に数えさせると数え方が揺れる）。定義はセッションの開始時に読まれるので、定義が main に入った後に始まったセッションで回す。
+読み方を変える形の比較（上の「Opus のまま読む量を減らす形の実測」）も同じ手順で回し、形の違いはプロンプトの追加の決まりか `subagent_type` だけにする。起動時のツールの一覧は、transcript と同じ場所の `agent-<id>.prefix.json` の `state.toolNames` で確かめる。ツールを絞った形は `subagent_type: curate-runner`（`.claude/agents/curate-runner.md`）で起動する。読みどころの形式（2 文・50 字超）は `python3 .claude/scripts/note_format_stats.py <出力>...` で数える（検査役に数えさせると数え方が揺れる）。11/19（#670）に各 subagent へ渡したプロンプトは次のとおり（`{WT}` は worktree の絶対パス、形の違いは `subagent_type` だけ）。11/18 以前のプロンプトは残っておらず、これは同じ決まりから組み立て直したもの:
+
+```text
+作業ディレクトリは {WT} とする（以降のコマンドはすべて `cd {WT} &&` を先頭に付けて実行する。他のディレクトリのファイルを読み書きしない）。
+
+`curate-news` スキルを Skill ツールで `--profile engineer` を `args` に渡して実行する。日付は YYYY-MM-DD を使い、ステップ6で再計算しない。好みファイルは {WT}/.claude/skills/curate-news/profiles/engineer.md。完了したら、ステップ6「結果の保存」で自分が書き出したファイルのフルパスを報告する。`ls` で探さないこと。
+
+この run は費用計測用。次を守る:
+- フィードは取得済みで {WT}/.claude/skills/curate-news/cache/ にある。`fetch_feeds.py` はキャッシュが有効なら再取得しないので手順どおり実行してよいが、`--force` は付けない。FAIL のソースを自前で取得・キャッシュ保存しない（欠けたまま進める）
+- commit・push・`_posts/` への書き込み・GitHub への投稿をしない。記事ページの取得（`fetch_article_context.py`）は手順どおりしてよい
+- 次の各工程に入る直前に、その行だけを単独の行としてテキストで出力する: 手順2（ソース選択）に入る直前に `STAGE:1`、手順4b（最終選定）に入る直前に `STAGE:2`、手順5で記事ごとの読みどころの材料集め（fetch_article_context.py 等）に入る直前に `STAGE:3`、リードの執筆とファイルの保存に入る直前に `STAGE:4`
+```
+定義はセッションの開始時に読まれるので、定義が main に入った後に始まったセッションで回す。
 
 記録に載せるのは公開プリセットの run の session ID と数値だけにする。有料プロファイルの run を測るときは、プロファイルの中身・見出し・URL を書かず、費用と件数だけを書く。
 
