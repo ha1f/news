@@ -1,0 +1,14 @@
+{%- comment -%}一覧の見出しに付ける「続報」の印 (#674)。日次ページでは読みどころの「続報（M/D掲載）」が
+前回へのリンクになるが、見出しだけを並べる一覧（トップ・アーカイブ・プロファイル別フィード・
+profiles 一覧）では読みどころが落ちるため、続いている話題が毎日の新着に見える。
+include.item は post.content を split: '<li>' した1要素、include.link_text はその見出しの文字列。
+読みどころは見出し行の `<br />` の後に置かれるので、その直後が「続報（」で始まるときだけ印を出す。
+9月中旬までの投稿には見出しの文字列そのものが「続報（」で始まるものがあり、そこには付けない
+（同じ語が並ぶだけになる）。印は JS 無しでも読める地の文字にし、セレンディピティ枠の印
+（#619）と同じく灰色の小さな語にとどめる{%- endcomment -%}
+{%- assign fu_title_head = include.link_text | strip | slice: 0, 3 -%}
+{%- if fu_title_head != '続報（' and include.item contains '<br />' -%}
+  {%- assign fu_parts = include.item | split: '<br />' -%}
+  {%- assign fu_note_head = fu_parts[1] | strip_html | strip | slice: 0, 3 -%}
+  {%- if fu_note_head == '続報（' -%}<span class="follow-up-mark">続報</span>{%- endif -%}
+{%- endif -%}

@@ -34,7 +34,7 @@ data-date を足す。include.strip_suffix を渡すと、見出し末尾の「�
           {%- assign link_text = before_close_a | strip_html -%}
           {%- if link_text.size > 1 -%}
             {%- assign article_count = article_count | plus: 1 -%}
-            <li{% if article_count > 3 %} class="archive-article-extra" hidden{% endif %}{% if post.article_tags %} data-tags="{{ post.article_tags[forloop.index0] | join: ',' | escape }}"{% endif %}><a href="{{ post.url | relative_url }}#article-{{ forloop.index }}">{{ link_text }}</a></li>
+            <li{% if article_count > 3 %} class="archive-article-extra" hidden{% endif %}{% if post.article_tags %} data-tags="{{ post.article_tags[forloop.index0] | join: ',' | escape }}"{% endif %}>{% include follow-up-mark.html item=item link_text=link_text %}<a href="{{ post.url | relative_url }}#article-{{ forloop.index }}">{{ link_text }}</a></li>
           {%- endif -%}
         {%- endif -%}
       {%- endfor -%}

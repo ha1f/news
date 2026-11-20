@@ -34,7 +34,7 @@ title: "プロファイル"
         {%- if link_text.size > 1 -%}
           {%- assign article_count = article_count | plus: 1 -%}
           {%- if article_count <= 3 -%}
-          <li><a href="{{ latest_post.url | relative_url }}#article-{{ forloop.index }}">{{ link_text }}</a></li>
+          <li>{% include follow-up-mark.html item=item link_text=link_text %}<a href="{{ latest_post.url | relative_url }}#article-{{ forloop.index }}">{{ link_text }}</a></li>
           {%- endif -%}
         {%- endif -%}
       {%- endif -%}

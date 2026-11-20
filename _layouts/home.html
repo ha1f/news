@@ -40,7 +40,7 @@ layout: default
               {%- comment -%}4件目以降も描画しておき、既定では hidden にする。JS が「他N件」を
               展開トグルに差し替えるので、その日の話題の幅を詳細ページに降りずに掴める (#386)。
               JS が無い環境では hidden のまま「他N件」が詳細ページへのリンクとして残る{%- endcomment -%}
-              <li{% if article_count > 3 %} class="archive-article-extra" hidden{% endif %}><a href="{{ post.url | relative_url }}#article-{{ forloop.index }}">{{ link_text }}</a></li>
+              <li{% if article_count > 3 %} class="archive-article-extra" hidden{% endif %}>{% include follow-up-mark.html item=item link_text=link_text %}<a href="{{ post.url | relative_url }}#article-{{ forloop.index }}">{{ link_text }}</a></li>
             {%- endif -%}
           {%- endif -%}
         {%- endfor -%}
