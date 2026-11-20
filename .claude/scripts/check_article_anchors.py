@@ -22,7 +22,8 @@ from pathlib import Path
 from urllib.parse import unquote
 
 LIST_RE = re.compile(r'<ul class="archive-article-titles">(.*?)</ul>', re.S)
-ITEM_RE = re.compile(r'<li(?P<attrs>[^>]*)>\s*<a href="(?P<href>[^"]+)">(?P<label>.*?)</a>\s*</li>', re.S)
+# 続報の項目は <a> の前に「続報」の印が入る (#674)。印を許さないと、その項目が黙って検査から外れる
+ITEM_RE = re.compile(r'<li(?P<attrs>[^>]*)>\s*(?:<span class="follow-up-mark">[^<]*</span>\s*)?<a href="(?P<href>[^"]+)">(?P<label>.*?)</a>\s*</li>', re.S)
 MORE_RE = re.compile(r'class="[^"]*archive-article-more')
 # 記事ページ側のアンカー付き <li> と、その中の最初のリンクテキスト
 ANCHOR_RE = re.compile(r'<li id="(article-\d+)">(.*?)(?=<li id="article-\d+">|</ol>|</ul>)', re.S)
