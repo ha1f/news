@@ -7,8 +7,11 @@ include.item は post.content を split: '<li>' した1要素、include.link_tex
 （同じ語が並ぶだけになる）。印は JS 無しでも読める地の文字にし、セレンディピティ枠の印
 （#619）と同じく灰色の小さな語にとどめる{%- endcomment -%}
 {%- assign fu_title_head = include.link_text | strip | slice: 0, 3 -%}
-{%- if fu_title_head != '続報（' and include.item contains '<br />' -%}
-  {%- assign fu_parts = include.item | split: '<br />' -%}
+{%- comment -%}最後の項目の item は </ol> 以降の本文まで含むので、</li> で切ってから見る。
+半角の「続報(」で書かれた読みどころも数件あるため同じに扱う{%- endcomment -%}
+{%- assign fu_item = include.item | split: '</li>' | first -%}
+{%- if fu_title_head != '続報（' and fu_title_head != '続報(' and fu_item contains '<br />' -%}
+  {%- assign fu_parts = fu_item | split: '<br />' -%}
   {%- assign fu_note_head = fu_parts[1] | strip_html | strip | slice: 0, 3 -%}
-  {%- if fu_note_head == '続報（' -%}<span class="follow-up-mark">続報</span>{%- endif -%}
+  {%- if fu_note_head == '続報（' or fu_note_head == '続報(' -%}<span class="follow-up-mark">続報</span>{%- endif -%}
 {%- endif -%}
