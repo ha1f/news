@@ -47,5 +47,5 @@ article_tags:
 9. [Android の開発者認証、2027年1月から世界で展開](https://gigazine.net/news/20261120-android-developer-verification-expanding/) (GIGAZINE)<br>
    Google は趣味や学生向けの配信限定アカウントを用意し、共有先の上限も50台に引き上げた
 
-10. [Scott Aaronson 氏、Anthropic のモデルによる一般化リーマン予想の証明を論評](https://scottaaronson.blog/?p=10344) (HN・英語)<br>
-   数学者 Levent Alpöge 氏が主張する証明は、Lean のコードで1740万行に及ぶという
+10. [スコット・アーロンソン氏、Anthropic のモデルによる一般化リーマン予想の証明を論評](https://scottaaronson.blog/?p=10344) (HN・英語)<br>
+   数学者アルポゲ氏が主張する証明は、Lean のコードで1740万行に及ぶという
