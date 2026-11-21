@@ -98,7 +98,8 @@ def load_all(root):
     reader_tags = [r.get("tag_id") for r in out["reader"].values() if r.get("tag_id")]
     if not all(isinstance(t, str) for t in reader_tags):
         raise SystemExit("readers.json の tag_id は文字列にする")
-    feed_tags = {r.get("tag_id") for r in out["feed"].values()}
+    # 不正な型（list など）は集合に入らないので外す（その行は finalize が「tag_id が無いか不正」で断る）
+    feed_tags = {r.get("tag_id") for r in out["feed"].values() if isinstance(r.get("tag_id"), str)}
     if len(reader_tags) != len(set(reader_tags)) or feed_tags & set(reader_tags):
         raise SystemExit("readers.json の tag_id が読者どうしか feeds.json の tag_id と重複している")
     return out

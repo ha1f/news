@@ -558,6 +558,9 @@ class PaidDailyTest(unittest.TestCase):
         self.feeds(self.feed("f-a", tag=TAG))
         with self.assertRaises(SystemExit):
             p.load_all(self.root)
+        # フィード側の偽の unhashable な値（[] など）で TypeError にならない（その行は finalize が断る）
+        self.feeds({**self.feed("f-a"), "tag_id": []})
+        self.assertIn("alice", p.load_all(self.root)["reader"])
         self.feeds()
         self.readers({**self.reader("alice"), "tag_id": [TAG]})
         with self.assertRaises(SystemExit) as cm:
