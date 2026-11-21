@@ -1,3 +1,4 @@
+import hashlib
 import io
 import json
 import os
@@ -45,12 +46,19 @@ class FakeResponse:
 
 
 class FakeOpener:
-    def __init__(self):
+    """作成のリクエストの filters をそのまま返し、タグを持つ購読者の一覧には holder の1人だけを返す。"""
+
+    def __init__(self, holder="sub_alice"):
+        self.holder = holder
         self.requests = []
 
     def __call__(self, req, timeout=None):
         self.requests.append(req)
-        return FakeResponse({"id": "em_1", "status": "draft"} if req.full_url.endswith("/emails") else None)
+        if req.full_url.endswith("/emails"):
+            return FakeResponse({"id": "em_1", "status": "draft", "filters": json.loads(req.data)["filters"]})
+        if "/subscribers?" in req.full_url:
+            return FakeResponse({"results": [{"id": self.holder}], "next": None, "previous": None, "count": 1})
+        return FakeResponse(None)
 
 
 class FeedOpener(FakeOpener):
@@ -61,6 +69,13 @@ class FeedOpener(FakeOpener):
         if req.full_url.endswith("/emails"):
             return FakeResponse({"id": "em_1", "status": "draft", "filters": json.loads(req.data)["filters"]})
         return FakeResponse(None)
+
+
+def reader_tag(rid):
+    """読者専用タグの ID（TypeID の形。読者ごとに違う）。"""
+    alphabet = "0123456789abcdefghjkmnpqrstvwxyz"
+    n = int(hashlib.md5(rid.encode()).hexdigest(), 16)
+    return "sub_tag_0" + "".join(alphabet[(n >> (5 * i)) & 31] for i in range(25))
 
 
 def no_network(*a, **k):
@@ -100,10 +115,11 @@ class PaidDailyTest(unittest.TestCase):
     def readers(self, *rows):
         (self.root / "readers.json").write_text(json.dumps(list(rows)), encoding="utf-8")
 
-    def reader(self, rid, profile_text=PROFILE, sid=None):
+    def reader(self, rid, profile_text=PROFILE, sid=None, tag=None):
         if profile_text is not None:
             (self.root / "profiles" / f"{rid}.md").write_text(profile_text, encoding="utf-8")
-        return {"reader_id": rid, "subscriber_id": sid or f"sub_{rid}", "profile": f"profiles/{rid}.md"}
+        return {"reader_id": rid, "subscriber_id": sid or f"sub_{rid}", "tag_id": tag or reader_tag(rid),
+                "profile": f"profiles/{rid}.md"}
 
     def curate(self, rid, text=CURATED):
         """curate-news の代わりに、プロファイルのハッシュの名前で当日の出力を書く。"""
@@ -205,8 +221,10 @@ class PaidDailyTest(unittest.TestCase):
             with mock.patch.object(send_email, "main", lambda argv: real(argv, opener=opener)):
                 rc = quiet(p.finalize, self.root, DAY, "alice", True)[0]
                 self.assertEqual(rc, 0)
-                self.assertTrue(opener.requests[1].full_url.endswith("/emails/em_1/send-draft"))
-                self.assertEqual(json.loads(opener.requests[1].data), {"subscribers": ["sub_alice"]})
+                listed, create, publish = opener.requests
+                self.assertIn(f"tag={reader_tag('alice')}", listed.full_url)
+                self.assertEqual(json.loads(create.data)["filters"]["filters"][0]["value"], reader_tag("alice"))
+                self.assertTrue(publish.full_url.endswith("/emails/em_1/publish"))  # send-draft は使わない（#679）
                 stored = self.root / "sent" / "alice" / f"{DAY}.md"
                 self.assertEqual(stored.read_text(encoding="utf-8"), CURATED)
                 self.assertFalse((stored.parent / f"{DAY}.sending").exists())
@@ -392,7 +410,8 @@ class PaidDailyTest(unittest.TestCase):
             rc, _, err = quiet(p.finalize, self.root, DAY, "alice", True)
         self.assertEqual(rc, 0, err)
         called.assert_called_once()
-        self.assertEqual(called.call_args[0][0][:4], [str(html_path), "--subscriber-id", "sub_alice", "--send"])
+        self.assertEqual(called.call_args[0][0], [str(html_path), "--subscriber-id", "sub_alice", "--tag-id", reader_tag("alice"),
+                                                  "--send"])
         body = html_path.read_text(encoding="utf-8")
         self.assertIn("テスト運営者", body)
         self.assertIn('<a href="{{ unsubscribe_url }}">', body)
@@ -528,6 +547,59 @@ class PaidDailyTest(unittest.TestCase):
         self.readers(self.reader("alice", sid="sub_x"), self.reader("bob", sid="sub_x"))
         with self.assertRaises(SystemExit):
             p.load_all(self.root)
+
+    def test_reader_tag_must_be_unique_and_not_a_feed_tag(self):
+        # 読者専用タグ（#679）を2人に書く・フィードのタグと同じにすると、そのタグの購読者に別の読者向けの本文が届く
+        self.readers(self.reader("alice", tag=TAG), self.reader("bob", tag=TAG))
+        with self.assertRaises(SystemExit) as cm:
+            p.load_all(self.root)
+        self.assertIn("readers.json の tag_id が", str(cm.exception))
+        self.readers(self.reader("alice", tag=TAG))
+        self.feeds(self.feed("f-a", tag=TAG))
+        with self.assertRaises(SystemExit):
+            p.load_all(self.root)
+        # フィード側の偽の unhashable な値（[] など）で TypeError にならない（その行は finalize が断る）
+        self.feeds({**self.feed("f-a"), "tag_id": []})
+        self.assertIn("alice", p.load_all(self.root)["reader"])
+        self.feeds()
+        self.readers({**self.reader("alice"), "tag_id": [TAG]})
+        with self.assertRaises(SystemExit) as cm:
+            p.load_all(self.root)
+        self.assertIn("tag_id は文字列", str(cm.exception))
+
+    def test_reader_without_valid_tag_is_not_sent(self):
+        for bad in (None, "alice-tag", "sub_alice"):
+            row = self.reader("alice")
+            if bad is None:
+                del row["tag_id"]
+            else:
+                row["tag_id"] = bad
+            self.readers(row)
+            quiet(p.prepare, self.root, DAY, "alice")
+            self.curate("alice")
+            called = mock.Mock(return_value=0)
+            with mock.patch.object(send_email, "main", called):
+                rc, _, err = quiet(p.finalize, self.root, DAY, "alice", False)
+            self.assertEqual(rc, 1, bad)
+            self.assertIn("tag_id（読者専用タグの ID）が無いか不正", err)
+            called.assert_not_called()
+
+    def test_reader_tag_held_by_someone_else_is_not_sent_and_can_retry(self):
+        self.readers(self.reader("alice"))
+        self.footer(FOOTER)
+        quiet(p.prepare, self.root, DAY, "alice")
+        self.curate("alice")
+        opener = FakeOpener(holder="sub_bob")
+        real = send_email.main
+        with mock.patch.dict(os.environ, {KEY: "k"}), \
+                mock.patch.object(send_email, "main", lambda argv: real(argv, opener=opener)):
+            rc, _, err = quiet(p.finalize, self.root, DAY, "alice", True)
+        self.assertEqual(rc, 1)
+        self.assertIn("sub_alice でない", err)
+        self.assertEqual(len(opener.requests), 1)  # 一覧を引いただけで email は作らない
+        # 何も送っていないので送信中の印は残さない（次の run が止まらずに再試行できる）
+        self.assertFalse((self.root / "sent" / "alice" / f"{DAY}.sending").exists())
+        self.assertFalse((self.root / "sent" / "alice" / f"{DAY}.md").exists())
 
     def test_non_string_destination_is_rejected_without_type_error(self):
         self.feeds({"feed_id": "f-a", "tag_id": [TAG], "profile": "p.md"})
