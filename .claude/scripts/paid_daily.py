@@ -6,7 +6,8 @@ prepare → （curate-news を --profile と --paid で回す）→ finalize の
 1件ずつ直列に回す（同じ内容のプロファイルどうしは curate-news の出力ファイル名が同じになるため）。
 
 対応表とプロファイルは、公開 repo の作業ツリーの外に置いたディレクトリ（private repo を想定。以下 ROOT_DIR）に置く:
-  ROOT_DIR/readers.json  [{"reader_id": "r1", "subscriber_id": "sub_abc", "profile": "profiles/r1.md"}, ...]
+  ROOT_DIR/readers.json  [{"reader_id": "r1", "subscriber_id": "sub_abc", "tag_id": "sub_tag_...", "profile": "profiles/r1.md"}, ...]
+                         tag_id はその読者だけが持つタグ（読者専用タグ）。送る直前に、持つのがその1人だけか確かめる（#679）
   ROOT_DIR/feeds.json    [{"feed_id": "f-ai", "tag_id": "sub_tag_...", "profile": "profiles/f-ai.md"}, ...]
   ROOT_DIR/sent/{reader_id または feed_id}/{日付}.md  送信済みの出力（finalize --send が保存し、prepare が output/ に戻す）
   ROOT_DIR/footer.json  本文末尾の送信者名と配信停止の案内（形式は render_email_body.py。無い・不正なら --send は送らない）
@@ -15,7 +16,7 @@ profile は ROOT_DIR からの相対パス。ROOT_DIR の外を指すものは�
 
   prepare  --root ROOT_DIR --date D (--reader ID | --feed ID)  プロファイルを確かめ、送信済みの出力を output/ に戻し、当日の出力を消す
   finalize --root ROOT_DIR --date D (--reader ID | --feed ID) [--send]  当日の出力を ID の名前で取り分け、本文生成 → 送信
-           （既定は dry-run。読者はその購読者1人に、フィードは tag_id のタグを持つ購読者全員に同じ本文を送る）
+           （既定は dry-run。読者は読者専用タグで絞ってその購読者1人に、フィードは tag_id のタグを持つ購読者全員に同じ本文を送る）
   check    --root ROOT_DIR --date D [--text TEXT]  作業ツリーが clean で _posts/ に commit も増えていないか確かめ、
            公開してよい要約（件数と成否）を出す。--text は要約の書式と完全一致するときだけ通す
 
@@ -93,6 +94,13 @@ def load_all(root):
             # 同じ宛先を2行に書くと、その購読者（タグの購読者全員）に毎日2通届く
             raise SystemExit(f"{k['file']} の {k['dest']} が重複している")
         out[kind] = {r[k["id"]]: r for r in rows}
+    # 読者専用タグ（#679）は読者どうしでもフィードのタグとも重ねない。重なると、そのタグの購読者に別の本文が届く
+    reader_tags = [r.get("tag_id") for r in out["reader"].values() if r.get("tag_id")]
+    if not all(isinstance(t, str) for t in reader_tags):
+        raise SystemExit("readers.json の tag_id は文字列にする")
+    feed_tags = {r.get("tag_id") for r in out["feed"].values()}
+    if len(reader_tags) != len(set(reader_tags)) or feed_tags & set(reader_tags):
+        raise SystemExit("readers.json の tag_id が読者どうしか feeds.json の tag_id と重複している")
     return out
 
 
@@ -216,6 +224,9 @@ def finalize(root, day, reader_id, send, kind="reader"):
         dest_re = send_email.SUBSCRIBER_ID_RE if kind == "reader" else send_email.TAG_ID_RE
         if not isinstance(sid, str) or not dest_re.match(sid):
             raise Fail(f"{dest_key} が無いか不正")
+        tag = reader.get("tag_id")
+        if kind == "reader" and not (isinstance(tag, str) and send_email.TAG_ID_RE.match(tag)):
+            raise Fail("tag_id（読者専用タグの ID）が無いか不正")
         if run_state(day).get(reader_id, {}).get("hash") != h:
             raise Fail("prepare を通していないか、その後にプロファイルが変わった")
         try:
@@ -242,8 +253,8 @@ def finalize(root, day, reader_id, send, kind="reader"):
             render_email_body.main([str(md), *(["--footer", str(footer)] if footer else [])])
         except SystemExit as e:
             raise Fail(f"本文生成に失敗: {e}")
-        args = [str(d / f"{reader_id}.html"), "--subscriber-id" if kind == "reader" else "--tag-id", sid,
-                "--send" if send else "--dry-run"]
+        dest_args = ["--subscriber-id", sid, "--tag-id", tag] if kind == "reader" else ["--tag-id", sid]
+        args = [str(d / f"{reader_id}.html"), *dest_args, "--send" if send else "--dry-run"]
         if send:
             # output/ は run をまたいで残らないので、送信中の印は private repo 側に置く。届いたか分からない
             # 失敗（通信の例外）ではこれを残し、次の run が同じ宛先に二重に送らないようにする
