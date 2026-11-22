@@ -43,6 +43,8 @@ gem install --no-document jekyll:3.9.5 minima:2.5.1 jekyll-feed jekyll-seo-tag \
     jekyll-sitemap jekyll-paginate kramdown-parser-gfm
 ```
 
+**このローカルビルドは GitHub Pages の既定プラグイン（`jekyll-optional-front-matter` など）を入れていないので、front matter の無い md の扱いが本番と違う。** ローカルでは静的ファイルとして `.md` のままコピーされるが、Pages（と CI の `actions/jekyll-build-pages`）では Liquid を通した `.html` になり sitemap にも載る（実測 2026-11-22、#686: front matter の無い `docs/m5-paid-delivery.md` が本番では `{{ unsubscribe_url }}` を空にして公開されていた。ローカルの `_site/` だけ見ると再現しない）。front matter の無い md が公開されるかは本番の `sitemap.xml` を `curl` して確かめる
+
 **`gem install` した実行ファイルは PATH に現れないので、必ず PATH を足す。** rbenv の shim 経由でも動かない（shim は作られるが `rbenv version` が `system` なので system ruby を見にいき `rbenv: <cmd>: command not found` になる）。`bash -lc` で回り道しても同じ。`export` は次の Bash 呼び出しに引き継がれないので、**使うコマンドと同じ行に置く**:
 
 ```bash
