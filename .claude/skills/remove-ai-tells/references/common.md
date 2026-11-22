@@ -146,7 +146,7 @@ common-em-dash: (?<![\u3000-\u30ff\u4e00-\u9fff\uff00-\uffef\u2014\u2015])(?<![\
 - 残す場合: 読み手が実際に持っている誤解や、相手の発言を正す文。トラブルシュートの「原因は A でなく B」や、技術文書の「A でなく B を使う」という指示。
 - 直し方: 打ち消す側を消し、本題を具体的に言う。
 - 例: Before "This isn't just a job change for me; it's a chance to keep working on the payment systems I've built for four years." → After "I want to keep working on payment systems, which I've built for four years."
-- 出典: [Wikipedia: Signs of AI writing](https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing)、[Paech et al. 2026 (Antislop)](https://arxiv.org/abs/2510.15061)、[Washington Post 2025](https://www.washingtonpost.com/technology/interactive/2025/how-detect-chatgpt-em-dash/)、[Russell et al. 2025](https://arxiv.org/abs/2501.15654)。証拠の強さ: 強
+- 出典: [Wikipedia: Signs of AI writing](https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing)、[Paech et al. 2025 (Antislop)](https://arxiv.org/abs/2510.15061)、[Washington Post 2025](https://www.washingtonpost.com/technology/interactive/2025/how-detect-chatgpt-em-dash/)、[Russell et al. 2025](https://arxiv.org/abs/2501.15654)。証拠の強さ: 強
 
 ### common-tagline-ending: 決め台詞で締める
 
@@ -238,7 +238,7 @@ common-tool-residue: contentReference\[oaicite:\d+\]|\boaicite\b|\boai_citation\
 - `lang`: 使った言語。指定がなければ文字種から判定する。日英が混ざる文章は `--lang ja,en` のように両方を指定すると、両方のパターンが当たる（文と語は先頭の言語で数える）。
 - `hits`: 一致ごとに `id`、`source`（`common` か言語）、`line`、`column`（1 始まり）、`match`（一致した文字列）、`context`（その行全体）。lexicon prose の観点は見出し行に当てない。同じ id の一致は先頭の一部だけ返る。
 - `counts`: id ごとの一致の総数。1 件はたいてい偶然。件数を文書の長さ（`metrics.words`、`metrics.chars`）と比べて読む。
-- `repeated_phrases`: 2 回以上出る言い回しの `phrase`、`count`、`lines`。評価や決め台詞の繰り返しは兆候（common-self-echo）で、用語、製品名、固有名詞の繰り返しは必要なもの。見出し行は数えない。英語は 3 語未満の句と機能語（the、of など）だけの句、日本語は 6 文字未満の句、数字を含む句、英数字だけの句を数えないので、リストが空でも短い決め台詞の繰り返しはありうる。
+- `repeated_phrases`: 2 回以上出る言い回しの `phrase`、`count`、`lines`。評価や決め台詞の繰り返しは兆候（common-self-echo）で、用語、製品名、固有名詞の繰り返しは必要なもの。見出し行は数えない。英語は 3 語未満の句と機能語（the、of など）だけの句、日本語は 6 文字未満の句、数字を含む句、ひらがなを含まない句（用語や固有名詞だけの並び）、カタカナ・漢字が 2 字未満の句を数えないので、リストが空でも短い決め台詞の繰り返しはありうる。
 - `metrics`: 文書全体の値。単独では判定せず、ほかの候補と合わせて読む。
   - `words`、`chars`: 見出しとコードを除いた本文の語数と、空白を除いた文字数。`counts` の件数を 1,000 語（日本語は 1,000 字）あたりに直すときに使う。
   - `sentences`: 数えた文の数。行と句読点で区切るので、箇条書きは 1 項目が 1 文になる。少ないとほかの値がぶれる。
@@ -260,7 +260,7 @@ common-tool-residue: contentReference\[oaicite:\d+\]|\boaicite\b|\boai_citation\
 
 どの語や記号が多用されるかはモデルと時期で入れ替わる。以下は確認日時点の観察で、項目の判断はこれに頼りすぎない。
 
-- em dash: ChatGPT の応答で em dash を含むものは 2024 年に 1 割未満、2025 年夏に半分超だった（[Washington Post 2025-11](https://www.washingtonpost.com/technology/interactive/2025/how-detect-chatgpt-em-dash/)）。OpenAI は GPT-5.1 で抑えた。2026-07 の The Economist の分析では、プロの書き手より多く使うのは Claude だけで、ChatGPT はどの書き手より少なかった（有料記事のため [Daring Fireball](https://daringfireball.net/linked/2026/08/11/economist-ai-writing) と Wikipedia 経由の二次情報）。Wikipedia は 2026-09 時点でこの兆候を過去の兆候に移すか検討している（[Wikipedia](https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing)）。今は Claude の下書きと、このスキル自身の書き換えで特に確かめる。
+- em dash: ChatGPT の応答で em dash を含むものは 2024 年に 1 割未満、2025 年夏に半分超だった（[Washington Post 2025-11](https://www.washingtonpost.com/technology/interactive/2025/how-detect-chatgpt-em-dash/)）。OpenAI は GPT-5.1 で抑えた。2026-07 の The Economist の分析では、プロの書き手より多く使うのは Claude だけで、ChatGPT はどの書き手より少なかった（有料記事のため [Daring Fireball](https://daringfireball.net/linked/2026/08/11/economist-ai-writing) と Wikipedia 経由の二次情報）。Wikipedia は 2026-09 にこの兆候を過去の兆候（Historical indicators、2022〜2026-09）へ移した（[Wikipedia](https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing)、2026-11-15 確認）。今は Claude の下書きと、このスキル自身の書き換えで特に確かめる。
 - 絵文字: 2025-07 の ChatGPT の応答の 70% に絵文字が 1 つ以上あり、✅ は人の 11 倍だった（Washington Post）。Wikipedia によると記事の中では減っている。
 - 太字、箇条書き、Markdown: 検出器ベンダーの計測（日付の記載なし）で、太字は人の約 43 倍、Markdown 全体で約 12 倍、箇条書きは約 9 倍（[Pangram](https://www.pangram.com/signs-of-ai-writing)）。Qiita の技術記事を 2019〜2022 年の平均と 2026-08 で比べた計測では、1,000 字あたりの太字が 1.26 から 3.83、箇条書きの行の割合が 8.9% から 16.4%、ダッシュが 0.043 から 0.426 に増えた（[逆瀬川 2026-09](https://nyosegawa.com/posts/qiita-writing-before-after-ai/)。増えた理由を AI と特定してはいない）。
 - 文の長さ: 同じ Qiita の計測で文長の変動係数は 0.609 から 0.535 に下がった（揃う方向）。一方 The Economist（2026-07）は、AI の文章では長い文が続いて短い文で区切られることが少ないと報告しており、短い断片を連ねる癖を挙げる実務者の観察（[tropes.fyi](https://tropes.fyi/directory)）とは向きが違う。
