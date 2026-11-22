@@ -165,7 +165,7 @@ python3 .claude/skills/curate-news/scripts/fetch_feeds.py --source hatena --cate
   python3 .claude/skills/curate-news/scripts/fetch_article_context.py "URL" ["URL" ...]
   ```
 
-  `meta`（og:description 等）と `body`（本文冒頭）が材料になる。**公開されている範囲だけを使う**（会員限定記事なら、無料で表示されるリード部分まで）。`ok: false` は robots.txt の拒否か取得失敗で、いずれも取りに行かない
+  `meta`（og:description 等）と `body`（本文冒頭）が材料になる。**公開されている範囲だけを使う**（会員限定記事なら、無料で表示されるリード部分まで）。`ok: false` は robots.txt の拒否か取得失敗で、いずれも取りに行かない。出力をファイルに落として読むなら、ファイル名にプロファイル名（デフォルトは `default`）を入れる。scratchpad は並列で走る他プロファイルの実行と共有で、同じ名前だと他の実行が取った別の記事の内容に差し替わる（実測 2026-11-22: designer が `ctx.json` に書いて読むと、渡していない URL の本文が入っていた）
 
 - description が空のときの `meta` も同じ扱い（上の規律）。`body` から別の事実を拾って組み立てる
 - 取得できない・`thin: true` で `meta` も汎用文の場合は、**別の一次経路**を当たる（論文なら DOI から Crossref、GitHub なら raw、Apple の docs なら `developer.apple.com/tutorials/data/...json` など、そのページの内容を返す公開エンドポイント）。ウェブページ（公式ドキュメント・製品ページ等）は `fetch_article_context.py` で取得して robots.txt の照合を通す（`ok: false` なら使わない）。公開 API はその API の利用条件の範囲で使う
