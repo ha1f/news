@@ -79,7 +79,7 @@ flowchart LR
 
 - **日次ステージ** — その時点の標準的な最新世代を指定する
 - **週次監査だけは最上位モデル** — 監査は最上位モデルで行うオーナー方針
-- 日次ステージのスキル（publish-pages・select-and-develop）は SKILL.md の frontmatter に `model: opus`（alias）を持ち、trigger 側の指定が空でも方針どおりの世代で動くことを狙ったもの。ただし `model` の上書きはそのターン限りで（skills docs）、1 ターンで完走する select-and-develop は実測で Opus 5.5 になった一方、subagent をバックグラウンド起動する publish-pages は完了通知で始まる後続ターンで既定モデル（実測 Sonnet 5.5）に戻る。`毎日ニュース` trigger のモデル指定は人間の作業として #568 で hold 中。alias は世代交代に追従するので ID の更新漏れが起きない
+- 日次ステージのスキル（publish-pages・select-and-develop）は SKILL.md の frontmatter に `model: opus`（alias）を持ち、trigger 側の指定が空でも方針どおりの世代で動くことを狙ったもの。ただし `model` の上書きはそのターン限りで（skills docs）、1 ターンで完走する select-and-develop は実測で Opus 5.5 になった一方、subagent をバックグラウンド起動する publish-pages は完了通知で始まる後続ターンで trigger の既定モデルに戻る（実測: 10/25〜11/01 は Sonnet 5.5、11/19〜11/22 は Fable 5.2。既定が何になるかは claude.ai 側で決まり、repo からは制御できない）。また Claude Code 2.1.330 以降、スキルの `model` は本体ターンにしか効かず subagent はセッションのモデルで動く。`毎日ニュース` trigger のモデル指定は人間の作業として #568 で hold 中。alias は世代交代に追従するので ID の更新漏れが起きない
 
 現行世代が何かは live docs（`https://platform.claude.com/docs/en/models/overview`）で確認する。claude-api スキルの Current Models はキャッシュで1世代遅れうる。コンテキスト長のサフィックス（`[1m]` 等）は、既定で足りるなら付けない — 旧世代の指定が残る原因になる。
 
