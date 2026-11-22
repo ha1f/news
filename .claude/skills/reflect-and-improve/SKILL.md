@@ -26,7 +26,7 @@ description: "作業後の振り返りと改善。会話中のエラー・回避
 ## PR
 
 - 改善は最新の `origin/main` からブランチを切り、DRAFT PR にする。URL を報告する
-- push できる branch が 1 本に限られる run（スケジュール起動の develop など。repo のノートが環境として定めていれば従う）では、学びを当該 PR に同梱し、PR body の変更点に 1 行足す。別 PR に分けるのは branch を切れるときだけ
+- push できる branch が 1 本に限られる run（スケジュール起動の develop など。制約の有無は repo のノートの環境の項に書かれている）では、学びを当該 PR に同梱し、PR body の変更点に 1 行足す。別 PR に分けるのは branch を切れるときだけ
 - 本文に背景・観測された証拠・成功基準を書く。linked issue の無い PR では本文が唯一の正本になる
 - 記述は head commit の実物と一致した状態で終える
 - 作る前に同じ内容を扱う open PR を確認し、あれば新しい PR を作らず追記する
