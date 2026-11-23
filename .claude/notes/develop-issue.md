@@ -96,7 +96,7 @@ artifact に写るのは、その branch の `_posts/` をビルドした結果�
   - **判定前に `origin/main` を取り込む。** `--diff` は2点 diff なので、branch が main より遅れていると *main 側で進んだ* ファイルまで自分の変更として並ぶ。実測 2026-09-21: branch が #369（Renovate の playwright 更新）の分だけ遅れていて `.github/workflows/jekyll-build-check.yml` が `protected: true` で出たが、`git diff --name-only origin/main...HEAD -- .github/workflows/` は 0 件。main をマージしたら `protected: false` になった
   - この「`origin/<ref>` を先に fetch する」は `check_protected_paths.py` に限らず、`origin/main` を引数に取る repo 内スクリプト全般に効く前提（`check_missing_publish_days.py` の `git ls-tree` 等）。新しく書くスクリプトは自分では fetch せず、呼び出し側（SKILL.md の手順）に `git fetch origin main -q` を明記する形で揃える（#421 で同じ抜けを一度踏んだ）
 - 見出しリンクの着地点: `python3 .claude/scripts/check_article_anchors.py <_site>`。**一覧の `<li>` の構造（`<a>` の前後に要素を足す等）を変えたら、変更前のビルドと件数を比べる**: ITEM_RE に合わない項目はエラーにならず検査から黙って外れる（実測 2026-11-20 #674: 続報の印の span を足したら 7369 → 7219 件で失敗 0 のまま。ITEM_RE に印を許して 7369 件に戻した）
-- 遷移先ドメインの表示（ラベルと遷移先が違う項目だけに付くか）: `python3 .claude/scripts/check_link_domains.py <_site>`（#183。`_data/source_domains.json` がソース定義と一致しているかも見る。書き直しは `python3 .claude/scripts/gen_source_domains.py`）。CI には未配線
+- 遷移先ドメインの表示（ラベルと遷移先が違う項目だけに付くか）: `python3 .claude/scripts/check_link_domains.py <_site>`（#183。`_data/source_domains.json` がソース定義と一致しているかも見る。書き直しは `python3 .claude/scripts/gen_source_domains.py`）。一致検査（`gen_source_domains.py --check`）は CI の「Check article quality」に配線済み、`check_link_domains.py` 本体は未配線
 - 読みどころの欠落: `python3 .claude/scripts/check_article_notes.py`
 - ソース表記の不一致: `python3 .claude/scripts/check_source_hints.py`
 - title が日付のままになっていないか: `python3 .claude/scripts/check_post_titles.py`
