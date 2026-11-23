@@ -98,6 +98,10 @@ jobs:
           # 「この PR が触った投稿」だけを見ると、別の PR で入った分を素通り
           # させる。誤検知は持たない（#408 で全 408 本に当てて0件）
           python3 .claude/scripts/check_tool_artifacts.py
+          # ソース定義の表示名・記事ドメインと _data/source_domains.json の写しが
+          # 一致するか。古いままだと遷移先ドメインの二重表示が出る（#183）。生成を
+          # 同じ commit に入れる手順は STYLEGUIDE にあるが、忘れても CI で止まるように
+          python3 .claude/scripts/gen_source_domains.py --check
           # 本文が変わった投稿だけを渡す。この2つの検査が見るのは本文の記事項目
           # だけなので、front matter を一括更新した PR に全件を渡すと、その投稿が
           # 書かれた当時のルールで書かれた既存の本文まで今の検査にかかり、PR が
