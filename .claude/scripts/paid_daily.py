@@ -44,7 +44,7 @@ KINDS = {
     "reader": {"file": "readers.json", "id": "reader_id", "dest": "subscriber_id"},
     "feed": {"file": "feeds.json", "id": "feed_id", "dest": "tag_id"},
 }
-# curate-news の recent_topics.py が自分のフィードを遡る日数（--own-days の既定10）を覆う
+# curate-news の recent_topics.py が自分のフィードを遡る日数（--own-days の既定14）を覆う
 RESTORE_DAYS = 14
 # 公開 repo に書いてよい文はこの書式だけ（読者 ID・関心・見出しが入る余地を残さない）
 SUMMARY_RE = re.compile(r"^有料フィード: 読者 \d+人中 \d+人成功・\d+人失敗（(?:dry-run|送信 \d+人)）"
