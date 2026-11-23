@@ -3,9 +3,11 @@
 
 照合の窓は2段になっている:
   - 直近 --days 日（既定3）: 全フィード（_posts/ の全プロファイル）と output/ の同じ好みの分
-  - その前の --own-days 日まで（既定10）: 自分のフィードの _posts/ と output/ の同じ好みの分だけ
-    （1週間ほど前に読んだ話題が別媒体の URL で再び載るのを防ぐ #531。全フィードを10日分
-    出すと行数が3倍以上になるため、読者が実際に読んだ自分のフィードに絞る）
+  - その前の --own-days 日まで（既定14）: 自分のフィードの _posts/ と output/ の同じ好みの分だけ
+    （1〜2週間前に読んだ話題が別媒体の URL で再び載るのを防ぐ #531・#695。全フィードを14日分
+    出すと行数が数倍になるため、読者が実際に読んだ自分のフィードに絞る。10日では 12日・14日おいた
+    再掲が窓の外になった。14日にしてメインの出力は見出し 213 → 254 本（全体 233 → 282 行）、約4KB 増える。
+    publish 前の check_topic_repeats.py の WINDOW_DAYS と揃える）
 
 全フィードの窓では、自分のフィード以外の見出しの頭に載ったフィードを「［起業家］」の形で付ける。
 「続報（M/D掲載）」の M/D は同じフィードのその日のページへのリンクになるので、別フィードの日付を
@@ -13,7 +15,7 @@
 profiles/{name}.md の title、メインは「メイン」。
 
 使い方:
-  python3 recent_topics.py                         # 直近3日（全フィード）+ 10日前まで（自分のフィード）
+  python3 recent_topics.py                         # 直近3日（全フィード）+ 14日前まで（自分のフィード）
   python3 recent_topics.py --profile researcher    # 自分のフィード = _posts/*-news-researcher.md
   python3 recent_topics.py --days 5 --own-days 14  # 窓を変える
   python3 recent_topics.py --today 2026-10-08      # 「今日」を固定する（検証用）
@@ -55,6 +57,7 @@ _HEADLINE_RE = re.compile(
 _POSTS_RE = re.compile(r"^\d{4}-\d{2}-\d{2}-news(?:-.+)?\.md$")
 
 OWN_ONLY_LABEL = "（このフィードのみ）"
+OWN_DAYS = 14  # --own-days の既定
 
 
 def _extract_headlines(file_path: str) -> list[str]:
@@ -174,8 +177,8 @@ def main():
     parser.add_argument("--hash", help="preferencesハッシュ（省略時は自動計算）")
     parser.add_argument("--days", type=int, default=3, help="全フィードを遡る日数（デフォルト3）")
     parser.add_argument(
-        "--own-days", type=int, default=10,
-        help="自分のフィードを遡る日数（デフォルト10。--days 以下なら追加なし）",
+        "--own-days", type=int, default=OWN_DAYS,
+        help=f"自分のフィードを遡る日数（デフォルト{OWN_DAYS}。--days 以下なら追加なし）",
     )
     parser.add_argument("--today", type=date.fromisoformat, help="今日とみなす日付 YYYY-MM-DD（検証用）")
     args = parser.parse_args()

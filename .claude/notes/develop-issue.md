@@ -104,7 +104,7 @@ artifact に写るのは、その branch の `_posts/` をビルドした結果�
 - 過去の日付の投稿に載せた URL の再掲: `python3 .claude/scripts/check_repeat_urls.py`（#40。判定の正本は curate-news の `published_urls.py`。CI には未配線。`--all` は過去の再掲を全部数えるので 300 件超で落ちる）
   （`check_article_notes.py` / `check_source_hints.py` / `check_post_titles.py` / `check_repeat_urls.py` の4つは引数なしで当日 JST 分を検査。`_posts/{YYYY-MM-DD}-*.md` を渡せば日付を固定できる。`--all` で全投稿）
 - 人物・会社名の表記の揺れ: `python3 .claude/scripts/check_name_variants.py`（#664。表は `.claude/skills/curate-news/references/names.md`。引数なしで当日 JST 分、`--all` で全投稿。過去の投稿には揺れが残っている（2026-11-17 時点で 197 件）ので `--all` は落ちる。CI には未配線）。`check_topic_repeats.py` も同じ表で揺れを揃えてから固有名を照合する
-- 同じフィードの直近10日に載せた話題の、印の無い再掲の候補: `python3 .claude/scripts/check_topic_repeats.py _posts/{YYYY-MM-DD}-*.md`（#531。**引数なしでは当日を検査せず exit 2**。exit 1 は判断の要る候補があるだけで、別の話題も混ざる。CI には未配線）
+- 同じフィードの直近14日に載せた話題の、印の無い再掲の候補: `python3 .claude/scripts/check_topic_repeats.py _posts/{YYYY-MM-DD}-*.md`（#531。**引数なしでは当日を検査せず exit 2**。exit 1 は判断の要る候補があるだけで、別の話題も混ざる。CI には未配線）
 - 投稿の `article_tags`（記事単位のトピック）が本文と揃っているか: `python3 .claude/scripts/check_article_tags.py`（#354。publish-pages が使う。引数なしで当日 JST 分、`_posts/{YYYY-MM-DD}-*.md` で日付固定、`--all` で全投稿。CI には未配線）
 - 記事にツール呼び出し構文（`</content>` 等）が残っていないか: `python3 .claude/scripts/check_tool_artifacts.py`（#408。CI の「Check article quality」で全投稿に当たる。#469）。**上の当日分を検査するものと違い、引数なしで全投稿を検査する**（混入は間欠的に起きるので「今日は出ていない」を収束と読まないため。`--help` は受けず `--all` だけ）。混入を見つけたら取り除いてから**もう一度走らせて0件を確認する**（同じ日の全プロファイルにまとめて出るので、1本直して終わりにならない）
 - ユニットテスト: `python3 .claude/scripts/run_unit_tests.py`（#488。`test_*.py` の在るディレクトリを見つけて全部回す。`--list` で置き場の一覧。CI は `.claude/` に差分がある PR で同じものを回す）。1 ディレクトリだけ回すなら、そのディレクトリで `python3 -m unittest discover -p 'test_*.py'`（repo ルートからの discover は 0 件になる）

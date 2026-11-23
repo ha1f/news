@@ -22,6 +22,11 @@ ECDSA の seed の由来が、印なしで再掲された）。ここで疑わ�
 1投稿あたり約1.9組、#531 の4組（Gemini 4 Argon・OpenAI の研究者3人・Deno・ECDSA）は
 いずれも10以上。別の話題の組も混ざるので、判断はモデルに残し、CI には載せない。
 
+窓は10日から14日に広げた（#695。11/09→11/23 の「今後確認しない」、11/08→11/20 のボイジャー1号が
+12日・14日おいて印なしに再掲された）。10/24〜11/23 の全フィード155投稿で、要判断の項目は
+1投稿あたり 2.16 → 2.62（30日にすると 3.63）。14日より広げるなら、有料 run が前日までの投稿を
+戻す日数（paid_daily.py の RESTORE_DAYS）も合わせて広げる。
+
 拾えないもの: 1語の点数は母集合の大きさで頭打ちになる（約1100項目で log(n) ≒ 7）ため、
 固有名が1語しか重ならない再掲は閾値に届かない。漢字の連なりは丸ごと1語なので粒度が
 違うと一致せず（「安全性研究者」と「安全性」）、表記揺れも `curate-news/references/names.md` の表に
@@ -57,7 +62,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from check_follow_up_links import MAIN_FEED_NAME, feed_names, nearest_prior  # noqa: E402
 
-WINDOW_DAYS = 10  # recent_topics.py の --own-days の既定と揃える
+WINDOW_DAYS = 14  # recent_topics.py の --own-days の既定（OWN_DAYS）と揃える。テストで一致を見ている
 IDF_DAYS = 30
 MIN_SCORE = 8.0
 MAX_PAIRS = 3

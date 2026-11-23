@@ -29,7 +29,7 @@ def _run(*argv):
 
 
 class RecentTopicsWindowTest(unittest.TestCase):
-    """直近3日は全フィード、10日前までは自分のフィードだけを照合に出す (#531)"""
+    """直近3日は全フィード、14日前までは自分のフィードだけを照合に出す (#531・#695)"""
 
     def setUp(self):
         tmp = tempfile.TemporaryDirectory()
@@ -51,7 +51,7 @@ class RecentTopicsWindowTest(unittest.TestCase):
             patcher.start()
             self.addCleanup(patcher.stop)
 
-        # 今日 = 10/11。直近3日 = 10/08〜10/10、自分のフィード = 10/01〜10/07
+        # 今日 = 10/11。直近3日 = 10/08〜10/10、自分のフィード = 09/27〜10/07
         _post(self.posts, "2026-10-11-news.md", "今日のメイン")
         _post(self.posts, "2026-10-10-news.md", "昨日のメイン")
         _post(self.posts, "2026-10-09-news-researcher.md", "2日前の研究者")
@@ -61,23 +61,39 @@ class RecentTopicsWindowTest(unittest.TestCase):
         _post(self.posts, "2026-10-02-news-researcher.md", "9日前の研究者")
         _post(self.posts, "2026-10-01-news.md", "10日前のメイン")
         _post(self.posts, "2026-09-30-news.md", "11日前のメイン")
+        _post(self.posts, "2026-09-27-news.md", "14日前のメイン")
+        _post(self.posts, "2026-09-27-news-researcher.md", "14日前の研究者")
+        _post(self.posts, "2026-09-26-news.md", "15日前のメイン")
         _post(self.output, "2026-10-05-news-abcd1234.md", "6日前の自分の出力")
         _post(self.output, "2026-10-05-news-ffff0000.md", "6日前の他人の出力")
 
     def test_default_profile(self):
         out = _run("--hash", "abcd1234", "--today", "2026-10-11")
         for h in ("昨日のメイン", "2日前の研究者", "3日前のデザイナー",
-                  "4日前のメイン", "6日前の自分の出力", "10日前のメイン"):
+                  "4日前のメイン", "6日前の自分の出力", "10日前のメイン",
+                  "11日前のメイン", "14日前のメイン"):
             self.assertIn(h, out)
         for h in ("今日のメイン", "4日前のデザイナー", "9日前の研究者",
-                  "11日前のメイン", "6日前の他人の出力"):
+                  "14日前の研究者", "15日前のメイン", "6日前の他人の出力"):
             self.assertNotIn(h, out)
+
+    def test_default_own_window_is_14_days(self):
+        """既定の窓に入る日付の数を固定する（境界日だけだと窓全体の1日ずれを見逃す）"""
+        _run_out = _run("--hash", "abcd1234", "--today", "2026-10-11")
+        sections = [l for l in _run_out.splitlines() if l.startswith("## ")]
+        # 10/02 は研究者だけ（直近3日より前なので出ない）、09/26 は15日前で窓の外
+        self.assertEqual(
+            [l[3:13] for l in sections],
+            ["2026-10-10", "2026-10-09", "2026-10-08", "2026-10-07", "2026-10-05",
+             "2026-10-01", "2026-09-30", "2026-09-27"],
+        )
 
     def test_named_profile(self):
         out = _run("--profile", "researcher", "--hash", "abcd1234", "--today", "2026-10-11")
-        for h in ("昨日のメイン", "3日前のデザイナー", "9日前の研究者", "6日前の自分の出力"):
+        for h in ("昨日のメイン", "3日前のデザイナー", "9日前の研究者", "14日前の研究者",
+                  "6日前の自分の出力"):
             self.assertIn(h, out)
-        for h in ("4日前のメイン", "10日前のメイン", "4日前のデザイナー"):
+        for h in ("4日前のメイン", "10日前のメイン", "14日前のメイン", "4日前のデザイナー"):
             self.assertNotIn(h, out)
 
     def test_profile_path_inside_profiles_dir(self):

@@ -53,11 +53,40 @@ class RealPostsTest(unittest.TestCase):
             self.pairs("2026-10-08-news.md"),
         )
 
+    def test_2026_11_23_main_14_days(self):
+        # #695: 10日の窓では照合されず、印なしに再掲された（14日おき）
+        self.assertIn(
+            ("Claude Code の「今後確認しない」設定から秘密情報が漏れていた", "2026-11-09"),
+            self.pairs("2026-11-23-news.md"),
+        )
+
+    def test_2026_11_20_main_12_days(self):
+        # #695: 12日おきの再掲
+        self.assertIn(
+            ("ボイジャー1号、地球から「1光日」の距離に到達", "2026-11-08"),
+            self.pairs("2026-11-20-news.md"),
+        )
+
     def test_2026_10_11_researcher(self):
         self.assertIn(
             ("OpenAI、安全性研究者3人を解雇　双方の主張が真っ向から対立", "2026-10-02"),
             self.pairs("2026-10-11-news-researcher.md"),
         )
+
+
+class WindowMatchesRecentTopicsTest(unittest.TestCase):
+    """publish 前の検査と curate-news が読む掲載済みヘッドラインの窓が同じ日数であること (#695)"""
+
+    def test_same_days(self):
+        import importlib.util
+
+        path = HERE.parents[0] / "skills" / "curate-news" / "scripts" / "recent_topics.py"
+        sys.path.insert(0, str(path.parent))
+        spec = importlib.util.spec_from_file_location("recent_topics_for_window", path)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        self.assertEqual(check_topic_repeats.WINDOW_DAYS, mod.OWN_DAYS)
+        self.assertEqual(check_topic_repeats.WINDOW_DAYS, 14)
 
 
 class RealFollowUpTargetsTest(unittest.TestCase):
@@ -164,12 +193,13 @@ class SyntheticTest(unittest.TestCase):
         today = self.write("2026-10-20-news.md", post(("Claude が Wexqort の謎を解明", "NSA の数値の出どころ。")))
         self.assertEqual(len(self.check(today)), 1)
 
-    def test_window_is_ten_days(self):
-        self.write("2026-10-09-news.md", post(self.PREV))
+    def test_window_is_fourteen_days(self):
+        # 15日前は窓の外、14日前は窓の中（#695。10日では 12日・14日おいた再掲を見逃した）
+        self.write("2026-10-05-news.md", post(self.PREV))
         today = self.write("2026-10-20-news.md", post(self.AGAIN))
         self.assertEqual(self.check(today), [])
-        self.write("2026-10-10-news.md", post(self.PREV))
-        self.assertEqual(len(self.check(today)), 1)
+        self.write("2026-10-06-news.md", post(self.PREV))
+        self.assertEqual([h[0] for _, hits in self.check(today) for h in hits], ["2026-10-06-news.md"])
 
     def test_other_feed_and_same_day_are_ignored(self):
         self.write("2026-10-15-news-engineer.md", post(self.PREV))
