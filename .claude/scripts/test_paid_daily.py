@@ -210,6 +210,40 @@ class PaidDailyTest(unittest.TestCase):
         self.assertFalse((self.root / "sent").exists())
         self.assertIs(p.run_state(DAY)["alice"]["sent"], False)
 
+    def body(self, rid):
+        return (p.run_dir(DAY) / f"{rid}.html").read_text(encoding="utf-8")
+
+    def test_subject_uses_profile_title_as_feed_name(self):
+        # 件名（<title>）と先頭の見出しにフィード名と1本目の見出しが入る (#703)
+        self.readers(self.reader("alice", profile_text='---\ntitle: "宇宙と半導体"\n---\n' + PROFILE))
+        self.assertEqual(self.run_reader("alice"), 0)
+        h = self.body("alice")
+        self.assertIn("<title>宇宙と半導体｜打ち上げ会社が初の黒字（10/21）</title>", h)
+        txt = (p.run_dir(DAY) / "alice.txt").read_text(encoding="utf-8")
+        self.assertTrue(txt.startswith("宇宙と半導体｜打ち上げ会社が初の黒字（10/21）\n"))
+        self.assertEqual(send_email.subject_of(h, None), "宇宙と半導体｜打ち上げ会社が初の黒字（10/21）")
+
+    def test_subject_without_profile_title_warns_and_still_names_top_story(self):
+        self.readers(self.reader("alice"))
+        quiet(p.prepare, self.root, DAY, "alice")
+        self.curate("alice")
+        rc, _, err = quiet(p.finalize, self.root, DAY, "alice", False)
+        self.assertEqual(rc, 0)
+        self.assertIn("title（フィード名）が無いか使えない", err)
+        self.assertIn("<title>打ち上げ会社が初の黒字（10/21）</title>", self.body("alice"))
+
+    def test_profile_name_reads_only_front_matter_title(self):
+        f = self.root / "profiles" / "x.md"
+        for text, want in (("---\ntitle: 研究者\n---\n# a\n", "研究者"),
+                           ("---\ntitle: 'AI と法務'\nother: 1\n---\n", "AI と法務"),
+                           ("# 興味\ntitle: 本文の行\n", None),
+                           ("---\nother: 1\n---\ntitle: 本文\n", None),
+                           ("---\ntitle: \n---\n", None),
+                           ("---\ntitle: " + "x" * 100 + "\n---\n", None)):
+            f.write_text(text, encoding="utf-8")
+            self.assertEqual(p.profile_name(f), want, text)
+        self.assertIsNone(p.profile_name(self.root / "none.md"))
+
     def test_send_saves_output_and_next_prepare_restores_it(self):
         self.readers(self.reader("alice"))
         quiet(p.prepare, self.root, DAY, "alice")

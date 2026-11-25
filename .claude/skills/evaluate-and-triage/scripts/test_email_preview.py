@@ -66,9 +66,14 @@ class CliTest(unittest.TestCase):
             html = ep.EVAL_DIR / "2099-01-02-news-engineer.html"
             try:
                 body = txt.read_text(encoding="utf-8")
-                self.assertTrue(body.startswith("ニュース (2099-01-02 JST)\n\nリード文。"))
+                # 件名・先頭の見出しは有料 run と同じく、プロファイルの title をフィード名にした文 (#703)
+                first = body.splitlines()[0]
+                self.assertTrue(first.startswith("ソフトウェアエンジニア｜"), first)
+                self.assertTrue(first.endswith("（1/2）"), first)
+                self.assertNotIn("ニュース (", first)
+                self.assertIn("\n\nリード文。", body)
                 self.assertIn("配信を停止する", body)
-                self.assertIn("<title>ニュース (2099-01-02 JST)</title>", html.read_text(encoding="utf-8"))
+                self.assertIn(f"<title>{ep.render_email_body.html.escape(first)}</title>", html.read_text(encoding="utf-8"))
                 self.assertIn(render_mark(), html.read_text(encoding="utf-8"))
             finally:
                 for p in (txt, html, ep.EVAL_DIR / post.name):

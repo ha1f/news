@@ -13,6 +13,8 @@ prepare → （curate-news を --profile と --paid で回す）→ finalize の
   ROOT_DIR/footer.json  本文末尾の送信者名と配信停止の案内（形式は render_email_body.py。無い・不正なら --send は送らない）
 readers.json と feeds.json はどちらか片方だけでもよい。reader_id と feed_id は両方を通して重複させない（sent/ と run.json を共有するため）。
 profile は ROOT_DIR からの相対パス。ROOT_DIR の外を指すものは受け付けない。
+profile の front matter の title（公開プロファイルと同じ書式。例: `title: ソフトウェアエンジニア`）はメールの件名と
+先頭の見出しの頭に付くフィード名になる (#703)。無ければフィード名なしの件名で送り、警告を出す。
 
   prepare  --root ROOT_DIR --date D (--reader ID | --feed ID)  プロファイルを確かめ、送信済みの出力を output/ に戻し、当日の出力を消す
   finalize --root ROOT_DIR --date D (--reader ID | --feed ID) [--send]  当日の出力を ID の名前で取り分け、本文生成 → 送信
@@ -145,6 +147,29 @@ def profile_of(root, reader):
     return path, h
 
 
+FRONT_TITLE_RE = re.compile(r"""^title:\s*(?P<q>["']?)(?P<title>.*?)(?P=q)\s*$""")
+
+
+def profile_name(path):
+    """プロファイルの front matter の title（フィード名）。無い・読めない・使えない値なら None。"""
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except (OSError, UnicodeDecodeError):
+        return None
+    if not lines or lines[0].strip() != "---":
+        return None
+    for line in lines[1:]:
+        if line.strip() == "---":
+            return None
+        m = FRONT_TITLE_RE.match(line.strip())
+        if m:
+            try:
+                return render_email_body.check_name(m["title"])
+            except ValueError:
+                return None
+    return None
+
+
 def store_of(root, reader_id):
     """送信済みの出力の置き場。symlink で --root の外（公開 repo など）に出ていないこと。"""
     store = root / "sent" / reader_id
@@ -219,7 +244,7 @@ def prepare(root, day, reader_id, kind="reader"):
 def finalize(root, day, reader_id, send, kind="reader"):
     reader = entry_of(root, reader_id, kind)
     try:
-        _, h = profile_of(root, reader)
+        path, h = profile_of(root, reader)
         dest_key = KINDS[kind]["dest"]
         sid = reader.get(dest_key)
         dest_re = send_email.SUBSCRIBER_ID_RE if kind == "reader" else send_email.TAG_ID_RE
@@ -250,8 +275,13 @@ def finalize(root, day, reader_id, send, kind="reader"):
         d = run_dir(day)
         md = d / f"{reader_id}.md"
         shutil.copyfile(src, md)
+        name = profile_name(path)
+        if name is None:
+            print(f"警告 {reader_id}: プロファイルの front matter に title（フィード名）が無いか使えない。件名はフィード名なしになる",
+                  file=sys.stderr)
         try:
-            render_email_body.main([str(md), *(["--footer", str(footer)] if footer else [])])
+            render_email_body.main([str(md), *(["--footer", str(footer)] if footer else []),
+                                    *(["--name", name] if name else [])])
         except SystemExit as e:
             raise Fail(f"本文生成に失敗: {e}")
         dest_args = ["--subscriber-id", sid, "--tag-id", tag] if kind == "reader" else ["--tag-id", sid]
