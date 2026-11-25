@@ -14,7 +14,8 @@ prepare → （curate-news を --profile と --paid で回す）→ finalize の
 readers.json と feeds.json はどちらか片方だけでもよい。reader_id と feed_id は両方を通して重複させない（sent/ と run.json を共有するため）。
 profile は ROOT_DIR からの相対パス。ROOT_DIR の外を指すものは受け付けない。
 profile の front matter の title（公開プロファイルと同じ書式。例: `title: ソフトウェアエンジニア`）はメールの件名と
-先頭の見出しの頭に付くフィード名になる (#703)。無ければフィード名なしの件名で送り、警告を出す。
+先頭の見出しの頭に付くフィード名になる (#703)。無ければ、共有フィードは --send で送らない（失敗にする）。
+読者（完全パーソナライズ）はフィード名なしの件名で送り、警告を出す。
 
   prepare  --root ROOT_DIR --date D (--reader ID | --feed ID)  プロファイルを確かめ、送信済みの出力を output/ に戻し、当日の出力を消す
   finalize --root ROOT_DIR --date D (--reader ID | --feed ID) [--send]  当日の出力を ID の名前で取り分け、本文生成 → 送信
@@ -147,13 +148,14 @@ def profile_of(root, reader):
     return path, h
 
 
-FRONT_TITLE_RE = re.compile(r"""^title:\s*(?P<q>["']?)(?P<title>.*?)(?P=q)\s*$""")
+# front matter のトップレベルの title だけ（インデントしたネストのキーは拾わない）。引用符は組が合うときだけ外す
+FRONT_TITLE_RE = re.compile(r"""^title:[ \t]*(?:"(?P<dq>[^"]*)"|'(?P<sq>[^']*)'|(?P<bare>[^"'#\s][^#]*?))[ \t]*(?:#.*)?$""")
 
 
 def profile_name(path):
     """プロファイルの front matter の title（フィード名）。無い・読めない・使えない値なら None。"""
     try:
-        lines = path.read_text(encoding="utf-8").splitlines()
+        lines = path.read_text(encoding="utf-8-sig").splitlines()
     except (OSError, UnicodeDecodeError):
         return None
     if not lines or lines[0].strip() != "---":
@@ -161,10 +163,10 @@ def profile_name(path):
     for line in lines[1:]:
         if line.strip() == "---":
             return None
-        m = FRONT_TITLE_RE.match(line.strip())
+        m = FRONT_TITLE_RE.match(line.rstrip())
         if m:
             try:
-                return render_email_body.check_name(m["title"])
+                return render_email_body.check_name(next(v for v in m.group("dq", "sq", "bare") if v is not None))
             except ValueError:
                 return None
     return None
@@ -277,8 +279,11 @@ def finalize(root, day, reader_id, send, kind="reader"):
         shutil.copyfile(src, md)
         name = profile_name(path)
         if name is None:
-            print(f"警告 {reader_id}: プロファイルの front matter に title（フィード名）が無いか使えない。件名はフィード名なしになる",
-                  file=sys.stderr)
+            # 共有フィードは件名のフィード名で受信箱の中のどのフィードかを見分ける (#703)。無いまま全購読者に送らない
+            if send and kind == "feed":
+                raise Fail("プロファイルの front matter に title（フィード名）が無いか使えない。件名でフィードを見分けられないので送らない")
+            print(f"警告 {reader_id}: プロファイルの front matter に title（フィード名）が無いか使えない。件名はフィード名なしになる"
+                  + ("（--send では送らない）" if kind == "feed" else ""), file=sys.stderr)
         try:
             render_email_body.main([str(md), *(["--footer", str(footer)] if footer else []),
                                     *(["--name", name] if name else [])])
