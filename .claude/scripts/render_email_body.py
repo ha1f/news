@@ -13,6 +13,10 @@
 curate-news の出力の見出し「ニュース (日時 JST)」は全フィード・毎日同じで、受信箱で区別できないので件名に使わない。
 フィード名は --name（paid_daily.py がプロファイルの front matter の title から渡す）。無ければ「{フィード名}｜」を省く。
 
+curate-news の出力の末尾の `セレンディピティ枠: {番号, ...}` 行（興味の外からあえて選んだ記事の番号）を読み、
+その番号の記事にだけ、サイトの日次ページ（_layouts/post.html, #619）と同じ「興味の外から、視野を広げる1本」の印を
+読みどころの前に付ける (#704)。行が無い・番号が範囲外・数字でないときは印を付けないだけで、止めない。
+
 --footer を渡すと、本文の末尾に送信者の名称と配信停止の案内を入れる（特定電子メール法 4 条の表示。#595）。
 文面は公開 repo に置かず、有料 run の ROOT_DIR（private repo）の footer.json から渡す:
   {"sender": "送信者の氏名又は名称", "unsubscribe_url": "{{ unsubscribe_url }}", "lines": ["住所: ...", "問い合わせ: ..."]}
@@ -23,6 +27,7 @@ import html
 import json
 import re
 import sys
+import unicodedata
 from pathlib import Path
 
 ITEM_RE = re.compile(
@@ -38,6 +43,12 @@ HEADING_RE = re.compile(r"^##\s+(?P<heading>.+?)\s*$")
 UNSUBSCRIBE_RE = re.compile(r"^(?:https://\S+|\{\{\s*unsubscribe_url\s*\}\})$")
 # フッタを入れた HTML の印。send_email.py --send はこれの無い本文を送らない（記事由来の文字列はエスケープされるので偽造されない）
 FOOTER_MARK = "<!-- footer: sender, unsubscribe -->"
+# curate-news の出力の末尾の「セレンディピティ枠: 3, 7」行（SKILL.md ステップ5）
+# 書き方の揺れ（全角数字・全角カンマ・「[2, 3]」・「2（宇宙）」・箇条書きや太字）で印が黙って落ちないよう、
+# NFKC で揃えてから数字を全部拾う
+SERENDIPITY_RE = re.compile(r"^[-*\s]*セレンディピティ枠[*\s]*:\s*(?P<nums>.*)$")
+# 印の文言はサイトの日次ページ（_layouts/post.html）と揃える
+SERENDIPITY_LABEL = "興味の外から、視野を広げる1本"
 # curate-news の出力の見出し「ニュース (2026-11-25 07:00 JST)」から日付を取る
 HEADING_DATE_RE = re.compile(r"(?P<y>\d{4})-(?P<m>\d{2})-(?P<d>\d{2})")
 # 件名に入れる1本目の見出しの上限（受信箱の一覧で切れる前に、フィード名と本数・日付まで見えるように）
@@ -103,12 +114,20 @@ def footer_text_lines(footer):
 
 
 def parse(text):
-    """output の markdown を {heading, lead, items[{title,url,source,note}]} に分解する。"""
+    """output の markdown を {heading, lead, items[{title,url,source,note,serendipity}]} に分解する。"""
     heading = ""
     lead = []
     items = []
+    picked = set()
     for raw in text.splitlines():
         line = raw.rstrip()
+        s = SERENDIPITY_RE.match(unicodedata.normalize("NFKC", line).strip())
+        if s:
+            nums = {int(t) for t in re.findall(r"\d+", s["nums"])}
+            if not nums:
+                print(f"警告: セレンディピティ枠の行から番号を読めない（印を付けない）: {line.strip()}", file=sys.stderr)
+            picked |= nums
+            continue
         m = ITEM_RE.match(line)
         if m:
             items.append({"title": m["title"], "url": m["url"], "source": m["source"] or "", "note": (m["note"] or "").strip()})
@@ -123,6 +142,11 @@ def parse(text):
             continue
         if not items and line.strip() and not line.startswith("---"):
             lead.append(line.strip())
+    for i, it in enumerate(items, 1):
+        it["serendipity"] = i in picked
+    stray = sorted(n for n in picked if not 1 <= n <= len(items))
+    if stray:
+        print(f"警告: セレンディピティ枠の番号 {stray} が記事 {len(items)} 本の範囲外（印を付けない）", file=sys.stderr)
     return {"heading": heading, "lead": " ".join(lead), "items": items}
 
 
@@ -133,6 +157,8 @@ def render_text(doc, footer=None, name=None):
     for i, it in enumerate(doc["items"], 1):
         src = f" ({it['source']})" if it["source"] else ""
         out.append(f"{i}. {it['title']}{src}")
+        if it.get("serendipity"):
+            out.append(f"   ［{SERENDIPITY_LABEL}］")
         if it["note"]:
             out.append(f"   {it['note']}")
         out += [f"   {it['url']}", ""]
@@ -158,6 +184,9 @@ def render_html(doc, footer=None, name=None):
     for it in doc["items"]:
         src = f' <span style="color:#666;">({e(it["source"])})</span>' if it["source"] else ""
         note = f'<br><span>{e(it["note"])}</span>' if it["note"] else ""
+        if it.get("serendipity"):
+            note = (f'<br><span style="font-size:13px;color:#7a4b00;background:#fff4dc;padding:0 4px;border-radius:3px;">'
+                    f'{e(SERENDIPITY_LABEL)}</span>') + note
         parts.append(
             f'<li style="margin:0 0 14px;"><a href="{e(it["url"], quote=True)}">{e(it["title"])}</a>{src}{note}</li>'
         )

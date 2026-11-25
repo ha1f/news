@@ -4,7 +4,9 @@
 有料 run は curate-news の出力（`output/` の .md、先頭が `## ニュース (...)` 見出し）を
 render_email_body.py に渡して本文を作る。`_posts/` はそれを Jekyll の投稿形式に変換したもの
 （front matter を足し、見出し行を落とす）なので、そのまま渡すと front matter がリード文に混ざり、
-件名（HTML の <title>）も決まらない。ここで front matter を剥がして見出しを戻してから同じ
+件名（HTML の <title>）も決まらない。ここで front matter を剥がして見出しを戻し、front matter の
+`serendipity`（publish-pages が curate-news の末尾の `セレンディピティ枠:` 行から写したもの, #619）を
+同じ行に戻してから (#704) 同じ
 render_email_body.py に通し、送られる本文と同じ組み版で評価できるようにする。
 
 使い方: python3 .claude/skills/evaluate-and-triage/scripts/email_preview.py _posts/{日付}-news-{プロファイル}.md [--footer FOOTER.json]
@@ -26,6 +28,7 @@ import render_email_body  # noqa: E402
 
 EVAL_DIR = render_email_body.OUTPUT_DIR / "eval-email"
 PROFILES_DIR = ROOT / ".claude" / "skills" / "curate-news" / "profiles"
+SERENDIPITY_FM_RE = re.compile(r"^serendipity:\s*\[(?P<nums>[^\]]*)\]\s*(?:#.*)?$")
 POST_NAME_RE = re.compile(r"^(?P<date>\d{4}-\d{2}-\d{2})-news(?:-(?P<profile>[a-z0-9-]+))?\.md$")
 PLACEHOLDER_FOOTER = {"sender": "（送信者名・評価用の仮の文面）", "unsubscribe_url": "https://example.invalid/unsubscribe", "lines": []}
 
@@ -33,14 +36,20 @@ PLACEHOLDER_FOOTER = {"sender": "（送信者名・評価用の仮の文面）",
 def to_curated(text, date):
     """`_posts/` の本文から front matter を剥がし、curate-news の出力と同じ見出し行を先頭に戻す。"""
     lines = text.splitlines()
+    picked = ""
     if lines and lines[0].strip() == "---":
         try:
             end = next(i for i in range(1, len(lines)) if lines[i].strip() == "---")
         except StopIteration:
             raise ValueError("front matter が閉じていない")
+        for ln in lines[1:end]:
+            m = SERENDIPITY_FM_RE.match(ln.strip())
+            if m:
+                picked = ", ".join(t.strip() for t in m["nums"].split(",") if t.strip())
         lines = lines[end + 1:]
     body = "\n".join(lines).strip("\n")
-    return f"## ニュース ({date} JST)\n\n{body}\n"
+    tail = f"\nセレンディピティ枠: {picked}\n" if picked else ""
+    return f"## ニュース ({date} JST)\n\n{body}\n{tail}"
 
 
 def main(argv=None):
