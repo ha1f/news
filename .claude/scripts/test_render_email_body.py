@@ -393,6 +393,29 @@ class SerendipityTest(unittest.TestCase):
         for tail in ("セレンディピティ枠: 4", "セレンディピティ枠: 0", "セレンディピティ枠: x", "セレンディピティ枠:"):
             self.assertEqual(self.render(self.THREE + "\n" + tail + "\n"), base, tail)
 
+    def test_notation_variants_still_mark(self):
+        expect = [False, True, True]
+        for line in ("セレンディピティ枠: 2，3", "セレンディピティ枠：２、３", "セレンディピティ枠: [2, 3]",
+                     "セレンディピティ枠: 2（宇宙）, 3", "- セレンディピティ枠: 2・3", "**セレンディピティ枠**: #2 #3"):
+            txt, h = self.render(self.THREE + "\n" + line + "\n")
+            tb, hb = self.blocks(txt, h)
+            self.assertEqual([self.LABEL in b for b in tb], expect, line)
+            self.assertEqual([self.LABEL in b for b in hb], expect, line)
+            self.assertNotIn("セレンディピティ", txt + h, line)
+
+    def test_unreadable_or_out_of_range_warns_but_succeeds(self):
+        for tail in ("セレンディピティ枠: 4", "セレンディピティ枠: x"):
+            with out_tmp() as t:
+                src = Path(t) / "w.md"
+                src.write_text(self.THREE + "\n" + tail + "\n", encoding="utf-8")
+                p = run(src)
+            self.assertEqual(p.returncode, 0, p.stderr)
+            self.assertIn("警告", p.stderr, tail)
+        with out_tmp() as t:
+            src = Path(t) / "w.md"
+            src.write_text(self.THREE + "\nセレンディピティ枠: 2\n", encoding="utf-8")
+            self.assertNotIn("警告", run(src).stderr)
+
     def test_line_before_items_does_not_enter_lead(self):
         text = self.THREE.replace("リード。", "リード。\n\nセレンディピティ枠: 3")
         txt, h = self.render(text)

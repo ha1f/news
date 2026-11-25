@@ -103,6 +103,11 @@ class SerendipityTest(unittest.TestCase):
         self.assertEqual(html.count(self.LABEL), 1)
         self.assertLess(txt.index("B の決算"), txt.index(self.LABEL))
 
+    def test_trailing_comment_in_front_matter(self):
+        post = POST.replace("profile: engineer\n", "profile: engineer\nserendipity: [2]  # 宇宙\n")
+        doc = ep.render_email_body.parse(ep.to_curated(post, "2026-11-24"))
+        self.assertEqual([it["serendipity"] for it in doc["items"]], [False, True])
+
     def test_multiple_and_absent(self):
         post = POST.replace("profile: engineer\n", "profile: engineer\nserendipity: [1, 2]\n")
         doc = ep.render_email_body.parse(ep.to_curated(post, "2026-11-24"))

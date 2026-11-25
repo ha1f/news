@@ -27,6 +27,7 @@ import html
 import json
 import re
 import sys
+import unicodedata
 from pathlib import Path
 
 ITEM_RE = re.compile(
@@ -43,7 +44,9 @@ UNSUBSCRIBE_RE = re.compile(r"^(?:https://\S+|\{\{\s*unsubscribe_url\s*\}\})$")
 # フッタを入れた HTML の印。send_email.py --send はこれの無い本文を送らない（記事由来の文字列はエスケープされるので偽造されない）
 FOOTER_MARK = "<!-- footer: sender, unsubscribe -->"
 # curate-news の出力の末尾の「セレンディピティ枠: 3, 7」行（SKILL.md ステップ5）
-SERENDIPITY_RE = re.compile(r"^セレンディピティ枠\s*[:：]\s*(?P<nums>.*)$")
+# 書き方の揺れ（全角数字・全角カンマ・「[2, 3]」・「2（宇宙）」・箇条書きや太字）で印が黙って落ちないよう、
+# NFKC で揃えてから数字を全部拾う
+SERENDIPITY_RE = re.compile(r"^[-*\s]*セレンディピティ枠[*\s]*:\s*(?P<nums>.*)$")
 # 印の文言はサイトの日次ページ（_layouts/post.html）と揃える
 SERENDIPITY_LABEL = "興味の外から、視野を広げる1本"
 # curate-news の出力の見出し「ニュース (2026-11-25 07:00 JST)」から日付を取る
@@ -118,9 +121,12 @@ def parse(text):
     picked = set()
     for raw in text.splitlines():
         line = raw.rstrip()
-        s = SERENDIPITY_RE.match(line.strip())
+        s = SERENDIPITY_RE.match(unicodedata.normalize("NFKC", line).strip())
         if s:
-            picked |= {int(t) for t in re.split(r"[,、\s]+", s["nums"]) if t.isascii() and t.isdigit()}
+            nums = {int(t) for t in re.findall(r"\d+", s["nums"])}
+            if not nums:
+                print(f"警告: セレンディピティ枠の行から番号を読めない（印を付けない）: {line.strip()}", file=sys.stderr)
+            picked |= nums
             continue
         m = ITEM_RE.match(line)
         if m:
@@ -138,6 +144,9 @@ def parse(text):
             lead.append(line.strip())
     for i, it in enumerate(items, 1):
         it["serendipity"] = i in picked
+    stray = sorted(n for n in picked if not 1 <= n <= len(items))
+    if stray:
+        print(f"警告: セレンディピティ枠の番号 {stray} が記事 {len(items)} 本の範囲外（印を付けない）", file=sys.stderr)
     return {"heading": heading, "lead": " ".join(lead), "items": items}
 
 

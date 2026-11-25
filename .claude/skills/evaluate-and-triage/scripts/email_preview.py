@@ -28,7 +28,7 @@ import render_email_body  # noqa: E402
 
 EVAL_DIR = render_email_body.OUTPUT_DIR / "eval-email"
 PROFILES_DIR = ROOT / ".claude" / "skills" / "curate-news" / "profiles"
-SERENDIPITY_FM_RE = re.compile(r"^serendipity:\s*\[(?P<nums>[^\]]*)\]\s*$")
+SERENDIPITY_FM_RE = re.compile(r"^serendipity:\s*\[(?P<nums>[^\]]*)\]\s*(?:#.*)?$")
 POST_NAME_RE = re.compile(r"^(?P<date>\d{4}-\d{2}-\d{2})-news(?:-(?P<profile>[a-z0-9-]+))?\.md$")
 PLACEHOLDER_FOOTER = {"sender": "（送信者名・評価用の仮の文面）", "unsubscribe_url": "https://example.invalid/unsubscribe", "lines": []}
 
