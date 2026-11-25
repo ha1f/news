@@ -335,5 +335,70 @@ class SubjectTest(unittest.TestCase):
                 self.assertNotEqual(run(src, "--name", bad).returncode, 0, repr(bad))
 
 
+class SerendipityTest(unittest.TestCase):
+    """末尾の「セレンディピティ枠:」行の番号の記事にだけ、サイトと同じ印が付く (#704)。"""
+
+    LABEL = "興味の外から、視野を広げる1本"  # サイトの _layouts/post.html と同じ文言。モジュールの定数から作らない
+    THREE = """## ニュース (2026-11-25 07:00 JST)
+
+リード。
+
+1. [一本目](https://example.com/1) (HN・英語)<br>
+   一の要点。
+
+2. [二本目](https://example.com/2) (日経)<br>
+   二の要点。
+
+3. [三本目](https://example.com/3) (X)
+"""
+
+    def render(self, text):
+        with out_tmp() as t:
+            src = Path(t) / "s.md"
+            src.write_text(text, encoding="utf-8")
+            p = run(src)
+            self.assertEqual(p.returncode, 0, p.stderr)
+            return ((Path(t) / "s.txt").read_text(encoding="utf-8"),
+                    (Path(t) / "s.html").read_text(encoding="utf-8"))
+
+    def blocks(self, txt, h):
+        """記事ごとの（テキスト版の塊, HTML の <li>）"""
+        tb = re.split(r"\n(?=\d+\. )", txt.split("\n\n", 2)[2])
+        hb = re.findall(r"<li[^>]*>.*?</li>", h, re.S)
+        return tb, hb
+
+    def test_only_picked_items_get_the_label_in_text_and_html(self):
+        txt, h = self.render(self.THREE + "\nセレンディピティ枠: 2\n")
+        tb, hb = self.blocks(txt, h)
+        self.assertEqual((len(tb), len(hb)), (3, 3))
+        self.assertEqual([self.LABEL in b for b in tb], [False, True, False])
+        self.assertEqual([self.LABEL in b for b in hb], [False, True, False])
+        # 印は見出しの後・読みどころの前。読みどころは残る
+        self.assertLess(tb[1].index("二本目"), tb[1].index(self.LABEL))
+        self.assertLess(tb[1].index(self.LABEL), tb[1].index("二の要点"))
+        self.assertLess(hb[1].index("二本目"), hb[1].index(self.LABEL))
+        self.assertLess(hb[1].index(self.LABEL), hb[1].index("二の要点"))
+        # 行そのものは本文（リード・記事）に漏れない
+        self.assertNotIn("セレンディピティ", txt + h)
+
+    def test_multiple_numbers_and_item_without_note(self):
+        txt, h = self.render(self.THREE + "\nセレンディピティ枠: 1, 3\n")
+        tb, hb = self.blocks(txt, h)
+        self.assertEqual([self.LABEL in b for b in tb], [True, False, True])
+        self.assertEqual([self.LABEL in b for b in hb], [True, False, True])
+
+    def test_no_line_or_out_of_range_renders_as_before(self):
+        base = self.render(self.THREE)
+        self.assertNotIn(self.LABEL, base[0] + base[1])
+        for tail in ("セレンディピティ枠: 4", "セレンディピティ枠: 0", "セレンディピティ枠: x", "セレンディピティ枠:"):
+            self.assertEqual(self.render(self.THREE + "\n" + tail + "\n"), base, tail)
+
+    def test_line_before_items_does_not_enter_lead(self):
+        text = self.THREE.replace("リード。", "リード。\n\nセレンディピティ枠: 3")
+        txt, h = self.render(text)
+        self.assertNotIn("セレンディピティ", txt + h)
+        self.assertEqual([self.LABEL in b for b in self.blocks(txt, h)[0]], [False, False, True])
+
+
 if __name__ == "__main__":
     unittest.main()

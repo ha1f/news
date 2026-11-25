@@ -87,6 +87,48 @@ class CliTest(unittest.TestCase):
             self.assertNotEqual(r.returncode, 0)
 
 
+class SerendipityTest(unittest.TestCase):
+    """front matter の serendipity からメールにも印が出る (#704)。"""
+
+    LABEL = "興味の外から、視野を広げる1本"
+
+    def test_front_matter_serendipity_marks_that_item_only(self):
+        post = POST.replace("profile: engineer\n", "profile: engineer\nserendipity: [2]\n")
+        doc = ep.render_email_body.parse(ep.to_curated(post, "2026-11-24"))
+        self.assertEqual([it["serendipity"] for it in doc["items"]], [False, True])
+        self.assertEqual(doc["lead"], "リード文。")
+        txt = ep.render_email_body.render_text(doc)
+        html = ep.render_email_body.render_html(doc)
+        self.assertEqual(txt.count(self.LABEL), 1)
+        self.assertEqual(html.count(self.LABEL), 1)
+        self.assertLess(txt.index("B の決算"), txt.index(self.LABEL))
+
+    def test_multiple_and_absent(self):
+        post = POST.replace("profile: engineer\n", "profile: engineer\nserendipity: [1, 2]\n")
+        doc = ep.render_email_body.parse(ep.to_curated(post, "2026-11-24"))
+        self.assertEqual([it["serendipity"] for it in doc["items"]], [True, True])
+        for p in (POST, POST.replace("profile: engineer\n", "profile: engineer\nserendipity: []\n")):
+            out = ep.to_curated(p, "2026-11-24")
+            self.assertNotIn("セレンディピティ", out)
+            doc = ep.render_email_body.parse(out)
+            self.assertEqual([it["serendipity"] for it in doc["items"]], [False, False])
+
+    def test_cli_output_has_label(self):
+        post_text = POST.replace("profile: engineer\n", "profile: engineer\nserendipity: [2]\n")
+        with tempfile.TemporaryDirectory() as d:
+            post = Path(d) / "2099-01-03-news-engineer.md"
+            post.write_text(post_text, encoding="utf-8")
+            r = subprocess.run([sys.executable, str(SCRIPT), str(post)], capture_output=True, text=True)
+            self.assertEqual(r.returncode, 0, r.stderr)
+            files = [ep.EVAL_DIR / f"{post.stem}.{x}" for x in ("txt", "html")]
+            try:
+                for f in files:
+                    self.assertEqual(f.read_text(encoding="utf-8").count(self.LABEL), 1, f.name)
+            finally:
+                for p in (*files, ep.EVAL_DIR / post.name):
+                    p.unlink(missing_ok=True)
+
+
 def render_mark():
     return ep.render_email_body.FOOTER_MARK
 
