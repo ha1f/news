@@ -5,8 +5,13 @@
 入力・出力とも gitignore 対象の `.claude/skills/curate-news/output/` に置き、公開 repo にコミットしない。
 入力・出力先とも、resolve した実体が `.claude/skills/curate-news/output/` の下にないと拒否する（`_posts/` や公開物の下に書かない）。
 
-使い方: python3 .claude/scripts/render_email_body.py <output/{日付}-{ハッシュ}.md> [--out-dir DIR] [--footer FOOTER.json]
+使い方: python3 .claude/scripts/render_email_body.py <output/{日付}-{ハッシュ}.md> [--out-dir DIR] [--footer FOOTER.json] [--name フィード名]
 出力: <out-dir>/{入力の stem}.html と .txt（既定の out-dir は入力と同じディレクトリ）
+
+件名（HTML の <title>。send_email.py が --subject の無いときに使う）と、テキスト版・HTML 版の先頭の見出しは同じ文にする (#703):
+  {フィード名}｜{1本目の見出し}ほかN本（M/D）
+curate-news の出力の見出し「ニュース (日時 JST)」は全フィード・毎日同じで、受信箱で区別できないので件名に使わない。
+フィード名は --name（paid_daily.py がプロファイルの front matter の title から渡す）。無ければ「{フィード名}｜」を省く。
 
 --footer を渡すと、本文の末尾に送信者の名称と配信停止の案内を入れる（特定電子メール法 4 条の表示。#595）。
 文面は公開 repo に置かず、有料 run の ROOT_DIR（private repo）の footer.json から渡す:
@@ -33,6 +38,34 @@ HEADING_RE = re.compile(r"^##\s+(?P<heading>.+?)\s*$")
 UNSUBSCRIBE_RE = re.compile(r"^(?:https://\S+|\{\{\s*unsubscribe_url\s*\}\})$")
 # フッタを入れた HTML の印。send_email.py --send はこれの無い本文を送らない（記事由来の文字列はエスケープされるので偽造されない）
 FOOTER_MARK = "<!-- footer: sender, unsubscribe -->"
+# curate-news の出力の見出し「ニュース (2026-11-25 07:00 JST)」から日付を取る
+HEADING_DATE_RE = re.compile(r"(?P<y>\d{4})-(?P<m>\d{2})-(?P<d>\d{2})")
+# 件名に入れる1本目の見出しの上限（受信箱の一覧で切れる前に、フィード名と本数・日付まで見えるように）
+TOP_TITLE_MAX = 40
+NAME_MAX = 30
+
+
+def check_name(name):
+    """フィード名（件名の先頭）。1行・空でない・長すぎない。不正なら ValueError。"""
+    if not isinstance(name, str) or not name.strip() or "\n" in name or "\r" in name:
+        raise ValueError("フィード名が空か、改行を含む")
+    name = name.strip()
+    if len(name) > NAME_MAX:
+        raise ValueError(f"フィード名が {NAME_MAX} 字を超える")
+    return name
+
+
+def make_subject(doc, name=None):
+    """件名と先頭の見出しに使う文。フィード名・その日の1本目の見出し・本数・日付から作る。"""
+    items = doc["items"]
+    top = items[0]["title"].strip() if items else ""
+    if len(top) > TOP_TITLE_MAX:
+        top = top[:TOP_TITLE_MAX - 1].rstrip() + "…"
+    rest = f"ほか{len(items) - 1}本" if len(items) > 1 else ""
+    m = HEADING_DATE_RE.search(doc.get("heading") or "")
+    day = f"（{int(m['m'])}/{int(m['d'])}）" if m else ""
+    prefix = f"{name}｜" if name else ""
+    return f"{prefix}{top}{rest}{day}"
 
 
 def load_footer(path):
@@ -93,10 +126,8 @@ def parse(text):
     return {"heading": heading, "lead": " ".join(lead), "items": items}
 
 
-def render_text(doc, footer=None):
-    out = []
-    if doc["heading"]:
-        out += [doc["heading"], ""]
+def render_text(doc, footer=None, name=None):
+    out = [make_subject(doc, name), ""]
     if doc["lead"]:
         out += [doc["lead"], ""]
     for i, it in enumerate(doc["items"], 1):
@@ -110,17 +141,17 @@ def render_text(doc, footer=None):
     return "\n".join(out).rstrip() + "\n"
 
 
-def render_html(doc, footer=None):
+def render_html(doc, footer=None, name=None):
     e = html.escape
+    subject = make_subject(doc, name)
     parts = [
         '<!DOCTYPE html>',
         '<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">',
-        f"<title>{e(doc['heading'] or 'ニュース')}</title></head>",
+        f"<title>{e(subject)}</title></head>",
         '<body style="margin:0;padding:16px;font-family:sans-serif;line-height:1.6;color:#222;">',
         '<div style="max-width:640px;margin:0 auto;">',
     ]
-    if doc["heading"]:
-        parts.append(f'<h2 style="font-size:18px;margin:0 0 12px;">{e(doc["heading"])}</h2>')
+    parts.append(f'<h2 style="font-size:18px;margin:0 0 12px;">{e(subject)}</h2>')
     if doc["lead"]:
         parts.append(f'<p style="margin:0 0 16px;">{e(doc["lead"])}</p>')
     parts.append('<ol style="padding-left:20px;margin:0;">')
@@ -167,6 +198,7 @@ def main(argv=None):
     ap.add_argument("input", type=Path)
     ap.add_argument("--out-dir", type=Path)
     ap.add_argument("--footer", type=Path, help="送信者の名称と配信停止の案内（footer.json）")
+    ap.add_argument("--name", help="フィード名（件名と先頭の見出しの頭に付ける）")
     args = ap.parse_args(argv)
     src = args.input
     out_dir = args.out_dir or src.parent
@@ -177,6 +209,12 @@ def main(argv=None):
             footer = load_footer(args.footer)
         except ValueError as e:
             raise SystemExit(f"フッタを読めない: {e}")
+    name = None
+    if args.name is not None:
+        try:
+            name = check_name(args.name)
+        except ValueError as e:
+            raise SystemExit(f"--name を使えない: {e}")
     text = src.read_text(encoding="utf-8")
     doc = parse(text)
     numbered = sum(1 for ln in text.splitlines() if NUMBERED_RE.match(ln))
@@ -184,7 +222,8 @@ def main(argv=None):
         raise SystemExit(f"番号付き行 {numbered} 件に対し記事を {len(doc['items'])} 件しか読めなかった（記事を取りこぼしている）")
     if not doc["items"]:
         raise SystemExit(f"{src} から記事を1件も読めなかった（形式が curate-news の出力と違う）")
-    outs = {out_dir / f"{src.stem}.html": render_html(doc, footer), out_dir / f"{src.stem}.txt": render_text(doc, footer)}
+    outs = {out_dir / f"{src.stem}.html": render_html(doc, footer, name),
+            out_dir / f"{src.stem}.txt": render_text(doc, footer, name)}
     for dst in outs:
         # 出力ファイル自体が output/ の外への symlink でないこと、入力を上書きしないこと
         if not _under_output(dst) or dst.resolve() == src.resolve():

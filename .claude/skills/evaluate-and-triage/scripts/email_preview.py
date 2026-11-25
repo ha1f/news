@@ -21,9 +21,11 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(ROOT / ".claude" / "scripts"))
+import paid_daily  # noqa: E402
 import render_email_body  # noqa: E402
 
 EVAL_DIR = render_email_body.OUTPUT_DIR / "eval-email"
+PROFILES_DIR = ROOT / ".claude" / "skills" / "curate-news" / "profiles"
 POST_NAME_RE = re.compile(r"^(?P<date>\d{4}-\d{2}-\d{2})-news(?:-(?P<profile>[a-z0-9-]+))?\.md$")
 PLACEHOLDER_FOOTER = {"sender": "（送信者名・評価用の仮の文面）", "unsubscribe_url": "https://example.invalid/unsubscribe", "lines": []}
 
@@ -62,7 +64,9 @@ def main(argv=None):
     if footer is None:
         footer = EVAL_DIR / "footer.placeholder.json"
         footer.write_text(json.dumps(PLACEHOLDER_FOOTER, ensure_ascii=False), encoding="utf-8")
-    render_email_body.main([str(src), "--footer", str(footer)])
+    # 有料 run と同じく、プロファイルの front matter の title をフィード名にする（メインのフィードには無い）
+    name = paid_daily.profile_name(PROFILES_DIR / f"{m['profile']}.md") if m["profile"] else None
+    render_email_body.main([str(src), "--footer", str(footer), *(["--name", name] if name else [])])
     for ext in ("txt", "html"):
         print(EVAL_DIR.relative_to(ROOT) / f"{src.stem}.{ext}")
     print("フッタ: " + ("本物（--footer）" if args.footer else "評価用の仮の文面（送信者名・配信停止の文面は語らせない）"))

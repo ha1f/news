@@ -1,4 +1,5 @@
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -252,6 +253,86 @@ class RenderTest(unittest.TestCase):
                 cwd=ROOT,
             )
             self.assertEqual(p.returncode, 0, rel)
+
+
+class SubjectTest(unittest.TestCase):
+    """件名（<title>）と先頭の見出しがフィード名とその日の内容を表し、日付だけの汎用文に戻らない (#703)。"""
+
+    ENGINEER_1124 = SAMPLE.replace("2026-10-11", "2026-11-24")
+    ENGINEER_1125 = """## ニュース (2026-11-25 07:00 JST)
+
+リード。
+
+1. [OpenAI、エージェント向けに Git を拡張する「Pando」](https://example.com/p) (OpenAI)<br>
+   同時 push に耐える。
+
+2. [jQuery 4.1 リリース](https://example.com/j) (jQuery Blog・英語)<br>
+   互換性の改善。
+
+3. [ExtendDB 1.0](https://example.com/x) (HN・英語)<br>
+   DynamoDB 互換。
+"""
+
+    def render(self, text, *args):
+        with out_tmp() as t:
+            src = Path(t) / "2026-11-25-abc.md"
+            src.write_text(text, encoding="utf-8")
+            p = run(src, *args)
+            self.assertEqual(p.returncode, 0, p.stderr)
+            h = (Path(t) / "2026-11-25-abc.html").read_text(encoding="utf-8")
+            txt = (Path(t) / "2026-11-25-abc.txt").read_text(encoding="utf-8")
+        title = r.html.unescape(re.search(r"<title>(.*?)</title>", h).group(1))
+        h2 = r.html.unescape(re.search(r"<h2[^>]*>(.*?)</h2>", h).group(1))
+        return title, h2, txt.splitlines()[0]
+
+    def test_subject_has_feed_name_top_story_count_and_date(self):
+        title, h2, first = self.render(self.ENGINEER_1125, "--name", "ソフトウェアエンジニア")
+        self.assertEqual(title, "ソフトウェアエンジニア｜OpenAI、エージェント向けに Git を拡張する「Pando」ほか2本（11/25）")
+        # テキスト版・HTML 版の先頭の見出しも件名と同じ
+        self.assertEqual(h2, title)
+        self.assertEqual(first, title)
+
+    def test_subject_differs_by_feed_and_by_day(self):
+        subjects = {
+            self.render(text, "--name", name)[0]
+            for text in (self.ENGINEER_1124, self.ENGINEER_1125)
+            for name in ("ソフトウェアエンジニア", "研究者")
+        }
+        self.assertEqual(len(subjects), 4, subjects)
+
+    def test_subject_never_falls_back_to_generic_heading(self):
+        for args in ((), ("--name", "研究者")):
+            for text in (SAMPLE, self.ENGINEER_1125, SAMPLE.replace("## ニュース (2026-10-11 07:00 JST)\n", "")):
+                title, h2, first = self.render(text, *args)
+                self.assertNotIn("ニュース (", title)
+                self.assertNotIn("JST", title)
+                self.assertIn("A、Bを発表" if text is not self.ENGINEER_1125 else "Pando", title)
+                self.assertEqual((h2, first), (title, title))
+
+    def test_without_name_subject_starts_with_top_story(self):
+        title, _, _ = self.render(SAMPLE)
+        self.assertEqual(title, "A、Bを発表ほか1本（10/11）")
+
+    def test_long_top_title_is_cut_and_single_item_has_no_count(self):
+        long = "あ" * 60
+        text = f"## ニュース (2026-11-25 07:00 JST)\n\n1. [{long}](https://example.com/l) (X)<br>\n   要約。\n"
+        title, _, _ = self.render(text, "--name", "研究者")
+        self.assertEqual(title, "研究者｜" + "あ" * (r.TOP_TITLE_MAX - 1) + "…（11/25）")
+
+    def test_html_in_subject_is_escaped(self):
+        with out_tmp() as t:
+            src = Path(t) / "x.md"
+            src.write_text(SAMPLE.replace("A、Bを発表", "A<b>B</b>"), encoding="utf-8")
+            self.assertEqual(run(src, "--name", "<研究者>").returncode, 0)
+            h = (Path(t) / "x.html").read_text(encoding="utf-8")
+        self.assertIn("<title>&lt;研究者&gt;｜A&lt;b&gt;B&lt;/b&gt;ほか1本（10/11）</title>", h)
+
+    def test_bad_name_is_rejected(self):
+        with out_tmp() as t:
+            src = Path(t) / "x.md"
+            src.write_text(SAMPLE, encoding="utf-8")
+            for bad in ("", "  ", "a\nb", "x" * (r.NAME_MAX + 1)):
+                self.assertNotEqual(run(src, "--name", bad).returncode, 0, repr(bad))
 
 
 if __name__ == "__main__":

@@ -26,6 +26,8 @@ CURATED = """## ニュース (2026-10-21 07:00 JST)
 1. [打ち上げ会社が初の黒字](https://example.com/a) (日経・会員限定)<br>
    売上の半分を設備貸しが占め、前年は赤字だった。
 """
+# 共有フィードのプロファイルは front matter の title（フィード名）が無いと --send で送らない (#703)
+FEED_PROFILE = "---\ntitle: 宇宙と半導体\n---\n" + PROFILE
 KEY = send_email.PROVIDER["api_key_env"]
 TAG = "sub_tag_0j6hb7h40j6hb7h40j6hb7h40j"  # OpenAPI の Filter の説明にある例
 FOOTER = {"sender": "テスト運営者", "unsubscribe_url": "{{ unsubscribe_url }}"}
@@ -209,6 +211,64 @@ class PaidDailyTest(unittest.TestCase):
         self.assertIn("[dry-run] 宛先 sub_alice", out)
         self.assertFalse((self.root / "sent").exists())
         self.assertIs(p.run_state(DAY)["alice"]["sent"], False)
+
+    def body(self, rid):
+        return (p.run_dir(DAY) / f"{rid}.html").read_text(encoding="utf-8")
+
+    def test_subject_uses_profile_title_as_feed_name(self):
+        # 件名（<title>）と先頭の見出しにフィード名と1本目の見出しが入る (#703)
+        self.readers(self.reader("alice", profile_text='---\ntitle: "宇宙と半導体"\n---\n' + PROFILE))
+        self.assertEqual(self.run_reader("alice"), 0)
+        h = self.body("alice")
+        self.assertIn("<title>宇宙と半導体｜打ち上げ会社が初の黒字（10/21）</title>", h)
+        txt = (p.run_dir(DAY) / "alice.txt").read_text(encoding="utf-8")
+        self.assertTrue(txt.startswith("宇宙と半導体｜打ち上げ会社が初の黒字（10/21）\n"))
+        self.assertEqual(send_email.subject_of(h, None), "宇宙と半導体｜打ち上げ会社が初の黒字（10/21）")
+
+    def test_subject_without_profile_title_warns_and_still_names_top_story(self):
+        self.readers(self.reader("alice"))
+        quiet(p.prepare, self.root, DAY, "alice")
+        self.curate("alice")
+        rc, _, err = quiet(p.finalize, self.root, DAY, "alice", False)
+        self.assertEqual(rc, 0)
+        self.assertIn("title（フィード名）が無いか使えない", err)
+        self.assertIn("<title>打ち上げ会社が初の黒字（10/21）</title>", self.body("alice"))
+
+    def test_feed_without_profile_title_is_not_sent(self):
+        # 共有フィードは件名のフィード名が無いと受信箱でどのフィードか分からないので、--send では送らない
+        (self.root / "profiles" / "f-space.md").write_text(PROFILE, encoding="utf-8")
+        (self.root / "feeds.json").write_text(json.dumps(
+            [{"feed_id": "f-space", "tag_id": TAG, "profile": "profiles/f-space.md"}]), encoding="utf-8")
+        quiet(p.prepare, self.root, DAY, "f-space", "feed")
+        _, h = p.profile_of(self.root, p.entry_of(self.root, "f-space", "feed"))
+        (self.out / f"{DAY}-{h}.md").write_text(CURATED, encoding="utf-8")
+        with mock.patch.object(send_email.urllib.request, "urlopen", side_effect=no_network), \
+                mock.patch.dict(os.environ, {KEY: "k"}):
+            rc, _, err = quiet(p.finalize, self.root, DAY, "f-space", True, "feed")
+        self.assertEqual(rc, 1)
+        self.assertIn("title（フィード名）が無いか使えない", err)
+        self.assertFalse((self.root / "sent").exists())
+        # dry-run は警告だけで本文を作る
+        rc, _, err = quiet(p.finalize, self.root, DAY, "f-space", False, "feed")
+        self.assertEqual(rc, 0)
+        self.assertIn("--send では送らない", err)
+
+    def test_profile_name_reads_only_front_matter_title(self):
+        f = self.root / "profiles" / "x.md"
+        for text, want in (("---\ntitle: 研究者\n---\n# a\n", "研究者"),
+                           ("---\ntitle: 'AI と法務'\nother: 1\n---\n", "AI と法務"),
+                           ("\ufeff---\r\ntitle: 研究者\r\n---\r\n", "研究者"),
+                           ("---\ntitle: 研究者 # 職種\n---\n", "研究者"),
+                           ("---\nseo:\n  title: ネスト\ntitle: 上位\n---\n", "上位"),
+                           ("---\ntitle: \"閉じていない\n---\n", None),
+                           ("---\ntitle: 'a\"\n---\n", None),
+                           ("# 興味\ntitle: 本文の行\n", None),
+                           ("---\nother: 1\n---\ntitle: 本文\n", None),
+                           ("---\ntitle: \n---\n", None),
+                           ("---\ntitle: " + "x" * 100 + "\n---\n", None)):
+            f.write_text(text, encoding="utf-8")
+            self.assertEqual(p.profile_name(f), want, text)
+        self.assertIsNone(p.profile_name(self.root / "none.md"))
 
     def test_send_saves_output_and_next_prepare_restores_it(self):
         self.readers(self.reader("alice"))
@@ -447,7 +507,7 @@ class PaidDailyTest(unittest.TestCase):
     def feeds(self, *rows):
         (self.root / "feeds.json").write_text(json.dumps(list(rows)), encoding="utf-8")
 
-    def feed(self, fid, profile_text=PROFILE, tag=TAG):
+    def feed(self, fid, profile_text=FEED_PROFILE, tag=TAG):
         if profile_text is not None:
             (self.root / "profiles" / f"{fid}.md").write_text(profile_text, encoding="utf-8")
         return {"feed_id": fid, "tag_id": tag, "profile": f"profiles/{fid}.md"}
@@ -527,7 +587,7 @@ class PaidDailyTest(unittest.TestCase):
 
     def test_reader_and_feed_with_same_profile_keep_separate_history(self):
         self.readers(self.reader("alice"))
-        self.feeds(self.feed("f-space"))  # 同じ PROFILE（同じハッシュ）
+        self.feeds(self.feed("f-space", PROFILE))  # 同じ PROFILE（同じハッシュ）
         prev = "2026-10-20"
         for uid, text in (("alice", "alice の前日分"), ("f-space", "フィードの前日分")):
             (self.root / "sent" / uid).mkdir(parents=True)
