@@ -28,7 +28,7 @@ Deno チームが Cloudflare に合流し、TypeSafe AI は 8.7 億ドルを調�
 3. [GitHub、Copilot 実行基盤を AI 支援で Rust 化](https://www.infoq.com/news/2026/10/github-copilot-rust-migration/) (InfoQ・英語)<br>
    TypeScript と Node.js の 80 万行超を約 14.5 週で移行し、N-API で段階的に置き換えた。
 
-4. [Anthropic、OSS 向け脆弱性スキャナ「OSS Scanner」を開始](https://www.anthropic.com/research/launching-opt-in-vuln-finding-service-for-open-source) (はてブ)<br>
+4. [Anthropic、OSS 向け脆弱性スキャナ「OSS Scanner」を開始](https://www.anthropic.com/research/launching-opt-in-vuln-finding-service-for-open-source) (はてブ・英語)<br>
    参加プロジェクトは定期スキャンを無料で受けられる。候補 2.9 万件のうち人手で精査できたのは約 6,000 件で、確認作業が詰まりどころ。
 
 5. [Let's Encrypt、証明書の有効期間を 64 日に短縮](https://gigazine.net/news/20261009-lets-encrypt-cuts-certificate-lifetimes-64-days/) (GIGAZINE)<br>

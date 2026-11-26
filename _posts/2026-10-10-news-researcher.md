@@ -22,7 +22,7 @@ OpenAI がミレニアム問題級の「ナビエ・ストークス問題」を�
 1. [OpenAIのナビエ・ストークス証明、人間版とLean版が不一致と数学者らが指摘](https://www.newscientist.com/article/2592824-openai-mistranslated-mathematics-into-code-for-its-navier-stokes-proof/) (HN・英語)<br>
    ケンブリッジ大の研究者らは、証明が誤りとは言えないが、形式化が査読の代わりになるかは疑わしいと見る。
 
-2. [Anthropic、OSS向けの脆弱性スキャン「OSS Scanner」を無償で開始](https://www.anthropic.com/research/launching-opt-in-vuln-finding-service-for-open-source) (はてブ)<br>
+2. [Anthropic、OSS向けの脆弱性スキャン「OSS Scanner」を無償で開始](https://www.anthropic.com/research/launching-opt-in-vuln-finding-service-for-open-source) (はてブ・英語)<br>
    半年で2.9万件の候補を見つけたが、人手で精査できたのは約6千件。検証側の人手不足が導入の背景。
 
 3. [AIの「お断り」に頼りすぎるな、MIT TR の論考](https://www.technologyreview.com/2026/10/09/1145728/we-are-putting-too-much-faith-in-ai-to-say-no/) (MIT TR・英語/一部会員限定)<br>

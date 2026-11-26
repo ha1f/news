@@ -19,7 +19,7 @@ article_tags:
 
 Anthropic が自社の雇用データを公開し、AI エージェントの稼働時間が従業員の6倍に達したと明かした。研究面では、潜在空間で考えて言葉で行動するエージェントや、LLM を寄せ付けない言語の実験が並ぶ。学会査読の質への嘆きも続く。
 
-1. [Anthropic、自社の雇用はどう変わったかを分析](https://www.anthropic.com/research/employment-at-anthropic) (はてブ)<br>
+1. [Anthropic、自社の雇用はどう変わったかを分析](https://www.anthropic.com/research/employment-at-anthropic) (はてブ・英語)<br>
    8月時点で対話型エージェントの稼働時間が従業員の6倍。若手技術職の採用比率は縮小した。
 
 2. [潜在空間で考え、テキストで行動する「HybridAgents」](https://arxiv.org/abs/2610.18861) (HN・英語)<br>

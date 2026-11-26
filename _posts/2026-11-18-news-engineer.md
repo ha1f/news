@@ -39,7 +39,7 @@ OpenJDK の Base64 デコーダに、認証なしでリモートからコード�
 6. [mizchi 氏「Mutation Test をやれ」、AI 時代のテスト品質の測り方](https://zenn.dev/mizchi/articles/mutation-test-quality) (はてブ)<br>
    分岐カバレッジは85%あたりで効き目が鈍るという経験則から、コードをわざと壊して検出できるかを見る自作ツール mutator を勧める
 
-7. [Rust 製リンター Oxlint、型を使う lint に Rust 版 TypeScript「tsrs」](https://oxc.rs/blog/2026-11-17-faster-type-aware-linting-with-tsrs) (はてブ)<br>
+7. [Rust 製リンター Oxlint、型を使う lint に Rust 版 TypeScript「tsrs」](https://oxc.rs/blog/2026-11-17-faster-type-aware-linting-with-tsrs) (はてブ・英語)<br>
    型検査と lint を1回の解析で済ませ、typescript-eslint と tsc を別々に回すより最大122倍速いと Oxc は計測
 
 8. [Shopify、AI エージェントにアプリを作らせるリモート環境「Remote Dev」](https://www.infoq.com/news/2026/11/shopify-remote-ai-dev/) (InfoQ・英語)<br>

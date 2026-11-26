@@ -190,6 +190,7 @@ python3 .claude/skills/curate-news/scripts/fetch_feeds.py --source hatena --cate
 - **購読**が無料以外なら、その値（`会員限定` / `一部会員限定`）を付ける
 - 両方付く場合は `/` でつなぐ
 - アグリゲータ（はてブ・HN・Reddit 等）の項目は、リンク先のドメインが別のソース定義の **記事ドメイン** に一致するなら、そちらの属性を使う（ソース名はアグリゲータのまま）。はてブ経由の日経記事を `(はてブ)` と書くと、読者は無料で読めると思って開いて引き返すことになる
+- 記事ドメインに一致しないリンク先は、[references/link-languages.md](references/link-languages.md) の一覧に載っていればその言語を付ける（`anthropic.com` の記事なら `(はてブ・英語)`。`claude.com/ja/…` のような日本語版のページには付けない。判定の規則は一覧の冒頭）。一覧にも無いサイトはアグリゲータの属性のまま出す（記事ごとに `・英語` を足すと検査と食い違う）
 
 ```
 (TechCrunch・英語)          英語のソース
@@ -197,6 +198,7 @@ python3 .claude/skills/curate-news/scripts/fetch_feeds.py --source hatena --cate
 (Nature・英語/一部会員限定)  両方
 (Publickey)                 日本語で無料のソース（何も付けない）
 (はてブ・会員限定)           はてブ経由だがリンク先が日経の記事
+(はてブ・英語)               はてブ経由だがリンク先が一覧に載った英語のサイト
 ```
 
 投稿ファイルを作ったら検査で確かめる（`_posts/` に書き出したあと）:

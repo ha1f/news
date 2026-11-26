@@ -26,7 +26,7 @@ Lovable で作られた15.9万件のアプリからログインなしで読め�
 1. [Lovable 製アプリ、旅券情報や20万件超の私信が丸見え](https://www.crissyfield.de/research/lovable-en/) (HN・英語)<br>
    AI でアプリを作るスウェーデン企業の15.9万件を調べ、ログイン不要で読める事例が多数
 
-2. [Cursor、偽の Claude Code 拡張が出回った侵害の経緯を公表](https://cursor.com/blog/security-incident-update) (はてブ)<br>
+2. [Cursor、偽の Claude Code 拡張が出回った侵害の経緯を公表](https://cursor.com/blog/security-incident-update) (はてブ・英語)<br>
    発端は Fireworks に渡したアクセスキーの流出で、API 認証情報が漏れた顧客は0.01%未満
 
 3. [Google Project Zero、報告から90日で脆弱性を開示する方針に](https://projectzero.google/2026/11/disclosure-policy.html) (HN・英語)<br>

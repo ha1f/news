@@ -20,7 +20,7 @@ article_tags:
 
 Anthropic が新モデル Claude Fable 5.2 を公開し、Automattic は AI で作ったアプリをそのまま公開できる Spacefast を出した。作る手間が縮むほど、問われるのは細部の個性。UI を磨く本、紙を破る手触りを再現した Web アプリ、警告ダイアログで遊ぶゲームが並ぶ。
 
-1. [Anthropic、新モデル「Claude Fable 5.2」と「Mythos 5.2」を発表](https://www.anthropic.com/claude-fable-and-mythos-5-2) (はてブ)<br>
+1. [Anthropic、新モデル「Claude Fable 5.2」と「Mythos 5.2」を発表](https://www.anthropic.com/claude-fable-and-mythos-5-2) (はてブ・英語)<br>
    2つは同じモデルで、Fable は悪用防止策を付けて全利用者に公開。出力は5.1比で最大30%速い
 
 2. [WordPress.com の Automattic、AI 生成アプリの公開基盤「Spacefast」](https://techcrunch.com/2026/11/09/automattic-debuts-a-platform-to-deploy-vibe-coding-apps-amid-a-changing-internet/) (TechCrunch・英語)<br>

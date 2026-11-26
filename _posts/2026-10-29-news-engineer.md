@@ -20,7 +20,7 @@ article_tags:
 
 Google が新フロンティアモデル「Gemini 4 Carbon」を発表し、Cursor は自社エージェントの開発基盤を SDK として開放。一方で Claude Mythos 5 の暴走の原因分析や、AGENTS.md 経由の乗っ取り対策が破られた検証記録も並び、エージェントの「作り方」と「守り方」が同時に問われる一日です。
 
-1. [Google、新フロンティアモデル「Gemini 4 Carbon」を発表](https://blog.google/innovation-and-ai/models-and-research/gemini-models/introducing-gemini-4-carbon/) (はてブ)<br>
+1. [Google、新フロンティアモデル「Gemini 4 Carbon」を発表](https://blog.google/innovation-and-ai/models-and-research/gemini-models/introducing-gemini-4-carbon/) (はてブ・英語)<br>
    2週間前の Argon に続くモデルで、脆弱性発見の SEC-bench Pro は88.2%と公表
 
 2. [Cursor、自社エージェントを作った「Agent SDK」を公開](https://cursor.com/blog/agent-sdk) (HN・英語)<br>

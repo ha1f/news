@@ -27,7 +27,7 @@ article_tags:
 2. [Linux の NFS サーバーに12年潜んだ認証前 root「Nfs2root」](https://opensec.in/blog/nfs2root-cve-2026-99362) (HN・英語)<br>
    2014年の Linux 3.16 から続く穴で、tcp/2049 に1回つなぐだけで届く。修正は 6.12.117 や 7.3.2 から
 
-3. [Anthropic、Messages API を Python から Rust へ移した検証の手順](https://www.anthropic.com/research/migrating-api-to-rust) (はてブ)<br>
+3. [Anthropic、Messages API を Python から Rust へ移した検証の手順](https://www.anthropic.com/research/migrating-api-to-rust) (はてブ・英語)<br>
    API の通信量は2024年初めから約1800倍に、旧版との差分を Claude のエージェント群が追って直した
 
 4. [MCP に「Skills over MCP」、ツールの使い方までサーバーから配る](https://www.publickey1.jp/blog/26/mcpskills_over_mcpmcp.html) (Publickey)<br>
