@@ -33,7 +33,7 @@ PHP に認証なしでサーバー上のコードを実行されかねない重�
 5. [claude -p を cron で回すと「ok」だけで4万トークン](https://zenn.dev/yosiki/articles/claude-p-cron-token-diet) (Zenn)<br>
    --safe-mode と --tools "" などの組み合わせを実測し、1回あたり39,968から737トークンまで落とした記録。
 
-6. [GitHub CLI、期限付きで自動更新される OAuth トークンを試験提供](https://github.blog/changelog/2026-10-21-github-cli-opt-in-to-expiring-auto-refreshing-oauth-tokens/) (はてブ)<br>
+6. [GitHub CLI、期限付きで自動更新される OAuth トークンを試験提供](https://github.blog/changelog/2026-10-21-github-cli-opt-in-to-expiring-auto-refreshing-oauth-tokens/) (はてブ・英語)<br>
    v2.103.0 の gh auth login --expiring で有効化。トークンが漏れても数時間で失効し、git 連携には gh auth setup-git を勧める。
 
 7. [Google Chrome 156 安定版、CSS だけで乱数が使える](https://gigazine.net/news/20261021-google-chrome-156/) (GIGAZINE)<br>

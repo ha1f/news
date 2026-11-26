@@ -22,7 +22,7 @@ Google の圧縮ライブラリ Brotli の欠陥「HTTP2Shell」が、Node.js �
 1. [Brotli の欠陥「HTTP2Shell」、Node.js 以外の HTTP 実装にも波及](https://www.aikido.dev/blog/python-packages-vulnerable-node2shell-brotli-cve-2026-111497) (HN・英語)<br>
    セキュリティ企業 Aikido の整理。Python も対象で、修正前は Brotli 展開の無効化を勧める
 
-2. [Anthropic、サブエージェントを本体ループに畳む設計指針](https://claude.com/resources/articles/building-agents-when-to-fold-subagents-into-your-main-agent-loop) (はてブ)<br>
+2. [Anthropic、サブエージェントを本体ループに畳む設計指針](https://claude.com/resources/articles/building-agents-when-to-fold-subagents-into-your-main-agent-loop) (はてブ・英語)<br>
    複数の企業導入の比較で、スキルを持たせた単一エージェントが品質とコストで勝つ例が多かったという
 
 3. [VS Code 1.142、エージェントと同じ画面を触れる「Canvas」](https://qiita.com/shahin0809/items/81e6a6737b2254bdc6ed) (はてブ)<br>
