@@ -32,7 +32,7 @@ article_tags:
 4. [まつもとゆきひろ氏「OSS 文化はあと10年もたないかもしれない」](https://type.jp/et/feature/32219/) (はてブ)<br>
    Ruby の生みの親が、PHP の脆弱性騒動を「明日は我が身」と語り、企業支援の難しさに触れる
 
-5. [PostgreSQL 19 が正式リリース](https://www.postgresql.org/about/news/postgresql-19-released-3449/) (はてブ)<br>
+5. [PostgreSQL 19 が正式リリース](https://www.postgresql.org/about/news/postgresql-19-released-3449/) (はてブ・英語)<br>
    続報（11/16掲載）。無停止で表を再編成する REPACK (CONCURRENTLY) や pg_plan_advice 拡張が入った
 
 6. [TypeScript 7.1 の Content Mapper で型の生成コマンドをなくす](https://zenn.dev/toiroakr/articles/typescript-content-mapper-codegen) (Zenn)<br>

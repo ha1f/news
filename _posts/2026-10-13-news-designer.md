@@ -28,7 +28,7 @@ Apple が今日13日の発表会で出すとみられるスマートホームハ
 3. [SWC 作者が語る、AI に UI を作らせる手順](https://kdy1.dev/2026-10-12-ai-ui) (はてブ)<br>
    画像生成でモックを作って承認し、課題に添付して複数を並列実装する流れ。
 
-4. [Adobe 代替 OSS の作者、Office 相当の3本を発表](https://www.tomshardware.com/software/microsoft-office/creator-of-free-adobe-clones-unveils-open-source-microsoft-office-excel-powerpoint-and-word-replications-autodesk-tools-and-other-subscription-based-services-may-come-next) (はてブ)<br>
+4. [Adobe 代替 OSS の作者、Office 相当の3本を発表](https://www.tomshardware.com/software/microsoft-office/creator-of-free-adobe-clones-unveils-open-source-microsoft-office-excel-powerpoint-and-word-replications-autodesk-tools-and-other-subscription-based-services-may-come-next) (はてブ・英語)<br>
    続報（10/6掲載）。ArtCraft の開発者が GridCraft・DeckCraft・WordCraft を出し、次は Autodesk 系かと報じられる。
 
 5. [CPG ブランドを90日で棚に並べる手法](https://dribbble.com/stories/2026/09/29/cl-mavrk-studio-aaron-swinton-how-to-launch-a-brand-in-90-days) (Dribbble・英語)<br>

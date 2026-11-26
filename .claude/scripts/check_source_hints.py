@@ -54,7 +54,9 @@ LANG_RE = re.compile(r"^- \*\*リンク先の言語\*\*:\s*(?P<v>.+)$", re.M)
 ACCESS_RE = re.compile(r"^- \*\*購読\*\*:\s*(?P<v>.+)$", re.M)
 DOMAIN_RE = re.compile(r"^- \*\*記事ドメイン\*\*:\s*(?P<v>.+)$", re.M)
 JA_PATH_SEGMENTS = {"ja", "jp", "ja-jp", "ja_jp"}
-LINK_LANG_RE = re.compile(r"^- `(?P<key>[^`]+)`:\s*(?P<lang>\S+)\s*$", re.M)
+LINK_LANG_RE = re.compile(r"^- `(?P<key>[^`]+)`:\s*(?P<lang>\S+)\s*$")
+# 一覧に書ける言語（ソース定義の「リンク先の言語」と同じ語彙）
+LANGUAGES = {"日本語", "英語"}
 
 
 def _labels(lang: str, access: str):
@@ -115,22 +117,38 @@ def link_languages(by_domain, path: Path = LINK_LANGUAGES):
     """{ドメイン: ラベル} を返す。ソース定義の無いサイトの言語の一覧 (#708)。
 
     載っているサイトは無料で読めるものとして扱い、言語だけをラベルにする。
+    「## 一覧」節の箇条書きは全行が形どおりでないと NG にする（崩した行を黙って
+    捨てると、そのサイトだけ検査から外れたまま気づけない）。
     """
     if not path.is_file():
         print(f"NG {path}: ファイルがありません")
         return None
+    text = path.read_text(encoding="utf-8")
+    section = re.split(r"^## 一覧\s*$", text, maxsplit=1, flags=re.M)
+    if len(section) != 2:
+        print(f"NG {path}: 「## 一覧」節がありません")
+        return None
     table = {}
-    for m in LINK_LANG_RE.finditer(path.read_text(encoding="utf-8")):
-        domain = m.group("key").strip().lower()
+    for line in section[1].split("\n"):
+        if not line.startswith("- "):
+            continue
+        m = LINK_LANG_RE.match(line)
+        if not m:
+            print(f"NG {path}: 形の崩れた行 「{line}」（`- `ドメイン`: 言語` の形で書きます）")
+            return None
+        domain, lang = m.group("key").strip().lower(), m.group("lang")
         if domain.startswith("www.") or "/" in domain:
             print(f"NG {path}: 「{domain}」はドメインだけを www. を付けずに書きます")
+            return None
+        if lang not in LANGUAGES:
+            print(f"NG {path}: 「{domain}」の言語「{lang}」は {sorted(LANGUAGES)} のどれかで書きます")
             return None
         clash = [d for d in by_domain if _host_matches(domain, d)]
         if clash:
             print(f"NG {path}: 「{domain}」はソース定義の記事ドメイン「{clash[0]}」に"
                   "一致するので、ここに書いても効きません")
             return None
-        table[domain] = _labels(m.group("lang"), "無料")
+        table[domain] = _labels(lang, "無料")
     if not table:
         print(f"NG {path}: 一覧が読み取れません")
         return None
@@ -172,12 +190,11 @@ def resolve(url: str, name: str, by_name, by_domain, by_link=None):
     for domain in sorted(by_domain, key=len, reverse=True):
         if _host_matches(host, domain):
             return by_domain[domain][0]
-    # 日本語版のページ（claude.com/ja/…、…/docs/ja/…、?hl=ja）は一覧を当てず、
-    # 日本語が既定のアグリゲータでは何も付けない
-    if not is_japanese_locale(url):
-        for domain in sorted(by_link or {}, key=len, reverse=True):
-            if _host_matches(host, domain):
-                return by_link[domain]
+    # 一覧のサイトの日本語版のページ（claude.com/ja/…、…/docs/ja/…、?hl=ja）は
+    # 日本語として扱う。英語が既定のアグリゲータ（HN 等）経由でも「英語」を付けない
+    for domain in sorted(by_link or {}, key=len, reverse=True):
+        if _host_matches(host, domain):
+            return [] if is_japanese_locale(url) else by_link[domain]
     return by_name.get(name)
 
 

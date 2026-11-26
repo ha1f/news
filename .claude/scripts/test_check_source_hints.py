@@ -16,6 +16,7 @@ FRONT_MATTER = "---\nlayout: post\ntitle: \"test\"\ndate: 2026-09-19\n---\n"
 
 BY_NAME = {
     "はてブ": [],
+    "HN": ["英語"],
     "日経": ["会員限定"],
     "Nature": ["英語", "一部会員限定"],
     "TechCrunch": ["英語"],
@@ -145,6 +146,15 @@ class TestResolveLinkLanguages(unittest.TestCase):
             with self.subTest(url=url):
                 self.assertEqual(self.hatena(url), [])
 
+    def test_japanese_page_via_english_aggregator(self):
+        # HN（英語が既定）経由でも、一覧のサイトの日本語版には「英語」を付けない
+        self.assertEqual(
+            resolve("https://claude.com/ja/resources/x", "HN", BY_NAME, BY_DOMAIN, BY_LINK),
+            [])
+        self.assertEqual(
+            resolve("https://claude.com/resources/x", "HN", BY_NAME, BY_DOMAIN, BY_LINK),
+            ["英語"])
+
     def test_locale_only_counts_as_whole_segment(self):
         # /japan/ や /jazz/ は日本語版の印ではない
         self.assertEqual(self.hatena("https://www.anthropic.com/japan/news"), ["英語"])
@@ -191,31 +201,50 @@ class TestLinkLanguages(unittest.TestCase):
             table = link_languages(BY_DOMAIN, Path(tmp.name))
         return table, out.getvalue()
 
+    def rows(self, *rows):
+        # 説明の箇条書きは「## 一覧」より前に置く（実物と同じ形）
+        return self.load("# x\n\n- 行の形は `` - `{ドメイン}`: {言語} ``。\n\n## 一覧\n\n"
+                         + "".join(r + "\n" for r in rows))
+
     def test_parses_rows(self):
-        table, _ = self.load("# x\n\n- `anthropic.com`: 英語\n- `example.jp`: 日本語\n")
+        table, _ = self.rows("- `anthropic.com`: 英語", "- `example.jp`: 日本語")
         self.assertEqual(table, {"anthropic.com": ["英語"], "example.jp": []})
 
-    def test_explanation_rows_are_not_entries(self):
-        # 説明の箇条書き（行頭が `- ` でもバッククォートの後が言語でない）は拾わない
-        table, _ = self.load(
-            "- 行の形は `` - `{ドメイン}`: {言語} ``。\n- `anthropic.com`: 英語\n")
+    def test_explanation_before_section_is_not_an_entry(self):
+        table, _ = self.rows("- `anthropic.com`: 英語")
         self.assertEqual(table, {"anthropic.com": ["英語"]})
 
+    def test_malformed_row_is_an_error_not_skipped(self):
+        for row in ("- `openai.com`: 英語（2026-11 確認）",
+                    "- `openai.com`: 英語 # memo",
+                    "- openai.com: 英語"):
+            with self.subTest(row=row):
+                table, out = self.rows("- `anthropic.com`: 英語", row)
+                self.assertIsNone(table)
+                self.assertIn("形の崩れた行", out)
+
+    def test_unknown_language_is_an_error(self):
+        table, out = self.rows("- `anthropic.com`: English")
+        self.assertIsNone(table)
+        self.assertIn("English", out)
+
     def test_rejects_source_domain(self):
-        table, out = self.load("- `nikkei.com`: 英語\n")
+        table, out = self.rows("- `nikkei.com`: 英語")
         self.assertIsNone(table)
         self.assertIn("nikkei.com", out)
 
     def test_rejects_subdomain_of_source_domain(self):
-        table, _ = self.load("- `asia.nikkei.com`: 英語\n")
-        self.assertIsNone(table)
+        self.assertIsNone(self.rows("- `asia.nikkei.com`: 英語")[0])
 
     def test_rejects_www_and_path(self):
-        self.assertIsNone(self.load("- `www.anthropic.com`: 英語\n")[0])
-        self.assertIsNone(self.load("- `claude.com/ja`: 日本語\n")[0])
+        self.assertIsNone(self.rows("- `www.anthropic.com`: 英語")[0])
+        self.assertIsNone(self.rows("- `claude.com/ja`: 日本語")[0])
 
     def test_empty_list_is_an_error(self):
-        self.assertIsNone(self.load("# 一覧なし\n")[0])
+        self.assertIsNone(self.rows()[0])
+
+    def test_missing_section_is_an_error(self):
+        self.assertIsNone(self.load("- `anthropic.com`: 英語\n")[0])
 
     def test_missing_file_is_an_error(self):
         with redirect_stdout(io.StringIO()):
