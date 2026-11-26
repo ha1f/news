@@ -9,6 +9,8 @@
 ソース名だけで判定すると「(はてブ)」のまま会員限定の記事に飛ばしてしまう。
 リンク先のドメインがソース定義の「記事ドメイン」に一致する場合は、そのソースの
 属性を優先する（記事ごとの判断ではなく、ドメインからの決定的な導出）。
+ソース定義の無いサイトは、`references/link-languages.md` の一覧に載っていれば
+その言語を使う（はてブ経由の英語サイトが「(はてブ)」と出て日本語に見えるのを防ぐ。#708）。
 
 使い方:
   python3 .claude/scripts/check_source_hints.py                    # 当日 (JST) の投稿
@@ -23,10 +25,11 @@ import re
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import parse_qsl, urlparse
 
 JST = timezone(timedelta(hours=9))
 SOURCES_DIR = Path(".claude/skills/curate-news/references/sources")
+LINK_LANGUAGES = Path(".claude/skills/curate-news/references/link-languages.md")
 # 出力で使われてきた表示名のゆれ。正規の表示名はソース定義の「表示名」が正。
 ALIASES = {
     "Hacker News": "HN",
@@ -50,6 +53,8 @@ DISPLAY_RE = re.compile(r"^## 表示名\s*\n+`(?P<name>[^`]+)`", re.M)
 LANG_RE = re.compile(r"^- \*\*リンク先の言語\*\*:\s*(?P<v>.+)$", re.M)
 ACCESS_RE = re.compile(r"^- \*\*購読\*\*:\s*(?P<v>.+)$", re.M)
 DOMAIN_RE = re.compile(r"^- \*\*記事ドメイン\*\*:\s*(?P<v>.+)$", re.M)
+JA_PATH_SEGMENTS = {"ja", "jp", "ja-jp", "ja_jp"}
+LINK_LANG_RE = re.compile(r"^- `(?P<key>[^`]+)`:\s*(?P<lang>\S+)\s*$", re.M)
 
 
 def _labels(lang: str, access: str):
@@ -87,6 +92,51 @@ def source_tables():
     return by_name, by_domain
 
 
+def _host(url: str) -> str:
+    """URL のホスト（www. を除く）"""
+    host = urlparse(url).netloc.lower().split(":")[0]
+    return host[4:] if host.startswith("www.") else host
+
+
+def is_japanese_locale(url: str) -> bool:
+    """URL が日本語版のページを指しているか（パスの区切りに ja / jp / ja-jp、または ?hl=ja 等）"""
+    parsed = urlparse(url)
+    if any(seg.lower() in JA_PATH_SEGMENTS for seg in parsed.path.split("/")):
+        return True
+    return any(k.lower() in ("hl", "lang", "locale") and v.lower().replace("_", "-").split("-")[0] == "ja"
+               for k, v in parse_qsl(parsed.query))
+
+
+def _host_matches(host: str, domain: str) -> bool:
+    return host == domain or host.endswith("." + domain)
+
+
+def link_languages(by_domain, path: Path = LINK_LANGUAGES):
+    """{ドメイン: ラベル} を返す。ソース定義の無いサイトの言語の一覧 (#708)。
+
+    載っているサイトは無料で読めるものとして扱い、言語だけをラベルにする。
+    """
+    if not path.is_file():
+        print(f"NG {path}: ファイルがありません")
+        return None
+    table = {}
+    for m in LINK_LANG_RE.finditer(path.read_text(encoding="utf-8")):
+        domain = m.group("key").strip().lower()
+        if domain.startswith("www.") or "/" in domain:
+            print(f"NG {path}: 「{domain}」はドメインだけを www. を付けずに書きます")
+            return None
+        clash = [d for d in by_domain if _host_matches(domain, d)]
+        if clash:
+            print(f"NG {path}: 「{domain}」はソース定義の記事ドメイン「{clash[0]}」に"
+                  "一致するので、ここに書いても効きません")
+            return None
+        table[domain] = _labels(m.group("lang"), "無料")
+    if not table:
+        print(f"NG {path}: 一覧が読み取れません")
+        return None
+    return table
+
+
 def items_of(post: Path):
     """投稿本文の記事項目を (見出し, URL, ソース表記) で返す。表記が無ければ None"""
     text = post.read_text(encoding="utf-8")
@@ -110,15 +160,24 @@ def malformed_lines_of(post: Path):
             yield line
 
 
-def resolve(url: str, name: str, by_name, by_domain):
-    """その項目に付けるべきラベルを返す。リンク先ドメインが既知ならそちらを優先する"""
-    host = urlparse(url).netloc.lower().split(":")[0]
-    if host.startswith("www."):
-        host = host[4:]
+def resolve(url: str, name: str, by_name, by_domain, by_link=None):
+    """その項目に付けるべきラベルを返す。
+
+    リンク先がソース定義の記事ドメインならそのソースの属性、ソース定義の無い
+    サイトでも言語の一覧 (by_link) に載っていればその言語、どちらでもなければ
+    投稿元ソース自身の属性を使う。
+    """
+    host = _host(url)
     # 最長一致にして、サブドメインを持つ定義があっても決定的に選ばれるようにする
     for domain in sorted(by_domain, key=len, reverse=True):
-        if host == domain or host.endswith("." + domain):
+        if _host_matches(host, domain):
             return by_domain[domain][0]
+    # 日本語版のページ（claude.com/ja/…、…/docs/ja/…、?hl=ja）は一覧を当てず、
+    # 日本語が既定のアグリゲータでは何も付けない
+    if not is_japanese_locale(url):
+        for domain in sorted(by_link or {}, key=len, reverse=True):
+            if _host_matches(host, domain):
+                return by_link[domain]
     return by_name.get(name)
 
 
@@ -129,6 +188,9 @@ def expected_text(name: str, labels) -> str:
 def main(argv):
     by_name, by_domain = source_tables()
     if by_name is None:
+        return 1
+    by_link = link_languages(by_domain)
+    if by_link is None:
         return 1
 
     if "--all" in argv:
@@ -161,7 +223,7 @@ def main(argv):
                 failures += 1
                 continue
             got = [x.strip() for p in parts[1:] for x in p.split("/")]
-            want = resolve(url, name, by_name, by_domain)
+            want = resolve(url, name, by_name, by_domain, by_link)
             if got != want:
                 print(f"NG {post.name}: ソース表記が定義と違う "
                       f"（{title} — いま「{label}」/ "
