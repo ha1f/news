@@ -308,6 +308,20 @@ class TestMainUsesLinkLanguages(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stdout)
 
 
+class TestSourceTablesOutsideRoot(unittest.TestCase):
+    def test_no_sources_is_an_error_not_an_empty_table(self):
+        cwd = os.getcwd()
+        with tempfile.TemporaryDirectory() as d:
+            os.chdir(d)
+            try:
+                out = io.StringIO()
+                with redirect_stdout(out):
+                    self.assertEqual(source_tables(), (None, None))
+            finally:
+                os.chdir(cwd)
+        self.assertIn("ソース定義がありません", out.getvalue())
+
+
 class TestExpectedText(unittest.TestCase):
     def test_no_labels(self):
         self.assertEqual(expected_text("Publickey", []), "Publickey")

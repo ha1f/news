@@ -72,7 +72,13 @@ def _labels(lang: str, access: str):
 def source_tables():
     """({表示名: ラベル}, {記事ドメイン: (ラベル, 表示名)}) を返す"""
     by_name, by_domain = {}, {}
-    for path in sorted(SOURCES_DIR.glob("*.md")):
+    paths = sorted(SOURCES_DIR.glob("*.md"))
+    if not paths:
+        # 相対パスなので、repo のルート以外から走らせると 0 件になる。空の表のまま
+        # 進むと全項目が「定義と違う」になり、検査器の誤りが記事の誤りに見える
+        print(f"NG {SOURCES_DIR}: ソース定義がありません（repo のルートで実行します）")
+        return None, None
+    for path in paths:
         text = path.read_text(encoding="utf-8")
         name = DISPLAY_RE.search(text)
         lang = LANG_RE.search(text)
