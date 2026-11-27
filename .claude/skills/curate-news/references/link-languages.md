@@ -14,6 +14,7 @@
 ## 一覧
 
 - `anthropic.com`: 英語
+- `arxiv.org`: 英語
 - `blog.google`: 英語
 - `claude.com`: 英語
 - `cursor.com`: 英語

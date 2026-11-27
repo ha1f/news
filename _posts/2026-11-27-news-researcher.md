@@ -31,7 +31,7 @@ article_tags:
 4. [細胞の表現学習にも「測定ノイズのスケーリング則」](https://www.nature.com/articles/s42256-026-01332-7) (Nature・英語/一部会員限定)<br>
    2000超のモデルを当てはめると性能はノイズに対数則で効き、1細胞の発現データはまだノイズが律速
 
-5. [強化学習の代わりに進化戦略で LLM を全パラメータ微調整](https://arxiv.org/abs/2509.24372) (はてブ)<br>
+5. [強化学習の代わりに進化戦略で LLM を全パラメータ微調整](https://arxiv.org/abs/2509.24372) (はてブ・英語)<br>
    「数十億パラメータには効かない」という通説に反し、遅れて届く報酬への耐性などで RL 実装を上回ったと主張
 
 6. [OpenAI の GPT-6.2 Astra、1808年のスケッチブックの作者を22分で特定](https://gigazine.net/news/20261126-gpt-62-astra-solves-a-historical-mystery/) (はてブ)<br>
