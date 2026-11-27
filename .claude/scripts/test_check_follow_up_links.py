@@ -68,8 +68,12 @@ class CheckFollowUpLinksTest(unittest.TestCase):
 
     def test_anchor_not_article_fails(self):
         page(self.site, "2025/12/30/news.html", '<div id="top"></div>')
-        page(self.site, "2026/01/02/news.html", link("/news/2025/12/30/news.htmlFOLLOW_UP_ANCHOR#top", "12/30"))
-        self.assertTrue(self.errors())
+        page(self.site, "2026/01/02/news.html", link("/news/2025/12/30/news.html#top", "12/30"))
+        self.assertTrue(any("記事（#article-N）でない" in e for e in self.errors()))
+
+    def test_leftover_placeholder_fails(self):
+        page(self.site, "2026/01/02/news.html", link("/news/2025/12/30/news.htmlFOLLOW_UP_ANCHOR", "12/30"))
+        self.assertTrue(any("日次ページでない" in e for e in self.errors()))
 
     def test_nested_link_fails(self):
         page(self.site, "2026/01/02/news.html",

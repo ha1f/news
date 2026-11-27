@@ -212,7 +212,8 @@ layout: default
         {%- else -%}
           {%- assign fu_anchor = '' -%}
         {%- endif -%}
-        {%- assign item_html = item_html | replace: 'FOLLOW_UP_ANCHOR', fu_anchor -%}
+        {%- comment -%}番号が指すのは読みどころの先頭の続報だけ。同じ記事の2つ目以降の続報は別の日のページなので先頭に着かせる{%- endcomment -%}
+        {%- assign item_html = item_html | replace_first: 'FOLLOW_UP_ANCHOR', fu_anchor | replace: 'FOLLOW_UP_ANCHOR', '' -%}
       {%- endif -%}
       {%- if part contains '</a>' -%}
         {%- assign item_href = part | split: 'href="' | slice: 1 | first | split: '"' | first -%}

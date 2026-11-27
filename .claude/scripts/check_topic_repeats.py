@@ -253,7 +253,8 @@ def follow_up_targets(post: Path, archive: Archive, names: dict[str, str] | None
 
 
 FOLLOW_UPS_RE = re.compile(r"^follow_ups:(?P<rest>.*)$", re.M)
-FOLLOW_UPS_PAIR_RE = re.compile(r"^\s*(\d+)\s*:\s*(\d+)\s*$")
+# コロンの後の空白は必須。`1:3` は YAML 1.1（Jekyll の Psych）では60進数の 3780 と読まれ、着地点が黙って付かない
+FOLLOW_UPS_PAIR_RE = re.compile(r"^\s*(\d+):\s+(\d+)\s*$")
 
 
 def parse_follow_ups(text: str) -> tuple[dict[int, int], str | None]:
@@ -269,7 +270,7 @@ def parse_follow_ups(text: str) -> tuple[dict[int, int], str | None]:
     for pair in filter(None, (p.strip() for p in rest[1:-1].split(","))):
         pm = FOLLOW_UPS_PAIR_RE.match(pair)
         if not pm or int(pm[1]) < 1 or int(pm[2]) < 1:
-            return {}, f"follow_ups は「今回の記事番号: 前回の記事番号」（1始まりの整数）で書く: {pair}"
+            return {}, f"follow_ups は「今回の記事番号: 前回の記事番号」（1始まりの整数・コロンの後に空白）で書く: {pair}"
         if int(pm[1]) in out:
             return {}, f"follow_ups の記事番号 {pm[1]} が重複している"
         out[int(pm[1])] = int(pm[2])
@@ -321,7 +322,7 @@ def follow_up_landings(post: Path, archive: Archive, names: dict[str, str] | Non
                 landing = (fu[i], prev[fu[i] - 1])
         out.append((i, it, where, landing, cands, err))
     for i in sorted(set(fu) - seen):
-        out.append((i, None, None, None, [], f"follow_ups の {i} 本目はリンクになる続報の記事でない"))
+        out.append((i, None, None, None, [], f"follow_ups の {i} 本目は、読みどころの先頭がリンクになる続報の表記でない"))
     return out
 
 

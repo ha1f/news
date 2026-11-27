@@ -360,11 +360,11 @@ class FollowUpLandingsTest(unittest.TestCase):
         errs = [f[5] for f in self.landings(self.today("{2: 5}"))]
         self.assertTrue(any("範囲外" in (e or "") for e in errs))
         errs = [f[5] for f in self.landings(self.today("{1: 1}"))]
-        self.assertTrue(any("続報の記事でない" in (e or "") for e in errs))
+        self.assertTrue(any("続報の表記でない" in (e or "") for e in errs))
 
     def test_malformed_follow_ups_fails(self):
         self.write("2026-10-10-news.md", post(self.PREV))
-        for bad in ("[2, 1]", "{2: x}", "{2: 1, 2: 1}", "{0: 1}"):
+        for bad in ("[2, 1]", "{2: x}", "{2: 1, 2: 1}", "{0: 1}", "{2:1}"):
             errs = [f[5] for f in self.landings(self.today(bad))]
             self.assertTrue(errs and errs[0], bad)
 
