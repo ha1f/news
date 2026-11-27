@@ -54,6 +54,27 @@ class CheckFollowUpLinksTest(unittest.TestCase):
         page(self.site, "2026/12/31/news.html", link("/news/2025/12/30/news.html", "12/30"))
         self.assertTrue(any("直近180日" in e for e in self.errors()))
 
+    def test_anchor_to_existing_article_passes(self):
+        page(self.site, "2025/12/30/news.html", '<li id="article-1">a</li><li id="article-2">b</li>')
+        page(self.site, "2026/01/02/news.html", link("/news/2025/12/30/news.html#article-2", "12/30"))
+        errors, linked, _, anchored = c.check(self.site)
+        self.assertEqual((errors, linked, anchored), ([], 1, 1))
+
+    def test_anchor_to_missing_article_fails(self):
+        # follow_ups の番号がリンク先の記事数を超えた（壊れた着地点）
+        page(self.site, "2025/12/30/news.html", '<li id="article-1">a</li>')
+        page(self.site, "2026/01/02/news.html", link("/news/2025/12/30/news.html#article-11", "12/30"))
+        self.assertTrue(any("着地点の記事がリンク先のページに無い" in e for e in self.errors()))
+
+    def test_anchor_not_article_fails(self):
+        page(self.site, "2025/12/30/news.html", '<div id="top"></div>')
+        page(self.site, "2026/01/02/news.html", link("/news/2025/12/30/news.html#top", "12/30"))
+        self.assertTrue(any("記事（#article-N）でない" in e for e in self.errors()))
+
+    def test_leftover_placeholder_fails(self):
+        page(self.site, "2026/01/02/news.html", link("/news/2025/12/30/news.htmlFOLLOW_UP_ANCHOR", "12/30"))
+        self.assertTrue(any("日次ページでない" in e for e in self.errors()))
+
     def test_nested_link_fails(self):
         page(self.site, "2026/01/02/news.html",
              '<a href="https://example.com/">' + link("/news/2025/12/30/news.html", "12/30") + '見出し</a>')
@@ -70,7 +91,7 @@ class CheckFollowUpLinksTest(unittest.TestCase):
     def test_bare_marker_without_same_feed_page_passes(self):
         # 12/29 はメインにしか無い。プロファイルでは文字のまま残るのが正しい
         page(self.site, "2026/01/02/news-engineer.html", "続報（12/29掲載）。")
-        errors, linked, unlinked = c.check(self.site)
+        errors, linked, unlinked, _ = c.check(self.site)
         self.assertEqual((errors, linked, unlinked), ([], 0, 1))
 
     def test_marker_in_headline_link_text_and_meta_is_ignored(self):
@@ -111,7 +132,7 @@ class NamedFeedFollowUpTest(unittest.TestCase):
 
     def test_bare_named_marker_without_page_passes(self):
         page(self.site, "2026/11/15/news.html", "続報（ソフトウェアエンジニア 11/14掲載）。")
-        self.assertEqual(c.check(self.site, self.NAMES), ([], 0, 1))
+        self.assertEqual(c.check(self.site, self.NAMES), ([], 0, 1, 0))
 
     def test_unknown_feed_name_fails(self):
         page(self.site, "2026/11/15/news.html", "続報（投資家 11/14掲載）。")
@@ -122,7 +143,7 @@ class NamedFeedFollowUpTest(unittest.TestCase):
         page(self.site, "2026/11/15/news.html",
              link("/news/2026/11/14/news.html", "投資家 11/14") + "続報（研究者 11/14掲載）。")
         names = dict(self.NAMES, 研究者="news-researcher")
-        errors, linked, unlinked = c.check(self.site, names)
+        errors, linked, unlinked, _ = c.check(self.site, names)
         self.assertEqual((len(errors), linked, unlinked), (1, 1, 1))
 
     def test_feed_names_from_real_profile_pages(self):
