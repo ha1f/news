@@ -44,6 +44,12 @@ ECDSA の seed の由来が、印なしで再掲された）。ここで疑わ�
 表に無い表記揺れで点数が届かない正しい組も出るので、判断はモデルに残す
 （同じ期間で約20件。#659 の5件はいずれも出る）。
 
+続報の着地点（#712）: リンクになる続報の項目ごとに、front matter の `follow_ups: {今回の記事番号: 前回の記事番号}`
+を読み、ビルド時に付く着地点（リンク先のページの #article-N）がどの記事かを出す。番号の無い項目は
+「未指定」として、リンク先の投稿の記事を同じ点数の高い順に候補として出す（見出しの言い回しが変わる続報では
+最高点が前回の記事とは限らないので、判断はモデルに残す。2026-11-27 の NVIDIA の続報の前回は、見出しに
+NVIDIA の無い 11/17 の3本目）。リンク先の記事数を超える番号・続報でない記事の番号・形の崩れは NG。
+
 使い方:
   python3 .claude/scripts/check_topic_repeats.py _posts/2026-10-20-*.md
 
@@ -246,13 +252,86 @@ def follow_up_targets(post: Path, archive: Archive, names: dict[str, str] | None
     return found
 
 
+FOLLOW_UPS_RE = re.compile(r"^follow_ups:(?P<rest>.*)$", re.M)
+FOLLOW_UPS_PAIR_RE = re.compile(r"^\s*(\d+)\s*:\s*(\d+)\s*$")
+
+
+def parse_follow_ups(text: str) -> tuple[dict[int, int], str | None]:
+    """front matter の `follow_ups: {1: 3, 4: 1}` を {今回の記事番号: 前回の記事番号} にする。(値, 形の誤り)"""
+    head = text.split("\n---", 1)[0] if text.startswith("---") else ""
+    m = FOLLOW_UPS_RE.search(head)
+    if not m:
+        return {}, None
+    rest = m["rest"].strip()
+    if not (rest.startswith("{") and rest.endswith("}")):
+        return {}, "follow_ups はフロー形式（`follow_ups: {1: 3, 4: 1}`）で書く"
+    out = {}
+    for pair in filter(None, (p.strip() for p in rest[1:-1].split(","))):
+        pm = FOLLOW_UPS_PAIR_RE.match(pair)
+        if not pm or int(pm[1]) < 1 or int(pm[2]) < 1:
+            return {}, f"follow_ups は「今回の記事番号: 前回の記事番号」（1始まりの整数）で書く: {pair}"
+        if int(pm[1]) in out:
+            return {}, f"follow_ups の記事番号 {pm[1]} が重複している"
+        out[int(pm[1])] = int(pm[2])
+    return out, None
+
+
+def follow_up_landings(post: Path, archive: Archive, names: dict[str, str] | None = None):
+    """リンクになる続報の着地点を (記事番号, 項目, 指し先の表記, 着地点, 候補, 誤り) で返す。
+
+    着地点は follow_ups が指すリンク先の (番号, 項目)、未指定なら None。候補はリンク先の投稿の
+    (番号, 項目, 点数) を点数の高い順に MAX_PAIRS 件。誤りは NG の説明（無ければ None）。
+    follow_ups のキーが続報の記事でないときは、項目を None にした行で誤りを返す。
+    """
+    parsed = parse_name(post.name)
+    if parsed is None:
+        raise ValueError(f"ファイル名が YYYY-MM-DD-news*.md ではありません（{post.name}）")
+    day, feed = parsed
+    names = feed_names() if names is None else names
+    by_name = {k: f"{v}.md" for k, v in names.items()}
+    display = {v: k for k, v in by_name.items()}
+    text = post.read_text(encoding="utf-8")
+    fu, err = parse_follow_ups(text)
+    if err:
+        return [(None, None, None, None, [], err)]
+    corpus = [it for _, it in archive.between(day - timedelta(days=IDF_DAYS), day)]
+    df = Counter(t for it in corpus for t in it["terms"])
+    n = len(corpus)
+    posts = {(d, f): its for d, f, _, its in archive.posts}
+    out, seen = [], set()
+    for i, it in enumerate(items(text), 1):
+        m = FOLLOW_UP_RE.match(it["raw_note"])
+        if not m or (m["name"] and m["name"] not in by_name):
+            continue
+        t_feed = by_name[m["name"]] if m["name"] else feed
+        t_day = nearest_prior(day, int(m["m"]), int(m["d"]))
+        prev = posts.get((t_day, t_feed)) if t_day else None
+        if not prev:
+            continue  # リンクにならない。follow_up_targets が出す
+        seen.add(i)
+        where = f"{display.get(t_feed, t_feed)}の {t_day}"
+        scored = sorted(((sum(math.log(n / df[t]) for t in it["terms"] & p["terms"] if df[t]), j, p)
+                         for j, p in enumerate(prev, 1)), key=lambda h: (-h[0], h[1]))
+        cands = [(j, p, sc) for sc, j, p in scored[:MAX_PAIRS]]
+        landing, err = None, None
+        if i in fu:
+            if fu[i] > len(prev):
+                err = f"follow_ups の {i}: {fu[i]} が{where}の記事（1〜{len(prev)} 本目）の範囲外"
+            else:
+                landing = (fu[i], prev[fu[i] - 1])
+        out.append((i, it, where, landing, cands, err))
+    for i in sorted(set(fu) - seen):
+        out.append((i, None, None, None, [], f"follow_ups の {i} 本目はリンクになる続報の記事でない"))
+    return out
+
+
 def main(argv: list[str]) -> int:
     posts = [Path(a) for a in argv if not a.startswith("--")]
     if not posts:
         print("使い方: check_topic_repeats.py _posts/YYYY-MM-DD-*.md", file=sys.stderr)
         return 2
     archives: dict[Path, Archive] = {}
-    pairs = errors = targets = 0
+    pairs = errors = targets = landing_issues = 0
     names = feed_names()
     for post in posts:
         if not post.is_file():
@@ -278,6 +357,22 @@ def main(argv: list[str]) -> int:
                 print(f"  候補 {mk}: 「{prev['title']}」（点数 {sc:.1f}）")
             if not cands:
                 print("  候補なし（直近の全フィードに点数の届く掲載が無い）")
+        try:
+            landings = follow_up_landings(post, archive, names)
+        except ValueError:
+            landings = []
+        for i, it, where, landing, cands, err in landings:
+            if err:
+                landing_issues += 1
+                print(f"NG 続報の着地点 {post.name}: {err}")
+                continue
+            if landing:
+                print(f"続報の着地点 {post.name}:{it['line']} {i}本目 → {where}の {landing[0]}本目「{landing[1]['title']}」")
+                continue
+            landing_issues += 1
+            print(f"続報の着地点 未指定 {post.name}:{it['line']} {i}本目「{it['title']}」（{where}）")
+            for j, p, sc in cands:
+                print(f"  候補 {j}本目: 「{p['title']}」（点数 {sc:.1f}）")
         for it, hits in found:
             pairs += 1
             print(f"要判断 {post.name}:{it['line']} 「{it['title']}」")
@@ -285,10 +380,10 @@ def main(argv: list[str]) -> int:
             for prev_name, prev, score, shared in hits:
                 print(f"  前回 {prev_name[:10]}: 「{prev['title']}」 {prev['note']}")
                 print(f"    共有語: {', '.join(shared[:6])}（点数 {score:.1f}）")
-    print(f"検査 {len(posts) - errors} 件 / 要判断 {pairs} 項目 / 続報の指し先 {targets} 項目 / 検査できなかった {errors} 件")
+    print(f"検査 {len(posts) - errors} 件 / 要判断 {pairs} 項目 / 続報の指し先 {targets} 項目 / 続報の着地点の未指定・NG {landing_issues} 項目 / 検査できなかった {errors} 件")
     if errors:
         return 2
-    return 1 if pairs or targets else 0
+    return 1 if pairs or targets or landing_issues else 0
 
 
 if __name__ == "__main__":

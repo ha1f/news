@@ -120,6 +120,9 @@ layout: default
     一度置き換えた表記は「続報（M/D掲載）」の形でなくなるので、より古い同じ M/D には二重に当たらない。
     9月中旬までの投稿には見出しのリンク文字列が「続報（M/D掲載）。」で始まるものがあり、そのまま置き換えると
     <a> が入れ子になる。リンク文字列の先頭（`">続報（`）は置き換えの間だけ退避して対象から外す。
+    href の後ろの FOLLOW_UP_ANCHOR は、下の記事ごとのループで前回の記事の着地点（#article-N）に置き換える (#712)。
+    前回の記事の番号は front matter の follow_ups（今回の記事番号: 前回の記事番号）にある。同じ M/D が1投稿に
+    2回出て別々の記事を指すことがある（2026-10-31 のメイン）ので、M/D でなく今回の記事番号で引く。
   {%- endcomment -%}
   {%- assign post_body = content -%}
   {%- if post_body contains '続報（' -%}
@@ -133,7 +136,7 @@ layout: default
       {%- assign follow_up_md = post.date | date: '%-m/%-d' -%}
       {%- assign follow_up_marker = '続報（' | append: follow_up_md | append: '掲載）' -%}
       {%- if post_body contains follow_up_marker -%}
-        {%- capture follow_up_linked -%}<span class="follow-up">続報（<a class="follow-up-link" href="{{ post.url | relative_url }}">{{ follow_up_md }}掲載</a>）</span>{%- endcapture -%}
+        {%- capture follow_up_linked -%}<span class="follow-up">続報（<a class="follow-up-link" href="{{ post.url | relative_url }}FOLLOW_UP_ANCHOR">{{ follow_up_md }}掲載</a>）</span>{%- endcapture -%}
         {%- assign post_body = post_body | replace: follow_up_marker, follow_up_linked -%}
       {%- endif -%}
     {%- endfor -%}
@@ -171,7 +174,7 @@ layout: default
         {%- assign follow_up_md = post.date | date: '%-m/%-d' -%}
         {%- assign follow_up_marker = feed_prefix | append: follow_up_md | append: '掲載）' -%}
         {%- if post_body contains follow_up_marker -%}
-          {%- capture follow_up_linked -%}<span class="follow-up">続報（<a class="follow-up-link" href="{{ post.url | relative_url }}">{{ feed_title }} {{ follow_up_md }}掲載</a>）</span>{%- endcapture -%}
+          {%- capture follow_up_linked -%}<span class="follow-up">続報（<a class="follow-up-link" href="{{ post.url | relative_url }}FOLLOW_UP_ANCHOR">{{ feed_title }} {{ follow_up_md }}掲載</a>）</span>{%- endcapture -%}
           {%- assign post_body = post_body | replace: follow_up_marker, follow_up_linked -%}
         {%- endif -%}
       {%- endfor -%}
@@ -185,7 +188,7 @@ layout: default
       同じ `split: '<li>'` の位置番号で href を作るため、番号は常に一致する。
     {%- endcomment -%}
     {%- assign content_parts = post_body | split: '<li>' -%}
-    {{- content_parts.first -}}
+    {{- content_parts.first | replace: 'FOLLOW_UP_ANCHOR', '' -}}
     {%- comment -%}
       ラベルが示す媒体とリンク先が違う項目（はてブ・HN 経由など）にだけ、見出しの直後に遷移先のドメインを出す (#183)。
       媒体ラベルの項目（TechCrunch → techcrunch.com 等）に足すと二重表示になるので出さない (#294)。
@@ -198,6 +201,19 @@ layout: default
     {%- assign generic_label_words = "the,and,blog,news,tech,notes,security,japan" | split: ',' -%}
     {%- for part in content_parts offset: 1 -%}
       {%- assign item_html = part -%}
+      {%- comment -%}
+        続報の日付リンクを前回の記事の着地点に向ける (#712)。follow_ups に番号の無い記事（前回の記事を特定
+        できなかった・この仕組みより前の投稿）は、今までどおり前回の日のページの先頭に着く
+      {%- endcomment -%}
+      {%- if item_html contains 'FOLLOW_UP_ANCHOR' -%}
+        {%- assign fu_target = page.follow_ups[forloop.index] -%}
+        {%- if fu_target -%}
+          {%- assign fu_anchor = '#article-' | append: fu_target -%}
+        {%- else -%}
+          {%- assign fu_anchor = '' -%}
+        {%- endif -%}
+        {%- assign item_html = item_html | replace: 'FOLLOW_UP_ANCHOR', fu_anchor -%}
+      {%- endif -%}
       {%- if part contains '</a>' -%}
         {%- assign item_href = part | split: 'href="' | slice: 1 | first | split: '"' | first -%}
         {%- if item_href contains '://' -%}
@@ -232,7 +248,7 @@ layout: default
           {%- endif -%}
           {%- if host_matches == false and item_host != '' -%}
             {%- capture link_domain_html -%}</a><span class="link-domain">{{ item_host }}</span>{%- endcapture -%}
-            {%- assign item_html = part | replace_first: '</a>', link_domain_html -%}
+            {%- assign item_html = item_html | replace_first: '</a>', link_domain_html -%}
           {%- endif -%}
         {%- endif -%}
       {%- endif -%}

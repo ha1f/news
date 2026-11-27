@@ -8,7 +8,10 @@
   1. リンクの着地先が実在し、同じフィード（メインならメイン、プロファイルなら同じプロファイル）の日次ページである
   2. 着地先の日付が表記の M/D と一致し、このページより前で180日以内の直近の日付である（年またぎも正しい年に飛ぶ。
      _layouts/post.html が遡るのも180日まで）。リンクが別の <a> の中に入れ子になっていない
-  3. リンクの付いていない表記について、同じフィードにその日のページがあるなら NG（付け損ね）。
+  3. リンクに着地点（`#article-N`、#712）が付いていれば、着地先のページにその記事（`id="article-N"`）が実在する。
+     それ以外の `#…` は NG（_layouts/post.html が付けるのは front matter の follow_ups から作る #article-N だけ）。
+     着地点の無いリンクはページの先頭に着く（前回の記事を特定できなかったとき・#712 より前の投稿）ので OK
+  4. リンクの付いていない表記について、同じフィードにその日のページがあるなら NG（付け損ね）。
      無ければ文字のまま残るのが正しいので件数だけ報告する
 
 前回が別のフィードにしか無いときの「続報（起業家 M/D掲載）」（#659）は、上の「同じフィード」を
@@ -34,6 +37,7 @@ MAIN_FEED_NAME = "メイン"
 FEED_PAGES_DIR = Path(__file__).resolve().parents[2] / "profiles"
 TITLE_RE = re.compile(r'^title:\s*"?(.+?)"?\s*$', re.M)
 PROFILE_RE = re.compile(r'^profile:\s*"?([\w-]+)"?\s*$', re.M)
+ANCHOR_RE = re.compile(r"^article-\d+$")
 # 検査するのは本文だけ。meta description や JSON-LD に入った抜粋はリンクにできない場所なので外す
 BODY_RE = re.compile(r'itemprop="articleBody">(.*?)</article>', re.S)
 
@@ -85,6 +89,8 @@ def check(site, names=None):
         if key:
             pages[key] = path
     errors, linked, unlinked = [], 0, 0
+    anchored = 0
+    ids = {}  # 着地先のページ → そのページの id の集合（読むのは着地点付きのリンクがあるページだけ）
     bare_errors = 0  # 文字のまま残った表記のうち NG にしたもの（件数の表示から引く）
     for (page_date, feed), path in sorted(pages.items()):
         rel = path.relative_to(site)
@@ -92,7 +98,8 @@ def check(site, names=None):
         text = body[1] if body else ""
         for m in LINKED_RE.finditer(text):
             linked += 1
-            target = page_key(m["href"])
+            href, _, fragment = m["href"].partition("#")
+            target = page_key(href)
             label = f'{m["name"] + " " if m["name"] else ""}{m["m"]}/{m["d"]}'
             want_feed = names.get(m["name"]) if m["name"] else feed
             if want_feed is None:
@@ -113,6 +120,14 @@ def check(site, names=None):
                 errors.append(f"{rel}: 続報（{label}掲載）のリンクが別の <a> の中に入れ子になっている")
             if target not in pages:
                 errors.append(f"{rel}: 続報（{label}掲載）のリンク先が存在しない: {m['href']}")
+            elif fragment:
+                anchored += 1
+                if target not in ids:
+                    ids[target] = set(re.findall(r'\bid="([^"]+)"', pages[target].read_text(encoding="utf-8")))
+                if not ANCHOR_RE.match(fragment):
+                    errors.append(f"{rel}: 続報（{label}掲載）の着地点が記事（#article-N）でない: {m['href']}")
+                elif fragment not in ids[target]:
+                    errors.append(f"{rel}: 続報（{label}掲載）の着地点の記事がリンク先のページに無い: {m['href']}")
         for m in BARE_RE.finditer(text):
             unlinked += 1
             label = f'{m["name"] + " " if m["name"] else ""}{m["m"]}/{m["d"]}'
@@ -126,15 +141,15 @@ def check(site, names=None):
                 where = "そのフィード" if m["name"] else "同じフィード"
                 errors.append(f'{rel}: 続報（{label}掲載）にリンクが無い（{where}の {prior} は実在する）')
                 bare_errors += 1
-    return errors, linked, unlinked - bare_errors
+    return errors, linked, unlinked - bare_errors, anchored
 
 
 def main():
     site = sys.argv[1] if len(sys.argv) > 1 else "_site"
-    errors, linked, unlinked = check(site)
+    errors, linked, unlinked, anchored = check(site)
     for e in errors:
         print("NG", e)
-    print(f"リンク {linked} 件 / 指すフィードに掲載日のページが無く文字のまま {unlinked} 件 / 失敗 {len(errors)} 件")
+    print(f"リンク {linked} 件（うち前回の記事の着地点付き {anchored} 件） / 指すフィードに掲載日のページが無く文字のまま {unlinked} 件 / 失敗 {len(errors)} 件")
     return 1 if errors else 0
 
 

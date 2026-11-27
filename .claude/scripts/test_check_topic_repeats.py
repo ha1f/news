@@ -314,5 +314,73 @@ class FollowUpTargetsTest(unittest.TestCase):
         self.assertIn("続報の指し先 1 項目", out)
 
 
+class FollowUpLandingsTest(unittest.TestCase):
+    """続報の着地点（front matter の follow_ups）の検査 (#712)"""
+
+    setUp = SyntheticTest.setUp
+    tearDown = SyntheticTest.tearDown
+    write = SyntheticTest.write
+    run_main = SyntheticTest.run_main
+    PREV, AGAIN = SyntheticTest.PREV, SyntheticTest.AGAIN
+    NAMES = FollowUpTargetsTest.NAMES
+    OTHER = ("無関係な Plimbo の話", "Plimbo が出た。")
+
+    def landings(self, path):
+        archive = check_topic_repeats.Archive(self.posts)
+        return check_topic_repeats.follow_up_landings(path, archive, self.NAMES)
+
+    def today(self, follow_ups=None, md="10/10"):
+        text = post(("今日だけの Wombix の話", "Wombix が出た。"), (self.AGAIN[0], f"続報（{md}掲載）。開発の終了が決まった。"))
+        if follow_ups is not None:
+            text = text.replace("title: \"見出し\"\n", f"title: \"見出し\"\nfollow_ups: {follow_ups}\n", 1)
+        return self.write("2026-10-20-news.md", text)
+
+    def test_unset_lists_candidates_of_target_post(self):
+        self.write("2026-10-10-news.md", post(self.OTHER, self.PREV))
+        found = self.landings(self.today())
+        self.assertEqual(len(found), 1)
+        i, it, where, landing, cands, err = found[0]
+        self.assertEqual((i, landing, err), (2, None, None))
+        self.assertEqual(cands[0][0], 2)  # 前回の記事は2本目
+
+    def test_set_landing_passes(self):
+        self.write("2026-10-10-news.md", post(self.OTHER, self.PREV))
+        found = self.landings(self.today("{2: 2}"))
+        self.assertEqual(found[0][3][0], 2)
+        self.assertIsNone(found[0][5])
+
+    def test_named_feed_landing(self):
+        self.write("2026-10-10-news-entrepreneur.md", post(self.PREV))
+        found = self.landings(self.today("{2: 1}", md="起業家 10/10"))
+        self.assertEqual(found[0][3][0], 1)
+        self.assertIn("起業家の 2026-10-10", found[0][2])
+
+    def test_out_of_range_and_non_follow_up_key_fail(self):
+        self.write("2026-10-10-news.md", post(self.PREV))
+        errs = [f[5] for f in self.landings(self.today("{2: 5}"))]
+        self.assertTrue(any("範囲外" in (e or "") for e in errs))
+        errs = [f[5] for f in self.landings(self.today("{1: 1}"))]
+        self.assertTrue(any("続報の記事でない" in (e or "") for e in errs))
+
+    def test_malformed_follow_ups_fails(self):
+        self.write("2026-10-10-news.md", post(self.PREV))
+        for bad in ("[2, 1]", "{2: x}", "{2: 1, 2: 1}", "{0: 1}"):
+            errs = [f[5] for f in self.landings(self.today(bad))]
+            self.assertTrue(errs and errs[0], bad)
+
+    def test_unlinkable_follow_up_is_not_listed(self):
+        # リンクにならない（その日の投稿が無い）続報は follow_up_targets の担当
+        self.assertEqual(self.landings(self.today()), [])
+
+    def test_main_exit_code_counts_unset(self):
+        self.write("2026-10-10-news.md", post(self.OTHER, self.PREV))
+        code, out = self.run_main(self.today())
+        self.assertEqual(code, 1)
+        self.assertIn("続報の着地点 未指定", out)
+        code, out = self.run_main(self.today("{2: 2}"))
+        self.assertEqual(code, 0, out)
+        self.assertIn("2本目 → メインの 2026-10-10の 2本目", out)
+
+
 if __name__ == "__main__":
     unittest.main()
