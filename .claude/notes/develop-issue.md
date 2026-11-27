@@ -100,7 +100,7 @@ artifact に写るのは、その branch の `_posts/` をビルドした結果�
 - 読みどころの欠落: `python3 .claude/scripts/check_article_notes.py`
 - ソース表記の不一致: `python3 .claude/scripts/check_source_hints.py`
 - title が日付のままになっていないか: `python3 .claude/scripts/check_post_titles.py`
-- 続報の日付リンク（#559・#659）: `python3 .claude/scripts/check_follow_up_links.py <_site>`。CI にも publish の手順にも未配線（workflow は保護パス）なので、`_layouts/post.html` の続報の置き換えや配信ページ `profiles/*.md` の `title` に触ったら手で回す。**`title` を変えると過去の「続報（起業家 M/D掲載）」が黙ってリンクでなくなり**、ここで初めて NG として見える
+- 続報の日付リンク（#559・#659）: `python3 .claude/scripts/check_follow_up_links.py <_site>`。CI にも publish の手順にも未配線（workflow は保護パス）なので、`_layouts/post.html` の続報の置き換えや配信ページ `profiles/*.md` の `title` に触ったら手で回す。**`title` を変えると過去の「続報（起業家 M/D掲載）」が黙ってリンクでなくなり**、ここで初めて NG として見える。前回の記事の着地点（`#article-N`、front matter の `follow_ups` から #712）が実在するかもここで見る（件数は「着地点付き」）
 - 過去の日付の投稿に載せた URL の再掲: `python3 .claude/scripts/check_repeat_urls.py`（#40。判定の正本は curate-news の `published_urls.py`。CI には未配線。`--all` は過去の再掲を全部数えるので 300 件超で落ちる）
   （`check_article_notes.py` / `check_source_hints.py` / `check_post_titles.py` / `check_repeat_urls.py` の4つは引数なしで当日 JST 分を検査。`_posts/{YYYY-MM-DD}-*.md` を渡せば日付を固定できる。`--all` で全投稿）
 - 人物・会社名の表記の揺れ: `python3 .claude/scripts/check_name_variants.py`（#664。表は `.claude/skills/curate-news/references/names.md`。引数なしで当日 JST 分、`--all` で全投稿。過去の投稿には揺れが残っている（2026-11-17 時点で 197 件）ので `--all` は落ちる。CI には未配線）。`check_topic_repeats.py` も同じ表で揺れを揃えてから固有名を照合する
