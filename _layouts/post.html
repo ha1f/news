@@ -325,6 +325,14 @@ layout: default
 
   <nav class="post-footer-nav">
     <a href="{{ '/' | relative_url }}">トップ</a> / <a href="{{ '/profiles/' | relative_url }}">プロファイル</a> / <a href="{{ '/archive.html' | relative_url }}">アーカイブ</a>
+    {%- comment -%}フッターの RSS はサイト全体（メイン）のまま。プロファイルの日次ページでは、そのプロファイルのフィードを読み終えた位置に出す (#715)。
+      最後の endif だけ右の空白を残し、メインの日次ページの出力を変更前と同じバイト列に保つ{%- endcomment -%}
+    {%- if page.profile -%}
+      {%- assign feed_profile_page = site.pages | where: "profile", page.profile | where: "layout", "profile" | first -%}
+      {%- if feed_profile_page -%}
+    <br><a class="post-footer-feed" href="{{ '/profiles/' | append: page.profile | append: '-feed.xml' | relative_url }}">{{ feed_profile_page.title | escape }}のフィードを RSS で購読</a>
+      {%- endif -%}
+    {%- endif %}
   </nav>
 
   {%- if site.disqus.shortname -%}
