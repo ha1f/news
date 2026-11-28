@@ -330,7 +330,7 @@ layout: default
     {%- if page.profile -%}
       {%- assign feed_profile_page = site.pages | where: "profile", page.profile | where: "layout", "profile" | first -%}
       {%- if feed_profile_page -%}
-    <br><a class="post-footer-feed" href="{{ '/profiles/' | append: page.profile | append: '-feed.xml' | relative_url }}">{{ feed_profile_page.title }}のフィードを RSS で購読</a>
+    <br><a class="post-footer-feed" href="{{ '/profiles/' | append: page.profile | append: '-feed.xml' | relative_url }}">{{ feed_profile_page.title | escape }}のフィードを RSS で購読</a>
       {%- endif -%}
     {%- endif %}
   </nav>

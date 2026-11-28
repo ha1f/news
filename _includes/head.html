@@ -10,15 +10,15 @@
   <meta name="theme-color" content="#1c6ace">
   <link rel="stylesheet" href="{{ "/assets/main.css" | relative_url }}">
   {%- comment -%}
-    プロファイルの配信ページ（layout: profile）と日次ページ（layout: post + profile）では、そのプロファイルのフィードを
+    page.profile を持つ HTML ページ（配信ページ layout: profile・日次ページ layout: post・過去分 profiles/older）では、そのプロファイルのフィードを
     メインより前に出す (#715)。自動検出で先頭の1本を登録する RSS リーダーがあり、日次ページは職種フィードの RSS や
     シェアから読者が最初に着く画面なので、ここで登録されるのは職種のフィードであるべき。
-    title は配信ページの title を使う（日次ページの page.title はその日の見出しで、フィードの名前にならない）
+    title は配信ページの title を使い（日次ページの page.title はその日の見出しで、フィードの名前にならない）、href は feed_meta と同じ絶対 URL にする
   {%- endcomment -%}
   {%- if page.profile -%}
     {%- assign head_profile_page = site.pages | where: "profile", page.profile | where: "layout", "profile" | first -%}
     {%- if head_profile_page -%}
-    <link rel="alternate" type="application/atom+xml" title="{{ site.title | xml_escape }} | {{ head_profile_page.title | xml_escape }}" href="{{ '/profiles/' | append: page.profile | append: '-feed.xml' | relative_url }}">
+    <link rel="alternate" type="application/atom+xml" title="{{ site.title | xml_escape }} | {{ head_profile_page.title | xml_escape }}" href="{{ '/profiles/' | append: page.profile | append: '-feed.xml' | absolute_url }}">
     {%- endif -%}
   {%- endif -%}
   {%- feed_meta -%}
