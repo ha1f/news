@@ -90,6 +90,10 @@ mcp__github__actions_get(method=download_workflow_run_artifact, resource_id=<art
 
 artifact に写るのは、その branch の `_posts/` をビルドした結果だけ。「これから生成される記事」の見え方を変える変更（publish-pages のタイトル生成ルール等）は `_posts/` を1件も触らないので、**artifact は main と同じ絵のままで、変更後の姿を1件も確認できない**（実走で PR #365 がこれに当たった）。この種の変更は、当日分の front matter を新形式に差し替えたローカルビルドで補う。
 
+CI の「最新記事」はメインの日次ページ（`*-news.md`）で、「プロファイル1件」は配信ページ（`profiles/<名前>.html`）。**プロファイルの日次ページ（`*-news-<名前>.md`）は撮影対象に入っていない**ので、`page.profile` で分岐する `_layouts/post.html` の変更は artifact に1枚も写らない。ローカルで `2026/MM/DD/news-<名前>.html` を撮って補う（実測 2026-11-28、#715）。
+
+テンプレートの変更が狙ったページだけに効いているかは、`origin/main` のビルド（`jekyll build -d <scratchpad>/site_before`）と branch のビルドを `diff -rq` で比べると全ページ分まとめて分かる。`*.xml` の `<updated>` はビルド時刻なので毎回差になる。**Liquid の `{%- comment -%}` も左右の空白を食う**ので、分岐の中でなくても置き場所しだいで対象外のページの HTML が変わる（実測 2026-11-28、#715: `post-footer-nav` の中に置いたコメントでメインの日次ページ 300 件超の改行が消えた。描画は同じで `check_article_anchors.py` も通るので、diff でしか気づけない）。
+
 ## 検証コマンド
 
 - 保護パス判定: `python3 .claude/scripts/check_protected_paths.py --diff origin/main`（`ui_changes` が出たら `.claude/rules/ui-changes.md` に従う。先に `git fetch origin main` する。セッション開始時の作業 branch は clone 時の `origin/main` より先の main を含むことがあり、fetch 前だと既にマージ済みの他 PR の変更まで diff に入って `protected: true` と誤判定する。実測 2026-10-25: fetch 前は review-and-merge と workflow の4ファイルで true、fetch 後は false）
